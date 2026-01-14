@@ -63,9 +63,9 @@ table{display:none;}
 
 <button onclick="toggleDark()">🌙 Dark</button>
 <button onclick="setFilter('ALL')">Tümü</button>
-<button onclick="setFilter('Hisse')">Hisse</button>
-<button onclick="setFilter('Fon')">Fon</button>
-<button onclick="setFilter('Altın')">Altın</button>
+<button onclick="setFilter('hisse')">Hisse</button>
+<button onclick="setFilter('fon')">Fon</button>
+<button onclick="setFilter('altın')">Altın</button>
 
 <div id="mobil" class="kart">
 <h3>📱 Mobil Özet</h3>
@@ -121,7 +121,9 @@ rows.forEach(r=>{
 let c = r.split(";");
 if(c.length < 9 || !c[0]) return;
 
-if(FILTRE !== "ALL" && c[1] !== FILTRE) return;
+const tur = c[1].toLowerCase();
+if(FILTRE !== "ALL" && !tur.includes(FILTRE.toLowerCase())) return;
+
 
 let tutar = temizSayi(c[5]);
 let kz = temizSayi(c[6]);
@@ -179,3 +181,4 @@ setInterval(yukle,60000);
 
 </body>
 </html>
+
