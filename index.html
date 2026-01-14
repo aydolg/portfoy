@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Portföy Dashboard</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+:root{
+--bg:#f2f4f7; --kart:#fff; --txt:#000;
+}
+.dark{ --bg:#121212; --kart:#1e1e1e; --txt:#fff; }
+
+body{
+margin:0; padding:10px;
+font-family:Arial;
+background:var(--bg); color:var(--txt);
+}
+
+button{
+padding:8px 12px;
+border:none;
+border-radius:8px;
+margin:4px;
+cursor:pointer;
+}
+
+.kart{
+background:var(--kart);
+padding:12px;
+border-radius:10px;
+margin-bottom:10px;
+}
+
+.kar{color:#00c853;font-weight:bold;}
+.zarar{color:#ff5252;font-weight:bold;}
+
+table{
+width:100%;
+border-collapse:collapse;
+background:var(--kart);
+}
+th,td{
+padding:8px;
+border-bottom:1px solid #ccc;
+text-align:center;
+}
+th{background:#222;color:white;}
+
+@media(max-width:600px){
+table{display:none;}
+#mobil{display:block;}
+}
+@media(min-width:601px){
+#mobil{display:none;}
+}
+</style>
+</head>
+
+<body>
+
+<button onclick="toggleDark()">🌙 Dark</button>
+<button onclick="setFilter('ALL')">Tümü</button>
+<button onclick="setFilter('Hisse')">Hisse</button>
+<button onclick="setFilter('Fon')">Fon</button>
+<button onclick="setFilter('Altın')">Altın</button>
+
+<div id="mobil" class="kart">
+<h3>📱 Mobil Özet</h3>
+<div id="mToplam"></div>
+<div id="mKZ"></div>
+</div>
+
+<div class="kart">
+<h3>📊 Genel Özet</h3>
+<div id="toplam"></div>
+<div id="kz"></div>
+</div>
+
+<div class="kart">
+<canvas id="dagilim"></canvas>
+</div>
+
+<table>
+<thead>
+<tr>
+<th>Varlık</th>
+<th>Tür</th>
+<th>Tutar</th>
+<th>Günlük %</th>
+<th>K/Z</th>
+</tr>
+</thead>
+<tbody id="tablo"></tbody>
+</table>
+
+<script>
+const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQeTFovlKfvEp9sPepJb9SGxf_2AgMU7eEPTDCc6WWc0o1Z1AizX6K2mJlaWtcvSderiBym7cyhEdsC/pub?gid=0&single=true&output=csv";
+
+let FILTRE = localStorage.getItem("filtre") || "ALL";
+let chart;
+
+function temizSayi(v){
+if(!v) return 0;
+return parseFloat(v.replace(",", "."));
+}
+
+function yukle(){
+fetch(url)
+.then(r=>r.text())
+.then(text=>{
+let rows = text.split("\n").slice(1);
+let toplam = 0;
+let toplamKZ = 0;
+let risk = {};
+tablo.innerHTML = "";
+
+rows.forEach(r=>{
+let c = r.split(";");
+if(c.length < 9 || !c[0]) return;
+
+if(FILTRE !== "ALL" && c[1] !== FILTRE) return;
+
+let tutar = temizSayi(c[5]);
+let kz = temizSayi(c[6]);
+let gunluk = temizSayi(c[8]) * 100;
+
+toplam += tutar;
+toplamKZ += kz;
+risk[c[1]] = (risk[c[1]] || 0) + tutar;
+
+tablo.innerHTML += `
+<tr>
+<td>${c[0]}</td>
+<td>${c[1]}</td>
+<td>${tutar.toFixed(0)} ₺</td>
+<td class="${gunluk>=0?'kar':'zarar'}">${gunluk.toFixed(2)}%</td>
+<td class="${kz>=0?'kar':'zarar'}">${kz.toFixed(0)} ₺</td>
+</tr>`;
+});
+
+toplam.innerHTML = "Toplam: " + toplam.toFixed(0) + " ₺";
+kz.innerHTML = "K/Z: <span class='"+(toplamKZ>=0?'kar':'zarar')+"'>" + toplamKZ.toFixed(0) + " ₺</span>";
+
+mToplam.innerHTML = toplam.innerHTML;
+mKZ.innerHTML = kz.innerHTML;
+
+if(chart) chart.destroy();
+chart = new Chart(dagilim,{
+type:"doughnut",
+data:{
+labels:Object.keys(risk),
+datasets:[{data:Object.values(risk)}]
+}
+});
+});
+}
+
+function setFilter(f){
+FILTRE = f;
+localStorage.setItem("filtre",f);
+yukle();
+}
+
+function toggleDark(){
+document.body.classList.toggle("dark");
+localStorage.setItem("dark",document.body.classList.contains("dark"));
+}
+
+if(localStorage.getItem("dark") === "true"){
+document.body.classList.add("dark");
+}
+
+yukle();
+setInterval(yukle,60000);
+</script>
+
+</body>
+</html>
