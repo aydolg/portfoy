@@ -35,32 +35,43 @@ th{background:#222;color:#fff}
 </table>
 
 <script>
-const csvURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQeTFovlKfvEp9sPepJb9SGxf_2AgMU7eEPTDCc6WWc0o1Z1AizX6K2mJlaWtcvSderiBym7cyhEdsC/pub?gid=0&single=true&output=csv";
+const csvURL =
+"https://docs.google.com/spreadsheets/d/e/2PACX-1vQeTFovlKfvEp9sPepJb9SGxf_2AgMU7eEPTDCc6WWc0o1Z1AizX6K2mJlaWtcvSderiBym7cyhEdsC/pub?gid=0&single=true&output=csv";
+
+function n(v){
+  if(!v) return 0;
+  return parseFloat(v.replace(",", "."));
+}
 
 Papa.parse(csvURL, {
   download: true,
-  header: true,
   delimiter: ";",
-  complete: function(results) {
+  skipEmptyLines: true,
+  complete: function(res){
 
-    results.data.forEach(r => {
-      if(!r["Varlık"]) return;
+    console.log("CSV RAW:", res.data); // 🔥 debug
 
-      const tutar = parseFloat((r["Tutar"]||"0").replace(",","."));
-      const kz = parseFloat((r["K/Z"]||"0").replace(",","."));
-      const gunluk = parseFloat((r["Günlük %"]||"0").replace(",","."));
+    // 0. satır başlık → atla
+    for(let i=1;i<res.data.length;i++){
+      const r = res.data[i];
+      if(r.length < 7) continue;
+
+      const varlik = r[0];
+      const tur    = r[1];
+      const tutar  = n(r[5]);
+      const kz     = n(r[6]);
+      const gunluk = n(r[8]);
 
       document.getElementById("tablo").innerHTML += `
         <tr>
-          <td>${r["Varlık"]}</td>
-          <td>${r["Tür"]}</td>
+          <td>${varlik}</td>
+          <td>${tur}</td>
           <td>${tutar.toFixed(0)} ₺</td>
           <td class="${gunluk>=0?'kar':'zarar'}">${gunluk.toFixed(2)}%</td>
           <td class="${kz>=0?'kar':'zarar'}">${kz.toFixed(0)} ₺</td>
         </tr>
       `;
-    });
-
+    }
   }
 });
 </script>
