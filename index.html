@@ -8,79 +8,23 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-:root{
---bg:#f2f4f7; --kart:#fff; --txt:#000;
-}
-.dark{ --bg:#121212; --kart:#1e1e1e; --txt:#fff; }
-
-body{
-margin:0; padding:10px;
-font-family:Arial;
-background:var(--bg); color:var(--txt);
-}
-
-button{
-padding:8px 12px;
-border:none;
-border-radius:8px;
-margin:4px;
-cursor:pointer;
-}
-
-.kart{
-background:var(--kart);
-padding:12px;
-border-radius:10px;
-margin-bottom:10px;
-}
-
-.kar{color:#00c853;font-weight:bold;}
-.zarar{color:#ff5252;font-weight:bold;}
-
-table{
-width:100%;
-border-collapse:collapse;
-background:var(--kart);
-}
-th,td{
-padding:8px;
-border-bottom:1px solid #ccc;
-text-align:center;
-}
-th{background:#222;color:white;}
-
-@media(max-width:600px){
-table{display:none;}
-#mobil{display:block;}
-}
-@media(min-width:601px){
-#mobil{display:none;}
-}
+body{font-family:Arial;background:#f2f4f7;margin:0;padding:10px}
+.kart{background:#fff;padding:12px;border-radius:10px;margin-bottom:10px}
+.kar{color:green;font-weight:bold}
+.zarar{color:red;font-weight:bold}
+table{width:100%;border-collapse:collapse;background:#fff}
+th,td{padding:8px;border-bottom:1px solid #ccc;text-align:center}
+th{background:#222;color:#fff}
 </style>
 </head>
 
 <body>
 
-<button onclick="toggleDark()">🌙 Dark</button>
-<button onclick="setFilter('ALL')">Tümü</button>
-<button onclick="setFilter('hisse')">Hisse</button>
-<button onclick="setFilter('fon')">Fon</button>
-<button onclick="setFilter('altın')">Altın</button>
-
-<div id="mobil" class="kart">
-<h3>📱 Mobil Özet</h3>
-<div id="mToplam"></div>
-<div id="mKZ"></div>
-</div>
+<h2>📊 Portföy</h2>
 
 <div class="kart">
-<h3>📊 Genel Özet</h3>
 <div id="toplam"></div>
 <div id="kz"></div>
-</div>
-
-<div class="kart">
-<canvas id="dagilim"></canvas>
 </div>
 
 <table>
@@ -99,86 +43,46 @@ table{display:none;}
 <script>
 const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQeTFovlKfvEp9sPepJb9SGxf_2AgMU7eEPTDCc6WWc0o1Z1AizX6K2mJlaWtcvSderiBym7cyhEdsC/pub?gid=0&single=true&output=csv";
 
-let FILTRE = localStorage.getItem("filtre") || "ALL";
-let chart;
-
-function temizSayi(v){
-if(!v) return 0;
+function num(v){
 return parseFloat(v.replace(",", "."));
 }
 
-function yukle(){
 fetch(url)
-.then(r=>r.text())
-.then(text=>{
-let rows = text.split("\n").slice(1);
-let toplam = 0;
-let toplamKZ = 0;
-let risk = {};
-tablo.innerHTML = "";
+.then(r => r.text())
+.then(text => {
 
-rows.forEach(r=>{
-let c = r.split(";");
-if(c.length < 9 || !c[0]) return;
+    // 🔥 BOM + satır sonu temizliği
+    text = text.replace(/\uFEFF/g, "").trim();
 
-const tur = c[1].toLowerCase();
-if(FILTRE !== "ALL" && !tur.includes(FILTRE.toLowerCase())) return;
+    const rows = text.split(/\r?\n/);
+    let toplam = 0, toplamKZ = 0;
 
+    for(let i=1;i<rows.length;i++){
+        const c = rows[i].split(";");
+        if(c.length < 9) continue;
 
-let tutar = temizSayi(c[5]);
-let kz = temizSayi(c[6]);
-let gunluk = temizSayi(c[8]) * 100;
+        const tutar = num(c[5]);
+        const kz = num(c[6]);
+        const gunluk = num(c[8]) * 100;
 
-toplam += tutar;
-toplamKZ += kz;
-risk[c[1]] = (risk[c[1]] || 0) + tutar;
+        toplam += tutar;
+        toplamKZ += kz;
 
-tablo.innerHTML += `
-<tr>
-<td>${c[0]}</td>
-<td>${c[1]}</td>
-<td>${tutar.toFixed(0)} ₺</td>
-<td class="${gunluk>=0?'kar':'zarar'}">${gunluk.toFixed(2)}%</td>
-<td class="${kz>=0?'kar':'zarar'}">${kz.toFixed(0)} ₺</td>
-</tr>`;
+        tablo.innerHTML += `
+        <tr>
+            <td>${c[0]}</td>
+            <td>${c[1]}</td>
+            <td>${tutar.toFixed(0)} ₺</td>
+            <td class="${gunluk>=0?'kar':'zarar'}">${gunluk.toFixed(2)}%</td>
+            <td class="${kz>=0?'kar':'zarar'}">${kz.toFixed(0)} ₺</td>
+        </tr>`;
+    }
+
+    toplam.innerHTML = "Toplam Değer: " + toplam.toFixed(0) + " ₺";
+    kz.innerHTML = "Toplam K/Z: <span class='"+(toplamKZ>=0?'kar':'zarar')+"'>" +
+                   toplamKZ.toFixed(0) + " ₺</span>";
 });
-
-toplam.innerHTML = "Toplam: " + toplam.toFixed(0) + " ₺";
-kz.innerHTML = "K/Z: <span class='"+(toplamKZ>=0?'kar':'zarar')+"'>" + toplamKZ.toFixed(0) + " ₺</span>";
-
-mToplam.innerHTML = toplam.innerHTML;
-mKZ.innerHTML = kz.innerHTML;
-
-if(chart) chart.destroy();
-chart = new Chart(dagilim,{
-type:"doughnut",
-data:{
-labels:Object.keys(risk),
-datasets:[{data:Object.values(risk)}]
-}
-});
-});
-}
-
-function setFilter(f){
-FILTRE = f;
-localStorage.setItem("filtre",f);
-yukle();
-}
-
-function toggleDark(){
-document.body.classList.toggle("dark");
-localStorage.setItem("dark",document.body.classList.contains("dark"));
-}
-
-if(localStorage.getItem("dark") === "true"){
-document.body.classList.add("dark");
-}
-
-yukle();
-setInterval(yukle,60000);
 </script>
 
 </body>
 </html>
-
