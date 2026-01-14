@@ -33,35 +33,44 @@ th{background:#222;color:#fff}
 </table>
 
 <script>
-const url =
-"https://docs.google.com/spreadsheets/d/1vQeTFovlKfvEp9sPepJb9SGxf_2AgMU7eEPTDCc6WWc0o1Z1AizX6K2mJlaWtcvSderiBym7cyhEdsC/gviz/tq?tqx=out:json";
+document.addEventListener("DOMContentLoaded", function(){
 
-fetch(url)
-.then(r => r.text())
-.then(text => {
-  const json = JSON.parse(text.substring(47).slice(0, -2));
-  const rows = json.table.rows;
+  const url =
+  "https://docs.google.com/spreadsheets/d/1vQeTFovlKfvEp9sPepJb9SGxf_2AgMU7eEPTDCc6WWc0o1Z1AizX6K2mJlaWtcvSderiBym7cyhEdsC/gviz/tq?tqx=out:json";
 
-  rows.forEach(r => {
-    const c = r.c;
-    if(!c[0]) return;
+  fetch(url)
+  .then(r => r.text())
+  .then(text => {
 
-    const tutar = c[5]?.v || 0;
-    const kz = c[6]?.v || 0;
-    const gunluk = c[8]?.v || 0;
+    const json = JSON.parse(text.substring(47).slice(0, -2));
+    const rows = json.table.rows;
 
-    document.getElementById("tablo").innerHTML += `
-      <tr>
-        <td>${c[0].v}</td>
-        <td>${c[1].v}</td>
-        <td>${tutar.toFixed(0)} ₺</td>
-        <td class="${gunluk>=0?'kar':'zarar'}">${gunluk.toFixed(2)}%</td>
-        <td class="${kz>=0?'kar':'zarar'}">${kz.toFixed(0)} ₺</td>
-      </tr>
-    `;
+    const tbody = document.getElementById("tablo");
+
+    rows.forEach(r => {
+      const c = r.c;
+      if(!c[0]) return;
+
+      const tutar  = c[5]?.v || 0;
+      const kz     = c[6]?.v || 0;
+      const gunluk = c[8]?.v || 0;
+
+      tbody.innerHTML += `
+        <tr>
+          <td>${c[0].v}</td>
+          <td>${c[1].v}</td>
+          <td>${tutar.toFixed(0)} ₺</td>
+          <td class="${gunluk>=0?'kar':'zarar'}">${gunluk.toFixed(2)}%</td>
+          <td class="${kz>=0?'kar':'zarar'}">${kz.toFixed(0)} ₺</td>
+        </tr>
+      `;
+    });
   });
+
 });
 </script>
 
+
 </body>
 </html>
+
