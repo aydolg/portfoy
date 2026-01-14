@@ -3,29 +3,23 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Portföy Dashboard</title>
+<title>Portföy Takibi</title>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
 <style>
-body{font-family:Arial;background:#f2f4f7;margin:0;padding:10px}
-.kart{background:#fff;padding:12px;border-radius:10px;margin-bottom:10px}
-.kar{color:green;font-weight:bold}
-.zarar{color:red;font-weight:bold}
+body{font-family:Arial;background:#f2f4f7;padding:10px}
 table{width:100%;border-collapse:collapse;background:#fff}
 th,td{padding:8px;border-bottom:1px solid #ccc;text-align:center}
 th{background:#222;color:#fff}
+.kar{color:green;font-weight:bold}
+.zarar{color:red;font-weight:bold}
 </style>
 </head>
 
 <body>
 
 <h2>📊 Portföy</h2>
-
-<div class="kart">
-<div id="toplam"></div>
-<div id="kz"></div>
-</div>
 
 <table>
 <thead>
@@ -41,46 +35,33 @@ th{background:#222;color:#fff}
 </table>
 
 <script>
-const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQeTFovlKfvEp9sPepJb9SGxf_2AgMU7eEPTDCc6WWc0o1Z1AizX6K2mJlaWtcvSderiBym7cyhEdsC/pub?gid=0&single=true&output=csv";
+const csvURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQeTFovlKfvEp9sPepJb9SGxf_2AgMU7eEPTDCc6WWc0o1Z1AizX6K2mJlaWtcvSderiBym7cyhEdsC/pub?gid=0&single=true&output=csv";
 
-function num(v){
-return parseFloat(v.replace(",", "."));
-}
+Papa.parse(csvURL, {
+  download: true,
+  header: true,
+  delimiter: ";",
+  complete: function(results) {
 
-fetch(url)
-.then(r => r.text())
-.then(text => {
+    results.data.forEach(r => {
+      if(!r["Varlık"]) return;
 
-    // 🔥 BOM + satır sonu temizliği
-    text = text.replace(/\uFEFF/g, "").trim();
+      const tutar = parseFloat((r["Tutar"]||"0").replace(",","."));
+      const kz = parseFloat((r["K/Z"]||"0").replace(",","."));
+      const gunluk = parseFloat((r["Günlük %"]||"0").replace(",","."));
 
-    const rows = text.split(/\r?\n/);
-    let toplam = 0, toplamKZ = 0;
-
-    for(let i=1;i<rows.length;i++){
-        const c = rows[i].split(";");
-        if(c.length < 9) continue;
-
-        const tutar = num(c[5]);
-        const kz = num(c[6]);
-        const gunluk = num(c[8]) * 100;
-
-        toplam += tutar;
-        toplamKZ += kz;
-
-        tablo.innerHTML += `
+      document.getElementById("tablo").innerHTML += `
         <tr>
-            <td>${c[0]}</td>
-            <td>${c[1]}</td>
-            <td>${tutar.toFixed(0)} ₺</td>
-            <td class="${gunluk>=0?'kar':'zarar'}">${gunluk.toFixed(2)}%</td>
-            <td class="${kz>=0?'kar':'zarar'}">${kz.toFixed(0)} ₺</td>
-        </tr>`;
-    }
+          <td>${r["Varlık"]}</td>
+          <td>${r["Tür"]}</td>
+          <td>${tutar.toFixed(0)} ₺</td>
+          <td class="${gunluk>=0?'kar':'zarar'}">${gunluk.toFixed(2)}%</td>
+          <td class="${kz>=0?'kar':'zarar'}">${kz.toFixed(0)} ₺</td>
+        </tr>
+      `;
+    });
 
-    toplam.innerHTML = "Toplam Değer: " + toplam.toFixed(0) + " ₺";
-    kz.innerHTML = "Toplam K/Z: <span class='"+(toplamKZ>=0?'kar':'zarar')+"'>" +
-                   toplamKZ.toFixed(0) + " ₺</span>";
+  }
 });
 </script>
 
