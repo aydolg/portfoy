@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Interaktif Portföy Paneli</title>
+  <title>Gelişmiş Portföy Terminali</title>
   <style>
     :root {
       --bg: #0b0e11; --card: #181a20; --header: #2b3139; --text: #eaecef;
@@ -11,37 +11,49 @@
     }
 
     body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; font-size: 14px; }
-    .container { max-width: 1200px; margin: 0 auto; }
+    .container { max-width: 1300px; margin: 0 auto; }
 
-    /* Üst Özet Kartlar */
+    /* Üst Özet Kartlar ve Dağılım Balonu */
     .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 30px; }
-    .card { background: var(--card); padding: 20px; border-radius: 12px; border: 1px solid var(--border); position: relative; cursor: help; }
+    .card { 
+      background: var(--card); padding: 20px; border-radius: 12px; border: 1px solid var(--border); 
+      position: relative; cursor: help; transition: border-color 0.3s;
+    }
+    .card:hover { border-color: var(--accent); }
     .card span { display: block; color: var(--text-muted); font-size: 0.7rem; font-weight: 600; text-transform: uppercase; margin-bottom: 5px; }
     .card div { font-size: 1.3rem; font-weight: 700; }
 
-    /* Tür Kartları */
+    /* Dağılım Tooltip (Popup) */
+    .dist-tooltip {
+      display: none; position: absolute; top: 105%; left: 0; width: 280px;
+      background: #1e2329; border: 1px solid var(--accent); border-radius: 8px;
+      padding: 15px; z-index: 1000; box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+    }
+    .card:hover .dist-tooltip { display: block; }
+    .dist-row { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.8rem; border-bottom: 1px solid #2d3339; padding-bottom: 4px; }
+    .dist-row:last-child { border: none; }
+
+    /* Tür Kartları (Accordion) */
     .group-card { background: var(--card); border-radius: 12px; border: 1px solid var(--border); margin-bottom: 15px; overflow: hidden; }
     .group-header { padding: 15px 20px; background: #1e2329; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
     .group-title { font-size: 1.1rem; font-weight: 700; color: var(--accent); }
 
-    /* Varlık Listesi */
+    /* Varlık Listesi ve Detaylar */
     .asset-list { display: none; background: #14171c; }
     .group-card.open .asset-list { display: block; }
-    
-    .asset-item { border-bottom: 1px solid #2d3339; cursor: pointer; transition: background 0.2s; }
-    .asset-item:hover { background: #1e2329; }
+    .asset-item { border-bottom: 1px solid #2d3339; cursor: pointer; }
     .asset-main { padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; }
+    .asset-main:hover { background: #1e2329; }
     
-    /* Varlık Detay Paneli (Seçildiğinde açılan yer) */
     .asset-detail { 
       display: none; background: #0b0e11; padding: 15px; 
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 15px;
-      border-top: 1px dashed var(--border); font-size: 0.8rem;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 15px;
+      border-top: 1px dashed var(--border);
     }
     .asset-item.selected .asset-detail { display: grid; }
     .detail-box { display: flex; flex-direction: column; }
     .detail-label { color: var(--text-muted); font-size: 0.65rem; text-transform: uppercase; margin-bottom: 4px; }
-    .detail-value { font-weight: 600; color: #fff; }
+    .detail-value { font-weight: 600; color: #fff; font-size: 0.85rem; }
 
     .up { color: var(--green); } .down { color: var(--red); }
     .bold { font-weight: 700; }
@@ -71,11 +83,11 @@
         yatirim: clean(r[5]), fiyat: clean(r[6]), tutar: clean(r[7]),
         gKZ: clean(r[8]), hKZ: clean(r[9]), tKZ: clean(r[10])
       }));
-      render(data);
+      renderAll(data);
     }
   });
 
-  function render(data) {
+  function renderAll(data) {
     const groups = {};
     const totals = { yatirim: 0, tutar: 0, gKZ: 0, hKZ: 0, tKZ: 0 };
 
@@ -89,29 +101,43 @@
       totals.gKZ += item.gKZ; totals.hKZ += item.hKZ; totals.tKZ += item.tKZ;
     });
 
-    // Üst Kartlar
+    // 1. ÜST ÖZET KARTLAR (Dağılım Balonlu)
     const sGrid = document.getElementById("summaryGrid");
     const summaryKeys = [
       { id: 'yatirim', label: 'Yatırım' }, { id: 'tutar', label: 'Güncel' },
       { id: 'gKZ', label: 'Günlük K/Z' }, { id: 'hKZ', label: 'Haftalık K/Z' }, { id: 'tKZ', label: 'Toplam K/Z' }
     ];
-    sGrid.innerHTML = summaryKeys.map(k => `
-      <div class="card">
-        <span>${k.label}</span>
-        <div class="${(k.id.includes('KZ') && totals[k.id] < 0) ? 'down' : (k.id.includes('KZ') ? 'up' : '')}">
-          ${totals[k.id].toLocaleString('tr-TR')} ₺
-        </div>
-      </div>
-    `).join('');
+    
+    sGrid.innerHTML = summaryKeys.map(k => {
+      let distRows = Object.keys(groups).map(tur => {
+        const val = groups[tur][k.id];
+        const perc = totals[k.id] !== 0 ? ((val / totals[k.id]) * 100).toFixed(1) : 0;
+        return `<div class="dist-row"><span>${tur}</span><span>${val.toLocaleString('tr-TR')} ₺ <strong>(%${perc})</strong></span></div>`;
+      }).join('');
 
-    // Grup Kartları
+      return `
+        <div class="card">
+          <span>${k.label}</span>
+          <div class="${(k.id.includes('KZ') && totals[k.id] < 0) ? 'down' : (k.id.includes('KZ') ? 'up' : '')}">
+            ${totals[k.id].toLocaleString('tr-TR')} ₺
+          </div>
+          <div class="dist-tooltip">
+            <strong>${k.label} Dağılımı</strong>
+            <hr style="border:0; border-top:1px solid #444; margin:10px 0">
+            ${distRows}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // 2. TÜRLERE GÖRE GRUPLAR VE ÜRÜN DETAYLARI
     const gGrid = document.getElementById("groupGrid");
     gGrid.innerHTML = Object.keys(groups).map(tur => {
       const g = groups[tur];
       return `
         <div class="group-card">
           <div class="group-header" onclick="this.parentElement.classList.toggle('open')">
-            <span class="group-title">${tur}</span>
+            <span class="group-title">${tur} (${g.assets.length})</span>
             <span class="bold">${g.tutar.toLocaleString('tr-TR')} ₺</span>
           </div>
           <div class="asset-list">
@@ -119,7 +145,7 @@
               <div class="asset-item" onclick="event.stopPropagation(); this.classList.toggle('selected')">
                 <div class="asset-main">
                   <span>${a.ad}</span>
-                  <span class="${a.tKZ >= 0 ? 'up' : 'down'}">${a.tutar.toLocaleString('tr-TR')} ₺ (${a.tKZ.toLocaleString('tr-TR')} ₺)</span>
+                  <span class="${a.tKZ >= 0 ? 'up' : 'down'}">${a.tutar.toLocaleString('tr-TR')} ₺ <small>(${a.tKZ.toLocaleString('tr-TR')} ₺)</small></span>
                 </div>
                 <div class="asset-detail">
                   <div class="detail-box"><span class="detail-label">Tür</span><span class="detail-value">${a.tur}</span></div>
