@@ -3,190 +3,201 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Elite Portfolio Terminal</title>
+  <title>Hiyerarşik Portföy Terminali</title>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
   <style>
     :root {
       --bg: #05070a; --card: #10141d; --accent: #00ff9d; --red: #ff3b5c; 
       --text: #ffffff; --text-muted: #8a919e; --border: #1f2633;
-      --glass: rgba(255, 255, 255, 0.03);
+      --glass: rgba(255, 255, 255, 0.05);
     }
 
     body { 
       font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); 
-      color: var(--text); margin: 0; padding: 20px; line-height: 1.5;
+      color: var(--text); margin: 0; padding: 20px;
     }
     
     .container { max-width: 1200px; margin: 0 auto; }
 
-    /* Üst Özet Kartlar */
-    .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 40px; }
+    /* KATMAN 1: ANA ÖZET KARTLAR */
+    .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 40px; }
+    
     .card { 
       background: linear-gradient(145deg, #161b26, #10141d); 
       padding: 24px; border-radius: 20px; border: 1px solid var(--border);
-      position: relative; overflow: hidden; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative; cursor: pointer; transition: all 0.3s ease;
     }
-    .card:hover { transform: translateY(-5px); border-color: var(--accent); box-shadow: 0 10px 30px rgba(0, 255, 157, 0.1); }
-    .card span { color: var(--text-muted); font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
-    .card .value { font-size: 1.5rem; font-weight: 800; margin-top: 8px; display: block; }
+    .card:hover { transform: translateY(-5px); border-color: var(--accent); }
+    .card span { color: var(--text-muted); font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+    .card .value { font-size: 1.4rem; font-weight: 800; margin-top: 8px; display: block; }
 
-    /* Tooltip Dağılım */
+    /* KATMAN 2: KART ÜZERİNE GELİNCE AÇILAN TÜRLER (TOOLTIP) */
     .dist-tooltip {
-      display: none; position: absolute; top: 100%; left: 0; width: 100%;
-      background: #161b26; border: 1px solid var(--border); border-radius: 12px;
-      padding: 15px; z-index: 100; box-shadow: 0 20px 40px rgba(0,0,0,0.8);
+      visibility: hidden; opacity: 0; position: absolute; top: 105%; left: 0; width: 100%;
+      background: #161b26; border: 1px solid var(--accent); border-radius: 12px;
+      padding: 15px; z-index: 1000; box-shadow: 0 15px 40px rgba(0,0,0,0.9);
+      transition: all 0.2s ease;
     }
-    .card:hover .dist-tooltip { display: block; }
+    .card:hover .dist-tooltip { visibility: visible; opacity: 1; top: 100%; }
     .dist-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--glass); font-size: 0.8rem; }
+    .dist-row:hover { color: var(--accent); }
 
-    /* Tür Grupları */
-    .group-card { background: var(--card); border-radius: 20px; border: 1px solid var(--border); margin-bottom: 15px; transition: 0.3s; }
-    .group-header { 
-      padding: 20px 25px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;
-      background: rgba(255,255,255,0.02);
-    }
-    .group-title-area { display: flex; align-items: center; gap: 15px; }
-    .group-icon { font-size: 1.5rem; }
-    .group-name { font-weight: 800; font-size: 1.1rem; color: var(--accent); }
-
-    /* Varlık Listesi */
-    .asset-list { display: none; padding: 10px 20px; }
-    .group-card.open .asset-list { display: block; }
+    /* KATMAN 3: ALT LİSTE (TIKLANINCA AÇILAN) */
+    #detailSection { margin-top: 30px; display: none; }
+    .section-title { font-weight: 800; color: var(--accent); margin-bottom: 20px; text-transform: uppercase; font-size: 0.9rem; }
+    
+    .asset-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; }
     .asset-item { 
-      background: var(--glass); border-radius: 12px; margin-bottom: 8px; 
-      transition: 0.2s; border: 1px solid transparent;
+      background: var(--card); border: 1px solid var(--border); padding: 15px 20px;
+      border-radius: 15px; position: relative; cursor: default;
+      display: flex; justify-content: space-between; align-items: center;
     }
-    .asset-item:hover { background: rgba(255,255,255,0.07); border-color: var(--glass); }
-    .asset-main { padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
 
-    /* Detay Paneli */
-    .asset-detail { 
-      display: none; padding: 20px; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 15px;
-      border-top: 1px solid var(--glass); background: rgba(0,0,0,0.2); border-radius: 0 0 12px 12px;
+    /* KATMAN 4: VARLIK ÜZERİNE GELİNCE AÇILAN FİNANSAL DETAYLAR */
+    .asset-hover-detail {
+      visibility: hidden; opacity: 0; position: absolute; bottom: 110%; left: 50%;
+      transform: translateX(-50%); width: 280px; background: #1c222d;
+      border: 1px solid #3d4452; border-radius: 12px; padding: 15px;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.7); z-index: 2000;
+      pointer-events: none; transition: 0.2s ease;
     }
-    .asset-item.selected .asset-detail { display: grid; }
-    .detail-box { display: flex; flex-direction: column; }
-    .lbl { color: var(--text-muted); font-size: 0.65rem; font-weight: 600; margin-bottom: 4px; }
-    .val { font-weight: 700; font-size: 0.9rem; }
+    .asset-item:hover .asset-hover-detail { visibility: visible; opacity: 1; bottom: 105%; }
+    
+    .det-box { display: flex; flex-direction: column; }
+    .det-lbl { font-size: 0.6rem; color: var(--text-muted); text-transform: uppercase; }
+    .det-val { font-size: 0.85rem; font-weight: 700; color: #fff; }
 
-    /* Durum Renkleri */
+    /* YARDIMCI SINIFLAR */
     .up { color: var(--accent); } .down { color: var(--red); }
-    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
-    .vade-tag { 
-      background: rgba(255, 59, 92, 0.15); color: var(--red); padding: 4px 10px; 
-      border-radius: 8px; font-size: 0.7rem; font-weight: 800; animation: pulse 1.5s infinite;
-    }
+    .vade-blink { color: var(--red); font-weight: 800; font-size: 0.65rem; animation: blink 1s infinite; margin-left: 5px; }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
   </style>
 </head>
 <body>
 
 <div class="container">
   <div class="summary-grid" id="summaryGrid"></div>
-  <div id="groupGrid"></div>
+
+  <div id="detailSection">
+    <div id="detailTitle" class="section-title"></div>
+    <div id="assetGrid" class="asset-grid"></div>
+  </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script>
   const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQeTFovlKfvEp9sPepJb9SGxf_2AgMU7eEPTDCc6WWc0o1Z1AizX6K2mJlaWtcvSderiBym7cyhEdsC/pub?gid=0&single=true&output=csv";
-
-  const icons = { "Hisse": "📈", "Fon": "🏦", "Altın": "🪙", "Döviz": "💵", "Mevduat": "⏳", "Bono": "📜", "default": "💎" };
+  let globalData = [];
 
   function clean(v) {
     if (!v || v === "" || v.toString().includes('#N/A')) return 0;
     return parseFloat(v.toString().replace(/\./g, '').replace(',', '.').replace(/[^0-9.-]+/g, '')) || 0;
   }
 
-  function parseTRDate(dateStr) {
-    if (!dateStr || dateStr.length < 8 || dateStr.includes("2999")) return null;
-    let parts = dateStr.split('.');
-    return new Date(parts[2], parts[1] - 1, parts[0]);
-  }
-
   Papa.parse(csvUrl, {
     download: true,
     complete: function(res) {
-      try {
-        const data = res.data.slice(1).filter(r => r[0]).map(r => ({
-          ad: r[0], tur: r[1], alis: r[2], vade: r[3], adet: clean(r[4]),
-          aFiyat: clean(r[5]), yatirim: clean(r[6]), fiyat: clean(r[7]),
-          tutar: clean(r[8]), gKZ: clean(r[9]), hKZ: clean(r[10]), tKZ: clean(r[11])
-        }));
-        renderAll(data);
-      } catch (e) { console.error(e); }
+      globalData = res.data.slice(1).filter(r => r[0]).map(r => ({
+        ad: r[0], tur: r[1], alis: r[2], vade: r[3], adet: clean(r[4]),
+        aFiyat: clean(r[5]), yatirim: clean(r[6]), fiyat: clean(r[7]),
+        tutar: clean(r[8]), gKZ: clean(r[9]), hKZ: clean(r[10]), tKZ: clean(r[11])
+      }));
+      renderSummaries();
     }
   });
 
-  function renderAll(data) {
+  function renderSummaries() {
+    const totals = { yatirim:0, tutar:0, gKZ:0, hKZ:0, tKZ:0 };
     const groups = {};
-    const totals = { yatirim: 0, tutar: 0, gKZ: 0, hKZ: 0, tKZ: 0 };
-    const bugun = new Date();
 
-    data.forEach(item => {
-      if (!groups[item.tur]) groups[item.tur] = { name: item.tur, assets: [], yatirim: 0, tutar: 0, gKZ: 0, hKZ: 0, tKZ: 0 };
-      const g = groups[item.tur];
-      g.assets.push(item);
-      g.yatirim += item.yatirim; g.tutar += item.tutar;
-      g.gKZ += item.gKZ; g.hKZ += item.hKZ; g.tKZ += item.tKZ;
+    globalData.forEach(item => {
+      if (!groups[item.tur]) groups[item.tur] = { yatirim:0, tutar:0, gKZ:0, hKZ:0, tKZ:0 };
+      groups[item.tur].yatirim += item.yatirim;
+      groups[item.tur].tutar += item.tutar;
+      groups[item.tur].gKZ += item.gKZ;
+      groups[item.tur].hKZ += item.hKZ;
+      groups[item.tur].tKZ += item.tKZ;
+      
       totals.yatirim += item.yatirim; totals.tutar += item.tutar;
       totals.gKZ += item.gKZ; totals.hKZ += item.hKZ; totals.tKZ += item.tKZ;
     });
 
-    const sortedGroupNames = Object.keys(groups).sort((a,b) => groups[b].tutar - groups[a].tutar);
+    const keys = [
+      { id: 'yatirim', l: 'Yatırım' }, { id: 'tutar', l: 'Portföy Değeri' },
+      { id: 'gKZ', l: 'Günlük K/Z' }, { id: 'hKZ', l: 'Haftalık K/Z' }, { id: 'tKZ', l: 'Toplam K/Z' }
+    ];
 
-    // Üst Kartlar
-    const keys = [{id:'yatirim', l:'Yatırım'}, {id:'tutar', l:'Portföy Değeri'}, {id:'gKZ', l:'Günlük K/Z'}, {id:'hKZ', l:'Haftalık K/Z'}, {id:'tKZ', l:'Toplam K/Z'}];
     document.getElementById("summaryGrid").innerHTML = keys.map(k => {
-      let dist = [...sortedGroupNames].map(t => {
-        let v = groups[t][k.id];
-        let p = totals[k.id] ? ((v/totals[k.id])*100).toFixed(1) : 0;
-        return `<div class="dist-row"><span>${t}</span><span class="${v>=0?'up':'down'}">${v.toLocaleString('tr-TR')} ₺ (%${p})</span></div>`;
-      }).join('');
-      return `<div class="card"><span>${k.l}</span><span class="value ${k.id.includes('KZ')?(totals[k.id]>=0?'up':'down'):''}">${totals[k.id].toLocaleString('tr-TR')} ₺</span><div class="dist-tooltip">${dist}</div></div>`;
+      const sortedTur = Object.keys(groups).sort((a,b) => groups[b][k.id] - groups[a][k.id]);
+      
+      let tooltipHtml = sortedTur.map(t => `
+        <div class="dist-row" onclick="event.stopPropagation(); showDetails('${t}', '${k.l}')">
+          <span>${t}</span>
+          <span class="${groups[t][k.id]>=0?'up':'down'}">${groups[t][k.id].toLocaleString('tr-TR')} ₺</span>
+        </div>
+      `).join('');
+
+      return `
+        <div class="card" onclick="showDetails('TÜMÜ', '${k.l}')">
+          <span>${k.l}</span>
+          <span class="value ${k.id.includes('KZ')?(totals[k.id]>=0?'up':'down'):''}">${totals[k.id].toLocaleString('tr-TR')} ₺</span>
+          <div class="dist-tooltip">
+            <div style="font-size:0.6rem; color:var(--accent); margin-bottom:10px; text-align:center;">DETAY İÇİN TIKLA</div>
+            ${tooltipHtml}
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function showDetails(filterTur, contextLabel) {
+    const detailSection = document.getElementById("detailSection");
+    const assetGrid = document.getElementById("assetGrid");
+    const title = document.getElementById("detailTitle");
+    const bugun = new Date();
+
+    detailSection.style.display = "block";
+    title.innerText = `${filterTur} - ${contextLabel} DETAYLARI`;
+
+    let filtered = filterTur === 'TÜMÜ' ? globalData : globalData.filter(d => d.tur === filterTur);
+    filtered.sort((a,b) => b.tutar - a.tutar);
+
+    assetGrid.innerHTML = filtered.map(a => {
+      // Vade kontrolü
+      let tag = "";
+      if(a.vade && !a.vade.includes("2999")) {
+        let p = a.vade.split('.');
+        let vd = new Date(p[2], p[1]-1, p[0]);
+        let fark = Math.ceil((vd - bugun)/(1000*3600*24));
+        if(fark <= 7 && fark >= 0) tag = `<span class="vade-blink">! VADE ${fark} GÜN</span>`;
+      }
+
+      return `
+        <div class="asset-item">
+          <div>
+            <div style="font-weight:800; font-size:0.9rem;">${a.ad} ${tag}</div>
+            <div style="font-size:0.7rem; color:var(--text-muted);">${a.tur}</div>
+          </div>
+          <div style="text-align:right">
+            <div class="up" style="font-weight:800;">${a.tutar.toLocaleString('tr-TR')} ₺</div>
+            <div class="${a.tKZ>=0?'up':'down'}" style="font-size:0.75rem;">${a.tKZ.toLocaleString('tr-TR')} ₺</div>
+          </div>
+
+          <div class="asset-hover-detail">
+            <div class="det-box"><span class="det-lbl">Adet</span><span class="det-val">${a.adet.toLocaleString('tr-TR')}</span></div>
+            <div class="det-box"><span class="det-lbl">Alış Fiyat</span><span class="det-val">${a.aFiyat.toLocaleString('tr-TR')} ₺</span></div>
+            <div class="det-box"><span class="det-lbl">Güncel Fiyat</span><span class="det-val">${a.fiyat.toLocaleString('tr-TR')} ₺</span></div>
+            <div class="det-box"><span class="det-lbl">Yatırım</span><span class="det-val">${a.yatirim.toLocaleString('tr-TR')} ₺</span></div>
+            <div class="det-box"><span class="det-lbl">Haftalık K/Z</span><span class="det-val ${a.hKZ>=0?'up':'down'}">${a.hKZ.toLocaleString('tr-TR')} ₺</span></div>
+            <div class="det-box"><span class="det-lbl">Vade</span><span class="det-val">${a.vade}</span></div>
+          </div>
+        </div>
+      `;
     }).join('');
 
-    // Tür Grupları
-    document.getElementById("groupGrid").innerHTML = sortedGroupNames.map(t => {
-      const g = groups[t];
-      const assets = g.assets.sort((a,b) => b.tutar - a.tutar);
-      return `
-        <div class="group-card">
-          <div class="group-header" onclick="this.parentElement.classList.toggle('open')">
-            <div class="group-title-area">
-              <span class="group-icon">${icons[t] || icons.default}</span>
-              <span class="group-name">${t} (${assets.length})</span>
-            </div>
-            <span class="value">${g.tutar.toLocaleString('tr-TR')} ₺</span>
-          </div>
-          <div class="asset-list">
-            ${assets.map(a => {
-              let vDate = parseTRDate(a.vade);
-              let tag = "";
-              if(vDate) {
-                let d = Math.ceil((vDate - bugun)/(1000*3600*24));
-                if(d <= 7 && d >= 0) tag = `<span class="vade-tag">VADE: ${d} GÜN</span>`;
-              }
-              return `
-                <div class="asset-item" onclick="event.stopPropagation(); this.classList.toggle('selected')">
-                  <div class="asset-main">
-                    <div><span style="font-weight:700">${a.ad}</span>${tag}</div>
-                    <div style="text-align:right">
-                      <div class="val">${a.tutar.toLocaleString('tr-TR')} ₺</div>
-                      <div class="lbl ${a.tKZ>=0?'up':'down'}">${a.tKZ.toLocaleString('tr-TR')} ₺</div>
-                    </div>
-                  </div>
-                  <div class="asset-detail">
-                    <div class="detail-box"><span class="lbl">Vade/Alış</span><span class="val">${a.vade || a.alis}</span></div>
-                    <div class="detail-box"><span class="lbl">Adet</span><span class="val">${a.adet.toLocaleString('tr-TR')}</span></div>
-                    <div class="detail-box"><span class="lbl">Alış Fiyat</span><span class="val">${a.aFiyat.toLocaleString('tr-TR')} ₺</span></div>
-                    <div class="detail-box"><span class="lbl">Güncel Fiyat</span><span class="val">${a.fiyat.toLocaleString('tr-TR')} ₺</span></div>
-                    <div class="detail-box"><span class="lbl">Yatırım</span><span class="val">${a.yatirim.toLocaleString('tr-TR')} ₺</span></div>
-                    <div class="detail-box"><span class="lbl">Günlük K/Z</span><span class="val ${a.gKZ>=0?'up':'down'}">${a.gKZ.toLocaleString('tr-TR')} ₺</span></div>
-                  </div>
-                </div>`;
-            }).join('')}
-          </div>
-        </div>`;
-    }).join('');
+    // Sayfayı otomatik olarak detay alanına kaydır
+    detailSection.scrollIntoView({ behavior: 'smooth' });
   }
 </script>
 </body>
