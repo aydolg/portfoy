@@ -3,17 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Kişisel Portföy Yönetimi</title>
+  <title>Portföy Analiz Paneli</title>
   <style>
     :root {
-      --bg: #0b0e14;
-      --card: #151921;
-      --text: #f0f2f5;
+      --bg: #0b0e11;
+      --card: #181a20;
+      --header: #2b2f36;
+      --text: #e2e8f0;
       --text-muted: #848e9c;
-      --border: #2b2f36;
       --green: #0ecb81;
       --red: #f6465d;
       --accent: #f0b90b;
+      --border: #2d3339;
     }
 
     body {
@@ -21,46 +22,29 @@
       background: var(--bg);
       color: var(--text);
       margin: 0;
-      padding: 20px;
+      padding: 15px;
     }
 
-    .container { max-width: 1300px; margin: 0 auto; }
+    .container { max-width: 1400px; margin: 0 auto; }
 
-    /* Üst Özet Kartları */
+    /* Özet Kartlar */
     .summary-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
       gap: 15px;
       margin-bottom: 25px;
     }
 
-    .summary-card {
+    .card {
       background: var(--card);
       padding: 20px;
       border-radius: 12px;
       border: 1px solid var(--border);
-      border-left: 4px solid var(--accent);
+      position: relative;
     }
 
-    .summary-card span { display: block; color: var(--text-muted); font-size: 0.8rem; font-weight: 600; text-transform: uppercase; margin-bottom: 8px; }
-    .summary-card div { font-size: 1.6rem; font-weight: 700; font-variant-numeric: tabular-nums; }
-
-    /* Filtre ve Başlık */
-    .header-actions {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
-    }
-
-    select {
-      background: var(--card);
-      color: var(--text);
-      border: 1px solid var(--border);
-      padding: 10px 15px;
-      border-radius: 8px;
-      cursor: pointer;
-    }
+    .card span { display: block; color: var(--text-muted); font-size: 0.75rem; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; }
+    .card div { font-size: 1.5rem; font-weight: 700; font-variant-numeric: tabular-nums; }
 
     /* Tablo Tasarımı */
     .table-container {
@@ -73,170 +57,163 @@
     table { width: 100%; border-collapse: collapse; min-width: 1100px; }
     
     th {
-      background: #1e2329;
-      padding: 15px;
+      background: var(--header);
+      padding: 12px 15px;
       text-align: right;
-      font-size: 0.75rem;
+      font-size: 0.7rem;
       color: var(--text-muted);
-      text-transform: uppercase;
+      white-space: nowrap;
     }
 
     td {
-      padding: 15px;
+      padding: 12px 15px;
       border-bottom: 1px solid var(--border);
       text-align: right;
       font-variant-numeric: tabular-nums;
-      font-size: 0.9rem;
+      font-size: 0.85rem;
     }
 
     th:first-child, td:first-child { text-align: left; padding-left: 20px; }
     
-    .varlik-info { display: flex; flex-direction: column; }
-    .varlik-name { font-weight: 700; color: #fff; }
-    .varlik-date { font-size: 0.7rem; color: var(--text-muted); }
+    .symbol-box { display: flex; flex-direction: column; }
+    .sym-name { font-weight: 600; color: #fff; }
+    .sym-date { font-size: 0.7rem; color: var(--text-muted); }
 
-    .kar { color: var(--green); }
-    .zarar { color: var(--red); }
-    .na-value { color: var(--text-muted); font-style: italic; }
+    .up { color: var(--green); }
+    .down { color: var(--red); }
+    
+    tr:hover { background: #222630; }
 
-    tr:hover { background: #1e2329; }
+    select {
+      background: var(--card); color: var(--text); border: 1px solid var(--border);
+      padding: 8px 12px; border-radius: 8px; margin-bottom: 15px;
+    }
   </style>
 </head>
 <body>
 
-  <div class="container">
-    <div class="header-actions">
-      <h2 style="margin:0">📊 Portföy İzleme Paneli</h2>
-      <select id="turFilter">
-        <option value="all">Tüm Varlık Türleri</option>
-      </select>
-    </div>
-
-    <div class="summary-grid">
-      <div class="summary-card">
-        <span>Toplam Yatırım</span>
-        <div id="totalInvestment">0 ₺</div>
-      </div>
-      <div class="summary-card">
-        <span>Güncel Değer</span>
-        <div id="currentValue">0 ₺</div>
-      </div>
-      <div class="summary-card">
-        <span>Toplam Kâr/Zarar</span>
-        <div id="totalProfit">0 ₺</div>
-      </div>
-    </div>
-
-    <div class="table-container">
-      <table>
-        <thead>
-          <tr>
-            <th>Varlık / Tarih</th>
-            <th>Tür</th>
-            <th>Adet</th>
-            <th>Alış Fiyatı</th>
-            <th>Yatırım Tutarı</th>
-            <th>Güncel Fiyat</th>
-            <th>Güncel Tutar</th>
-            <th>Kâr / Zarar</th>
-          </tr>
-        </thead>
-        <tbody id="tabloGövde"></tbody>
-      </table>
-    </div>
+<div class="container">
+  <div class="summary-grid">
+    <div class="card"><span>Toplam Yatırım</span><div id="totInv">0 ₺</div></div>
+    <div class="card"><span>Güncel Portföy</span><div id="totCur">0 ₺</div></div>
+    <div class="card"><span>Günlük K/Z</span><div id="totDaily">0 ₺</div></div>
+    <div class="card"><span>Haftalık K/Z</span><div id="totWeekly">0 ₺</div></div>
+    <div class="card"><span>Toplam K/Z</span><div id="totKZ">0 ₺</div></div>
   </div>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-  <script>
-    // Sizin Google Sheets CSV URL'niz
-    const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQeTFovlKfvEp9sPepJb9SGxf_2AgMU7eEPTDCc6WWc0o1Z1AizX6K2mJlaWtcvSderiBym7cyhEdsC/pub?gid=0&single=true&output=csv";
-    
-    let tumVeriler = [];
+  <select id="filterType"><option value="all">Tüm Varlıklar</option></select>
 
-    // Sayı Temizleme (Türkçe formatı destekler: 1.250,50 -> 1250.50)
-    function temizleSayi(deger) {
-      if (!deger || deger.includes('#N/A')) return null;
-      let temiz = deger.toString().replace(/\./g, '').replace(',', '.').replace(/[^0-9.-]+/g, '');
-      return parseFloat(temiz) || 0;
-    }
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Varlık / Tarih</th>
+          <th>Tür</th>
+          <th>Adet</th>
+          <th>Alış</th>
+          <th>Yatırım</th>
+          <th>Fiyat</th>
+          <th>Tutar</th>
+          <th>Günlük K/Z</th>
+          <th>Haftalık K/Z</th>
+          <th>Toplam K/Z</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+</div>
 
-    function tabloyuCiz(filtre = "all") {
-      const gövde = document.getElementById("tabloGövde");
-      gövde.innerHTML = "";
-      
-      const filtrelenmis = filtre === "all" ? tumVeriler : tumVeriler.filter(v => v.tur === filtre);
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script>
+  const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQeTFovlKfvEp9sPepJb9SGxf_2AgMU7eEPTDCc6WWc0o1Z1AizX6K2mJlaWtcvSderiBym7cyhEdsC/pub?gid=0&single=true&output=csv";
+  let allData = [];
 
-      let toplamYatirim = 0;
-      let toplamGuncel = 0;
-      let toplamKZ = 0;
+  function clean(val) {
+    if (!val || val === "" || val.includes('#N/A')) return 0;
+    // Noktayı siler, virgülü noktaya çevirir (1.250,50 -> 1250.50)
+    let num = val.toString().replace(/\./g, '').replace(',', '.').replace(/[^0-9.-]+/g, '');
+    return parseFloat(num) || 0;
+  }
 
-      filtrelenmis.forEach(v => {
-        toplamYatirim += (v.yatirimTutari || 0);
-        toplamGuncel += (v.guncelTutar || 0);
-        toplamKZ += (v.kz || 0);
+  function updateDisplay(filter = "all") {
+    const tbody = document.getElementById("tableBody");
+    tbody.innerHTML = "";
+    const data = filter === "all" ? allData : allData.filter(d => d.tur === filter);
 
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td>
-            <div class="varlik-info">
-              <span class="varlik-name">${v.ad}</span>
-              <span class="varlik-date">${v.tarih}</span>
-            </div>
-          </td>
-          <td><small>${v.tur}</small></td>
-          <td>${v.adet ? v.adet.toLocaleString('tr-TR') : '-'}</td>
-          <td>${v.alisFiyati ? v.alisFiyati.toLocaleString('tr-TR', {minimumFractionDigits:2}) + ' ₺' : '-'}</td>
-          <td>${v.yatirimTutari ? v.yatirimTutari.toLocaleString('tr-TR') + ' ₺' : '-'}</td>
-          <td style="font-weight:600">${v.guncelFiyat ? v.guncelFiyat.toLocaleString('tr-TR', {minimumFractionDigits:4}) : '<span class="na-value">Veri Yok</span>'}</td>
-          <td style="font-weight:600">${v.guncelTutar ? v.guncelTutar.toLocaleString('tr-TR') + ' ₺' : '-'}</td>
-          <td class="${v.kz >= 0 ? 'kar' : 'zarar'}" style="font-weight:700">
-            ${v.kz !== null ? v.kz.toLocaleString('tr-TR') + ' ₺' : '-'}
-          </td>
-        `;
-        gövde.appendChild(tr);
-      });
+    let sums = { inv: 0, cur: 0, d: 0, w: 0, kz: 0 };
 
-      // Özet Kartlarını Güncelle
-      document.getElementById("totalInvestment").textContent = toplamYatirim.toLocaleString('tr-TR') + " ₺";
-      document.getElementById("currentValue").textContent = toplamGuncel.toLocaleString('tr-TR') + " ₺";
-      document.getElementById("totalProfit").textContent = toplamKZ.toLocaleString('tr-TR') + " ₺";
-      document.getElementById("totalProfit").className = toplamKZ >= 0 ? 'kar' : 'zarar';
-    }
+    data.forEach(item => {
+      sums.inv += item.yatirim;
+      sums.cur += item.tutar;
+      sums.d += item.gunlukKZ;
+      sums.w += item.haftalikKZ;
+      sums.kz += item.toplamKZ;
 
-    Papa.parse(csvUrl, {
-      download: true,
-      header: false,
-      complete: function(results) {
-        const satirlar = results.data.slice(1); // Başlığı atla
-        
-        tumVeriler = satirlar
-          .filter(s => s[0] && s[0].trim() !== "")
-          .map(s => ({
-            ad: s[0],
-            tur: s[1],
-            adet: temizleSayi(s[2]),
-            alisFiyati: temizleSayi(s[3]),
-            yatirimTutari: temizleSayi(s[4]),
-            guncelFiyat: temizleSayi(s[5]),
-            guncelTutar: temizleSayi(s[6]),
-            kz: temizleSayi(s[7]),
-            tarih: s[8] || ''
-          }));
-
-        // Tür Filtresini Doldur
-        const turler = [...new Set(tumVeriler.map(v => v.tur))].sort();
-        const select = document.getElementById("turFilter");
-        turler.forEach(t => {
-          const opt = document.createElement("option");
-          opt.value = opt.textContent = t;
-          select.appendChild(opt);
-        });
-
-        tabloyuCiz();
-      }
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td><div class="symbol-box"><span class="sym-name">${item.ad}</span><span class="sym-date">${item.tarih}</span></div></td>
+        <td><small>${item.tur}</small></td>
+        <td>${item.adet.toLocaleString('tr-TR')}</td>
+        <td>${item.alis.toLocaleString('tr-TR', {minimumFractionDigits:2})}</td>
+        <td>${item.yatirim.toLocaleString('tr-TR')} ₺</td>
+        <td style="font-weight:bold">${item.fiyat.toLocaleString('tr-TR', {minimumFractionDigits:2})}</td>
+        <td style="font-weight:bold">${item.tutar.toLocaleString('tr-TR')} ₺</td>
+        <td class="${item.gunlukKZ >= 0 ? 'up' : 'down'}">${item.gunlukKZ.toLocaleString('tr-TR')} ₺</td>
+        <td class="${item.haftalikKZ >= 0 ? 'up' : 'down'}">${item.haftalikKZ.toLocaleString('tr-TR')} ₺</td>
+        <td class="${item.toplamKZ >= 0 ? 'up' : 'down'}" style="font-weight:bold">${item.toplamKZ.toLocaleString('tr-TR')} ₺</td>
+      `;
+      tbody.appendChild(tr);
     });
 
-    document.getElementById("turFilter").addEventListener("change", (e) => tabloyuCiz(e.target.value));
-  </script>
+    // Kartları Güncelle
+    const setVal = (id, val, color = true) => {
+      const el = document.getElementById(id);
+      el.textContent = val.toLocaleString('tr-TR') + " ₺";
+      if(color) el.className = val >= 0 ? 'up' : 'down';
+    };
+
+    setVal("totInv", sums.inv, false);
+    setVal("totCur", sums.cur, false);
+    setVal("totDaily", sums.d);
+    setVal("totWeekly", sums.w);
+    setVal("totKZ", sums.kz);
+  }
+
+  Papa.parse(csvUrl, {
+    download: true,
+    complete: function(res) {
+      allData = res.data.slice(1) // Başlığı atla
+        .filter(r => r[0] && r[0].trim() !== "")
+        .map(r => ({
+          ad: r[0],
+          tur: r[1],
+          tarih: r[2],
+          adet: clean(r[3]),
+          alis: clean(r[4]),
+          yatirim: clean(r[5]),
+          fiyat: clean(r[6]),
+          tutar: clean(r[7]),
+          gunlukKZ: clean(r[8]),
+          haftalikKZ: clean(r[9]),
+          toplamKZ: clean(r[10])
+        }));
+
+      // Filtre Listesi
+      const types = [...new Set(allData.map(d => d.tur))].sort();
+      const sel = document.getElementById("filterType");
+      types.forEach(t => {
+        const o = document.createElement("option");
+        o.value = o.textContent = t;
+        sel.appendChild(o);
+      });
+
+      updateDisplay();
+    }
+  });
+
+  document.getElementById("filterType").addEventListener("change", (e) => updateDisplay(e.target.value));
+</script>
+
 </body>
 </html>
