@@ -2,76 +2,72 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Hiyerarşik Portföy Terminali</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Pro Portföy Terminali</title>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
   <style>
     :root {
       --bg: #05070a; --card: #10141d; --accent: #00ff9d; --red: #ff3b5c; 
       --text: #ffffff; --text-muted: #8a919e; --border: #1f2633;
-      --glass: rgba(255, 255, 255, 0.05);
     }
 
     body { 
       font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); 
-      color: var(--text); margin: 0; padding: 20px;
+      color: var(--text); margin: 0; padding: 15px; overflow-x: hidden;
     }
     
     .container { max-width: 1200px; margin: 0 auto; }
 
     /* KATMAN 1: ANA ÖZET KARTLAR */
-    .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 40px; }
+    .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 30px; }
     
     .card { 
       background: linear-gradient(145deg, #161b26, #10141d); 
-      padding: 24px; border-radius: 20px; border: 1px solid var(--border);
-      position: relative; cursor: pointer; transition: all 0.3s ease;
+      padding: 15px; border-radius: 16px; border: 1px solid var(--border);
+      position: relative; cursor: pointer; transition: 0.3s;
     }
-    .card:hover { transform: translateY(-5px); border-color: var(--accent); }
-    .card span { color: var(--text-muted); font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
-    .card .value { font-size: 1.4rem; font-weight: 800; margin-top: 8px; display: block; }
+    .card:active { transform: scale(0.98); }
+    .card span { color: var(--text-muted); font-size: 0.65rem; font-weight: 600; text-transform: uppercase; }
+    .card .value { font-size: 1.1rem; font-weight: 800; margin-top: 5px; display: block; }
 
-    /* KATMAN 2: KART ÜZERİNE GELİNCE AÇILAN TÜRLER (TOOLTIP) */
-    .dist-tooltip {
-      visibility: hidden; opacity: 0; position: absolute; top: 105%; left: 0; width: 100%;
-      background: #161b26; border: 1px solid var(--accent); border-radius: 12px;
-      padding: 15px; z-index: 1000; box-shadow: 0 15px 40px rgba(0,0,0,0.9);
-      transition: all 0.2s ease;
+    /* KATMAN 2: KART DETAYI (TÜRLER) */
+    .dist-container {
+      display: none; background: #161b26; border: 1px solid var(--accent);
+      border-radius: 12px; padding: 10px; margin-top: 10px;
     }
-    .card:hover .dist-tooltip { visibility: visible; opacity: 1; top: 100%; }
-    .dist-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--glass); font-size: 0.8rem; }
-    .dist-row:hover { color: var(--accent); }
+    .card.active .dist-container { display: block; }
+    .dist-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.8rem; }
 
-    /* KATMAN 3: ALT LİSTE (TIKLANINCA AÇILAN) */
-    #detailSection { margin-top: 30px; display: none; }
-    .section-title { font-weight: 800; color: var(--accent); margin-bottom: 20px; text-transform: uppercase; font-size: 0.9rem; }
+    /* KATMAN 3: VARLIK LİSTESİ */
+    #detailSection { margin-top: 25px; display: none; padding-bottom: 50px; }
+    .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+    .section-title { font-weight: 800; color: var(--accent); font-size: 0.8rem; text-transform: uppercase; }
     
-    .asset-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; }
+    .asset-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+    
     .asset-item { 
-      background: var(--card); border: 1px solid var(--border); padding: 15px 20px;
-      border-radius: 15px; position: relative; cursor: default;
-      display: flex; justify-content: space-between; align-items: center;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; overflow: hidden; transition: 0.3s;
     }
 
-    /* KATMAN 4: VARLIK ÜZERİNE GELİNCE AÇILAN FİNANSAL DETAYLAR */
-    .asset-hover-detail {
-      visibility: hidden; opacity: 0; position: absolute; bottom: 110%; left: 50%;
-      transform: translateX(-50%); width: 280px; background: #1c222d;
-      border: 1px solid #3d4452; border-radius: 12px; padding: 15px;
-      display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.7); z-index: 2000;
-      pointer-events: none; transition: 0.2s ease;
+    .asset-main { padding: 15px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+
+    /* KATMAN 4: VARLIK DETAYLARI (MOBİL UYUMLU) */
+    .asset-expand-detail {
+      display: none; padding: 15px; background: rgba(0,0,0,0.3);
+      grid-template-columns: 1fr 1fr; gap: 15px; border-top: 1px solid var(--border);
     }
-    .asset-item:hover .asset-hover-detail { visibility: visible; opacity: 1; bottom: 105%; }
+    .asset-item.open .asset-expand-detail { display: grid; }
     
     .det-box { display: flex; flex-direction: column; }
-    .det-lbl { font-size: 0.6rem; color: var(--text-muted); text-transform: uppercase; }
-    .det-val { font-size: 0.85rem; font-weight: 700; color: #fff; }
+    .det-lbl { font-size: 0.6rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 2px; }
+    .det-val { font-size: 0.8rem; font-weight: 700; color: #fff; }
 
-    /* YARDIMCI SINIFLAR */
     .up { color: var(--accent); } .down { color: var(--red); }
-    .vade-blink { color: var(--red); font-weight: 800; font-size: 0.65rem; animation: blink 1s infinite; margin-left: 5px; }
+    .vade-blink { color: var(--red); font-weight: 800; font-size: 0.65rem; animation: blink 1s infinite; }
     @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+    
+    .close-btn { color: var(--text-muted); font-size: 0.7rem; cursor: pointer; }
   </style>
 </head>
 <body>
@@ -80,7 +76,10 @@
   <div class="summary-grid" id="summaryGrid"></div>
 
   <div id="detailSection">
-    <div id="detailTitle" class="section-title"></div>
+    <div class="section-header">
+      <div id="detailTitle" class="section-title"></div>
+      <div class="close-btn" onclick="document.getElementById('detailSection').style.display='none'">[Kapat X]</div>
+    </div>
     <div id="assetGrid" class="asset-grid"></div>
   </div>
 </div>
@@ -118,86 +117,82 @@
       groups[item.tur].gKZ += item.gKZ;
       groups[item.tur].hKZ += item.hKZ;
       groups[item.tur].tKZ += item.tKZ;
-      
       totals.yatirim += item.yatirim; totals.tutar += item.tutar;
       totals.gKZ += item.gKZ; totals.hKZ += item.hKZ; totals.tKZ += item.tKZ;
     });
 
-    const keys = [
-      { id: 'yatirim', l: 'Yatırım' }, { id: 'tutar', l: 'Portföy Değeri' },
-      { id: 'gKZ', l: 'Günlük K/Z' }, { id: 'hKZ', l: 'Haftalık K/Z' }, { id: 'tKZ', l: 'Toplam K/Z' }
-    ];
+    const keys = [{id:'yatirim', l:'Yatırım'}, {id:'tutar', l:'Portföy'}, {id:'gKZ', l:'Günlük'}, {id:'hKZ', l:'Haftalık'}, {id:'tKZ', l:'Toplam'}];
 
     document.getElementById("summaryGrid").innerHTML = keys.map(k => {
       const sortedTur = Object.keys(groups).sort((a,b) => groups[b][k.id] - groups[a][k.id]);
-      
-      let tooltipHtml = sortedTur.map(t => `
+      let distHtml = sortedTur.map(t => `
         <div class="dist-row" onclick="event.stopPropagation(); showDetails('${t}', '${k.l}')">
           <span>${t}</span>
           <span class="${groups[t][k.id]>=0?'up':'down'}">${groups[t][k.id].toLocaleString('tr-TR')} ₺</span>
-        </div>
-      `).join('');
+        </div>`).join('');
 
       return `
-        <div class="card" onclick="showDetails('TÜMÜ', '${k.l}')">
+        <div class="card" onclick="toggleCard(this)">
           <span>${k.l}</span>
           <span class="value ${k.id.includes('KZ')?(totals[k.id]>=0?'up':'down'):''}">${totals[k.id].toLocaleString('tr-TR')} ₺</span>
-          <div class="dist-tooltip">
-            <div style="font-size:0.6rem; color:var(--accent); margin-bottom:10px; text-align:center;">DETAY İÇİN TIKLA</div>
-            ${tooltipHtml}
+          <div class="dist-container">
+            <div style="font-size:0.55rem; color:var(--accent); margin-bottom:8px; text-align:center;">TÜRE TIKLA VE DETAYI GÖR</div>
+            ${distHtml}
           </div>
-        </div>
-      `;
+        </div>`;
     }).join('');
+  }
+
+  function toggleCard(el) {
+    const isActive = el.classList.contains('active');
+    document.querySelectorAll('.card').forEach(c => c.classList.remove('active'));
+    if (!isActive) el.classList.add('active');
   }
 
   function showDetails(filterTur, contextLabel) {
     const detailSection = document.getElementById("detailSection");
     const assetGrid = document.getElementById("assetGrid");
-    const title = document.getElementById("detailTitle");
-    const bugun = new Date();
-
+    document.getElementById("detailTitle").innerText = `${filterTur} DETAYI`;
+    
     detailSection.style.display = "block";
-    title.innerText = `${filterTur} - ${contextLabel} DETAYLARI`;
-
-    let filtered = filterTur === 'TÜMÜ' ? globalData : globalData.filter(d => d.tur === filterTur);
-    filtered.sort((a,b) => b.tutar - a.tutar);
+    let filtered = globalData.filter(d => d.tur === filterTur).sort((a,b) => b.tutar - a.tutar);
 
     assetGrid.innerHTML = filtered.map(a => {
-      // Vade kontrolü
       let tag = "";
       if(a.vade && !a.vade.includes("2999")) {
         let p = a.vade.split('.');
-        let vd = new Date(p[2], p[1]-1, p[0]);
-        let fark = Math.ceil((vd - bugun)/(1000*3600*24));
-        if(fark <= 7 && fark >= 0) tag = `<span class="vade-blink">! VADE ${fark} GÜN</span>`;
+        let fark = Math.ceil((new Date(p[2], p[1]-1, p[0]) - new Date())/(1000*3600*24));
+        if(fark <= 7 && fark >= 0) tag = `<span class="vade-blink">! VADE ${fark}G</span>`;
       }
 
       return `
-        <div class="asset-item">
-          <div>
-            <div style="font-weight:800; font-size:0.9rem;">${a.ad} ${tag}</div>
-            <div style="font-size:0.7rem; color:var(--text-muted);">${a.tur}</div>
+        <div class="asset-item" onclick="toggleAsset(this)">
+          <div class="asset-main">
+            <div><div style="font-weight:800; font-size:0.85rem;">${a.ad}</div>${tag}</div>
+            <div style="text-align:right">
+              <div class="up" style="font-weight:800; font-size:0.85rem;">${a.tutar.toLocaleString('tr-TR')} ₺</div>
+              <div class="${a.tKZ>=0?'up':'down'}" style="font-size:0.65rem;">${a.tKZ.toLocaleString('tr-TR')} ₺</div>
+            </div>
           </div>
-          <div style="text-align:right">
-            <div class="up" style="font-weight:800;">${a.tutar.toLocaleString('tr-TR')} ₺</div>
-            <div class="${a.tKZ>=0?'up':'down'}" style="font-size:0.75rem;">${a.tKZ.toLocaleString('tr-TR')} ₺</div>
-          </div>
-
-          <div class="asset-hover-detail">
+          <div class="asset-expand-detail">
             <div class="det-box"><span class="det-lbl">Adet</span><span class="det-val">${a.adet.toLocaleString('tr-TR')}</span></div>
-            <div class="det-box"><span class="det-lbl">Alış Fiyat</span><span class="det-val">${a.aFiyat.toLocaleString('tr-TR')} ₺</span></div>
-            <div class="det-box"><span class="det-lbl">Güncel Fiyat</span><span class="det-val">${a.fiyat.toLocaleString('tr-TR')} ₺</span></div>
-            <div class="det-box"><span class="det-lbl">Yatırım</span><span class="det-val">${a.yatirim.toLocaleString('tr-TR')} ₺</span></div>
+            <div class="det-box"><span class="det-lbl">Yatırım Tutarı</span><span class="det-val">${a.yatirim.toLocaleString('tr-TR')} ₺</span></div>
+            <div class="det-box"><span class="det-lbl">Güncel Tutar</span><span class="det-val up">${a.tutar.toLocaleString('tr-TR')} ₺</span></div>
+            <div class="det-box"><span class="det-lbl">Alış / Güncel</span><span class="det-val">${a.aFiyat} / ${a.fiyat} ₺</span></div>
+            <div class="det-box"><span class="det-lbl">Günlük K/Z</span><span class="det-val ${a.gKZ>=0?'up':'down'}">${a.gKZ.toLocaleString('tr-TR')} ₺</span></div>
             <div class="det-box"><span class="det-lbl">Haftalık K/Z</span><span class="det-val ${a.hKZ>=0?'up':'down'}">${a.hKZ.toLocaleString('tr-TR')} ₺</span></div>
+            <div class="det-box"><span class="det-lbl">Toplam K/Z</span><span class="det-val bold ${a.tKZ>=0?'up':'down'}">${a.tKZ.toLocaleString('tr-TR')} ₺</span></div>
             <div class="det-box"><span class="det-lbl">Vade</span><span class="det-val">${a.vade}</span></div>
           </div>
-        </div>
-      `;
+        </div>`;
     }).join('');
-
-    // Sayfayı otomatik olarak detay alanına kaydır
     detailSection.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function toggleAsset(el) {
+    const isOpen = el.classList.contains('open');
+    document.querySelectorAll('.asset-item').forEach(i => i.classList.remove('open'));
+    if (!isOpen) el.classList.add('open');
   }
 </script>
 </body>
