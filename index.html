@@ -92,7 +92,7 @@
     const totals = { yatirim: 0, tutar: 0, gKZ: 0, hKZ: 0, tKZ: 0 };
 
     data.forEach(item => {
-      if (!groups[item.tur]) groups[item.tur] = { assets: [], yatirim: 0, tutar: 0, gKZ: 0, hKZ: 0, tKZ: 0 };
+      if (!groups[item.tur]) groups[item.tur] = { type: item.tur, assets: [], yatirim: 0, tutar: 0, gKZ: 0, hKZ: 0, tKZ: 0 };
       const g = groups[item.tur];
       g.assets.push(item);
       g.yatirim += item.yatirim; g.tutar += item.tutar;
@@ -101,7 +101,10 @@
       totals.gKZ += item.gKZ; totals.hKZ += item.hKZ; totals.tKZ += item.tKZ;
     });
 
-    // 1. ÜST ÖZET KARTLAR (Dağılım Balonlu)
+    // Grupları ve içindeki varlıkları TUTARA göre büyükten küçüğe sırala
+    const sortedGroupKeys = Object.keys(groups).sort((a, b) => groups[b].tutar - groups[a].tutar);
+
+    // 1. ÜST ÖZET KARTLAR
     const sGrid = document.getElementById("summaryGrid");
     const summaryKeys = [
       { id: 'yatirim', label: 'Yatırım' }, { id: 'tutar', label: 'Güncel' },
@@ -109,7 +112,8 @@
     ];
     
     sGrid.innerHTML = summaryKeys.map(k => {
-      let distRows = Object.keys(groups).map(tur => {
+      // Tooltip içindeki türleri de o başlığın değerine göre sırala
+      let distRows = [...sortedGroupKeys].sort((a, b) => Math.abs(groups[b][k.id]) - Math.abs(groups[a][k.id])).map(tur => {
         const val = groups[tur][k.id];
         const perc = totals[k.id] !== 0 ? ((val / totals[k.id]) * 100).toFixed(1) : 0;
         return `<div class="dist-row"><span>${tur}</span><span>${val.toLocaleString('tr-TR')} ₺ <strong>(%${perc})</strong></span></div>`;
@@ -130,10 +134,13 @@
       `;
     }).join('');
 
-    // 2. TÜRLERE GÖRE GRUPLAR VE ÜRÜN DETAYLARI
+    // 2. TÜRLERE GÖRE GRUPLAR
     const gGrid = document.getElementById("groupGrid");
-    gGrid.innerHTML = Object.keys(groups).map(tur => {
+    gGrid.innerHTML = sortedGroupKeys.map(tur => {
       const g = groups[tur];
+      // Grup içindeki varlıkları da tutara göre sırala
+      const sortedAssets = g.assets.sort((a, b) => b.tutar - a.tutar);
+
       return `
         <div class="group-card">
           <div class="group-header" onclick="this.parentElement.classList.toggle('open')">
@@ -141,7 +148,7 @@
             <span class="bold">${g.tutar.toLocaleString('tr-TR')} ₺</span>
           </div>
           <div class="asset-list">
-            ${g.assets.map(a => `
+            ${sortedAssets.map(a => `
               <div class="asset-item" onclick="event.stopPropagation(); this.classList.toggle('selected')">
                 <div class="asset-main">
                   <span>${a.ad}</span>
