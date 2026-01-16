@@ -3,64 +3,46 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <title>Elite Portföy Terminali</title>
+  <title>Elite Portföy Pro</title>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #030508; --card-bg: rgba(16, 20, 29, 0.8);
+      --bg: #030508; --card-bg: rgba(16, 20, 29, 0.85);
       --accent: #00ff9d; --red: #ff3b5c; --text: #ffffff;
       --text-muted: #94a3b8; --border: rgba(255, 255, 255, 0.08);
     }
-
-    body { 
-      font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); 
-      color: var(--text); margin: 0; padding: 12px; overflow-x: hidden;
-    }
-    
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 12px; overflow-x: hidden; }
     .container { max-width: 1200px; margin: 0 auto; }
 
-    /* KART TASARIMI */
+    /* KARTLAR */
     .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
     @media (max-width: 600px) { .summary-grid { grid-template-columns: repeat(2, 1fr); } }
-
-    .card { 
-      background: var(--card-bg); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-      padding: 15px 12px; border-radius: 18px; border: 1px solid var(--border);
-      cursor: pointer; position: relative; transition: 0.3s;
-    }
-    .card::before {
-      content: ""; position: absolute; left: 0; top: 25%; height: 50%; width: 4px;
-      border-radius: 0 4px 4px 0; background: var(--text-muted);
-    }
+    .card { background: var(--card-bg); backdrop-filter: blur(10px); padding: 15px 12px; border-radius: 18px; border: 1px solid var(--border); cursor: pointer; position: relative; transition: 0.3s; }
+    .card::before { content: ""; position: absolute; left: 0; top: 25%; height: 50%; width: 4px; border-radius: 0 4px 4px 0; background: var(--text-muted); }
     .card.up-card::before { background: var(--accent); box-shadow: 0 0 10px var(--accent); }
     .card.down-card::before { background: var(--red); box-shadow: 0 0 10px var(--red); }
-    .card.active { border-color: var(--accent); }
-
     .card span { color: var(--text-muted); font-size: 0.6rem; font-weight: 700; text-transform: uppercase; display: block; margin-bottom: 4px; }
     .card .value { font-size: 0.95rem; font-weight: 800; }
+    .card.active { border-color: var(--accent); }
 
-    /* TÜRLER DETAYI */
-    .dist-container {
-      display: none; background: #0b0e11; border: 1px solid var(--border);
-      border-radius: 14px; padding: 10px; margin-top: 10px; text-align: left;
-    }
-    .card.active .dist-container { display: block; position: absolute; left: 0; right: 0; z-index: 100; width: 100%; box-sizing: border-box; }
+    /* TÜRLER LİSTESİ */
+    .dist-container { display: none; background: #0b0e11; border: 1px solid var(--border); border-radius: 14px; padding: 10px; margin-top: 10px; position: absolute; left: 0; right: 0; z-index: 100; width: 100%; box-sizing: border-box; }
+    .card.active .dist-container { display: block; }
     .dist-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.7rem; }
 
-    /* AKICI TICKER */
-    .ticker-wrap {
-      width: 100%; overflow: hidden; background: rgba(16, 20, 29, 0.5); 
-      border-radius: 10px; border: 1px solid var(--border);
-      padding: 12px 0; margin-bottom: 20px;
-    }
-    .ticker { display: flex; white-space: nowrap; animation: ticker-move 20s linear infinite; }
+    /* TICKER */
+    .ticker-wrap { width: 100%; overflow: hidden; background: rgba(16, 20, 29, 0.5); border-radius: 10px; border: 1px solid var(--border); padding: 12px 0; margin-bottom: 20px; }
+    .ticker { display: flex; white-space: nowrap; animation: ticker-move 25s linear infinite; }
     .ticker-item { padding: 0 30px; font-size: 0.75rem; font-weight: 600; flex-shrink: 0; }
     @keyframes ticker-move { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
 
-    /* VARLIK LİSTESİ */
+    /* VARLIK DETAYLARI (10 PARAMETRE) */
     .asset-item { background: var(--card-bg); border: 1px solid var(--border); border-radius: 14px; margin-bottom: 8px; }
     .asset-main { padding: 14px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
-    .asset-expand { display: none; padding: 15px; grid-template-columns: 1fr 1fr; gap: 10px; border-top: 1px solid var(--border); background: rgba(0,0,0,0.2); }
+    .asset-expand { display: none; padding: 15px; grid-template-columns: repeat(2, 1fr); gap: 12px; border-top: 1px solid var(--border); background: rgba(0,0,0,0.3); }
+    .det-box { display: flex; flex-direction: column; }
+    .det-label { font-size: 0.55rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 2px; }
+    .det-value { font-size: 0.8rem; font-weight: 700; }
     
     .up { color: var(--accent); } .down { color: var(--red); }
   </style>
@@ -69,15 +51,12 @@
 
 <div class="container">
   <div class="summary-grid" id="summaryGrid"></div>
+  <div class="ticker-wrap"><div class="ticker" id="tickerContent">Yükleniyor...</div></div>
 
-  <div class="ticker-wrap">
-    <div class="ticker" id="tickerContent">Yükleniyor...</div>
-  </div>
-
-  <div id="detailSection" style="display:none;">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-      <div id="detailTitle" style="font-weight:800; color:var(--accent); font-size:0.75rem;">DETAYLAR</div>
-      <div onclick="closeAll()" style="color:var(--red); font-size:0.65rem; border:1px solid var(--red); padding:4px 8px; border-radius:6px; cursor:pointer;">KAPAT X</div>
+  <div id="detailSection" style="display:none; margin-bottom:100px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; padding:0 5px;">
+      <div id="detailTitle" style="font-weight:800; color:var(--accent); font-size:0.8rem;">VARLIKLAR</div>
+      <div onclick="closeAll()" style="color:var(--red); font-size:0.7rem; font-weight:bold; cursor:pointer;">KAPAT X</div>
     </div>
     <div id="assetGrid"></div>
   </div>
@@ -94,11 +73,21 @@
     return parseFloat(num) || 0;
   }
 
+  function getDaysBetween(dateStr) {
+    if (!dateStr || dateStr === "0") return "-";
+    try {
+      let parts = dateStr.split('.');
+      let d = new Date(parts[2], parts[1]-1, parts[0]);
+      let diff = Math.floor((new Date() - d) / (1000 * 60 * 60 * 24));
+      return diff >= 0 ? diff + " Gün" : "-";
+    } catch(e) { return "-"; }
+  }
+
   Papa.parse(csvUrl, {
     download: true,
     complete: function(res) {
       globalData = res.data.slice(1).filter(r => r[0] && r[0] !== "Varlık").map(r => ({
-        ad: r[0], tur: r[1], alis: r[2], vade: r[3], adet: clean(r[4]),
+        ad: r[0], tur: r[1], alisTarihi: r[2], vade: r[3], adet: clean(r[4]),
         aFiyat: clean(r[5]), yatirim: clean(r[6]), fiyat: clean(r[7]),
         tutar: clean(r[8]), gKZ: clean(r[9]), hKZ: clean(r[10]), aKZ: clean(r[11]), tKZ: clean(r[12])
       }));
@@ -112,15 +101,7 @@
     const groups = {};
     globalData.forEach(item => {
       if (!groups[item.tur]) groups[item.tur] = { yatirim:0, tutar:0, tKZ:0, gKZ:0, hKZ:0, aKZ:0 };
-      groups[item.tur].yatirim += item.yatirim;
-      groups[item.tur].tutar += item.tutar;
-      groups[item.tur].tKZ += item.tKZ;
-      groups[item.tur].gKZ += item.gKZ;
-      groups[item.tur].hKZ += item.hKZ;
-      groups[item.tur].aKZ += item.aKZ;
-      totals.yatirim += item.yatirim; totals.tutar += item.tutar;
-      totals.tKZ += item.tKZ; totals.gKZ += item.gKZ; 
-      totals.hKZ += item.hKZ; totals.aKZ += item.aKZ;
+      Object.keys(totals).forEach(key => { groups[item.tur][key] += item[key]; totals[key] += item[key]; });
     });
 
     const keys = [
@@ -134,94 +115,58 @@
       const isKZ = k.id.includes('KZ');
       const cardStatus = isKZ ? (val >= 0 ? 'up-card' : 'down-card') : '';
       const colorClass = isKZ ? (val >= 0 ? 'up' : 'down') : '';
-
       const sortedTur = Object.keys(groups).sort((a,b) => groups[b][k.id] - groups[a][k.id]);
       let distHtml = sortedTur.map(t => `<div class="dist-row" onclick="event.stopPropagation(); showDetails('${t}')"><span>${t}</span><span class="${groups[t][k.id]>=0?'up':'down'}">${groups[t][k.id].toLocaleString('tr-TR')} ₺</span></div>`).join('');
-      
-      return `
-        <div class="card ${cardStatus}" onclick="toggleCard(this)">
-          <span>${k.l}</span>
-          <div class="value ${colorClass}">${val.toLocaleString('tr-TR')} ₺</div>
-          <div class="dist-container">${distHtml}</div>
-        </div>`;
+      return `<div class="card ${cardStatus}" onclick="toggleCard(this)"><span>${k.l}</span><div class="value ${colorClass}">${val.toLocaleString('tr-TR')} ₺</div><div class="dist-container">${distHtml}</div></div>`;
     }).join('');
   }
 
   function renderTicker() {
     const ticker = document.getElementById("tickerContent");
-    let vades = [];
-    let moves = [];
-    const bugun = new Date();
-
+    let vades = [], moves = [];
     globalData.forEach(a => {
-      // Vade (Sırala ve 2 tane al)
-      if(a.vade && !a.vade.includes("2999") && a.vade !== "0") {
-        let p = a.vade.split('.');
-        if(p.length === 3) {
-          let vd = new Date(p[2], p[1]-1, p[0]);
-          let fark = Math.ceil((vd - bugun)/(1000*3600*24));
-          if(fark <= 7 && fark >= 0) vades.push({f:fark, h:`<span style="color:var(--red)">⚠️ ${a.ad} (${fark}G)</span>`});
-        }
+      if(a.vade && a.vade.length > 5 && !a.vade.includes("2999")) {
+        let p = a.vade.split('.'), vd = new Date(p[2], p[1]-1, p[0]);
+        let f = Math.ceil((vd - new Date())/(1000*3600*24));
+        if(f <= 7 && f >= 0) vades.push({f:f, h:`<span style="color:var(--red)">⚠️ ${a.ad} (${f}G)</span>`});
       }
-      // Hareket
-      let yuzde = (a.gKZ / (a.tutar - a.gKZ)) * 100;
-      if (Math.abs(yuzde) >= 0.2) {
-        moves.push(`<span style="color:${yuzde>0?'var(--accent)':'var(--red)'}">${yuzde>0?'▲':'▼'} ${a.ad}: %${yuzde.toFixed(2)}</span>`);
-      }
+      let y = (a.gKZ / (a.tutar - a.gKZ)) * 100;
+      if (Math.abs(y) >= 0.2) moves.push(`<span style="color:${y>0?'var(--accent)':'var(--red)'}">${y>0?'▲':'▼'} ${a.ad}: %${y.toFixed(2)}</span>`);
     });
-
     vades.sort((a,b) => a.f - b.f);
     let final = vades.slice(0,2).map(v => v.h).concat(moves);
-    if(final.length === 0) final.push("Piyasa Takibi Aktif");
-
     const html = final.map(m => `<div class="ticker-item">${m}</div>`).join('');
     ticker.innerHTML = html + html;
   }
 
-  function toggleCard(el) {
-    const isActive = el.classList.contains('active');
-    document.querySelectorAll('.card').forEach(c => c.classList.remove('active'));
-    if (!isActive) el.classList.add('active');
-  }
-
   function showDetails(tur) {
-    const sect = document.getElementById("detailSection");
-    const grid = document.getElementById("assetGrid");
-    sect.style.display = "block";
-    document.getElementById("detailTitle").innerText = tur + " VARLIKLARI";
-    
-    let filtered = globalData.filter(d => d.tur === tur).sort((a,b) => b.tutar - a.tutar);
-    grid.innerHTML = filtered.map(a => `
+    const sect = document.getElementById("detailSection"), grid = document.getElementById("assetGrid");
+    sect.style.display = "block"; document.getElementById("detailTitle").innerText = tur + " DETAY ANALİZ";
+    grid.innerHTML = globalData.filter(d => d.tur === tur).sort((a,b) => b.tutar - a.tutar).map(a => `
       <div class="asset-item">
         <div class="asset-main" onclick="toggleAsset(this)">
-          <div><div style="font-weight:700; font-size:0.8rem;">${a.ad}</div></div>
-          <div style="text-align:right">
-            <div class="up" style="font-weight:800;">${a.tutar.toLocaleString('tr-TR')} ₺</div>
-            <div class="${a.tKZ>=0?'up':'down'}" style="font-size:0.6rem;">${a.tKZ.toLocaleString('tr-TR')} ₺</div>
-          </div>
+          <div style="font-weight:700; font-size:0.85rem;">${a.ad}</div>
+          <div style="text-align:right"><div class="up" style="font-weight:800;">${a.tutar.toLocaleString('tr-TR')} ₺</div><div class="${a.tKZ>=0?'up':'down'}" style="font-size:0.65rem;">${a.tKZ.toLocaleString('tr-TR')} ₺</div></div>
         </div>
         <div class="asset-expand">
-          <div style="display:flex; flex-direction:column;"><span style="font-size:0.5rem; color:var(--text-muted);">ADET</span><span style="font-size:0.75rem; font-weight:700;">${a.adet.toLocaleString('tr-TR')}</span></div>
-          <div style="display:flex; flex-direction:column;"><span style="font-size:0.5rem; color:var(--text-muted);">YATIRIM</span><span style="font-size:0.75rem; font-weight:700;">${a.yatirim.toLocaleString('tr-TR')} ₺</span></div>
-          <div style="display:flex; flex-direction:column;"><span style="font-size:0.5rem; color:var(--text-muted);">GÜNLÜK K/Z</span><span class="${a.gKZ>=0?'up':'down'}" style="font-size:0.75rem; font-weight:700;">${a.gKZ.toLocaleString('tr-TR')} ₺</span></div>
-          <div style="display:flex; flex-direction:column;"><span style="font-size:0.5rem; color:var(--text-muted);">VADE</span><span style="font-size:0.75rem; font-weight:700;">${a.vade}</span></div>
+          <div class="det-box"><span class="det-label">Adet</span><span class="det-value">${a.adet.toLocaleString('tr-TR')}</span></div>
+          <div class="det-box"><span class="det-label">Elde Tutma</span><span class="det-value">${getDaysBetween(a.alisTarihi)}</span></div>
+          <div class="det-box"><span class="det-label">Alış Fiyatı</span><span class="det-value">${a.aFiyat.toLocaleString('tr-TR')}</span></div>
+          <div class="det-box"><span class="det-label">Güncel Fiyat</span><span class="det-value up">${a.fiyat.toLocaleString('tr-TR')}</span></div>
+          <div class="det-box"><span class="det-label">Yatırım Tutarı</span><span class="det-value">${a.yatirim.toLocaleString('tr-TR')} ₺</span></div>
+          <div class="det-box"><span class="det-label">Güncel Tutar</span><span class="det-value up">${a.tutar.toLocaleString('tr-TR')} ₺</span></div>
+          <div class="det-box"><span class="det-label">Günlük K/Z</span><span class="det-value ${a.gKZ>=0?'up':'down'}">${a.gKZ.toLocaleString('tr-TR')} ₺</span></div>
+          <div class="det-box"><span class="det-label">Haftalık K/Z</span><span class="det-value ${a.hKZ>=0?'up':'down'}">${a.hKZ.toLocaleString('tr-TR')} ₺</span></div>
+          <div class="det-box"><span class="det-label">Aylık K/Z</span><span class="det-value ${a.aKZ>=0?'up':'down'}">${a.aKZ.toLocaleString('tr-TR')} ₺</span></div>
+          <div class="det-box"><span class="det-label">Toplam K/Z</span><span class="det-value ${a.tKZ>=0?'up':'down'}">${a.tKZ.toLocaleString('tr-TR')} ₺</span></div>
         </div>
       </div>`).join('');
     sect.scrollIntoView({ behavior: 'smooth' });
   }
 
-  function toggleAsset(el) {
-    const exp = el.parentElement.querySelector('.asset-expand');
-    const isOpen = exp.style.display === 'grid';
-    document.querySelectorAll('.asset-expand').forEach(d => d.style.display = 'none');
-    exp.style.display = isOpen ? 'none' : 'grid';
-  }
-
-  function closeAll() {
-    document.getElementById('detailSection').style.display = 'none';
-    document.querySelectorAll('.card').forEach(c => c.classList.remove('active'));
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
+  function toggleCard(el) { const active = el.classList.contains('active'); document.querySelectorAll('.card').forEach(c => c.classList.remove('active')); if (!active) el.classList.add('active'); }
+  function toggleAsset(el) { const exp = el.parentElement.querySelector('.asset-expand'); const open = exp.style.display === 'grid'; document.querySelectorAll('.asset-expand').forEach(d => d.style.display = 'none'); exp.style.display = open ? 'none' : 'grid'; }
+  function closeAll() { document.getElementById('detailSection').style.display = 'none'; document.querySelectorAll('.card').forEach(c => c.classList.remove('active')); }
 </script>
 </body>
 </html>
