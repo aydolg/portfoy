@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <title>Elite Portföy Terminali v4.0</title>
+  <title>Elite Portföy v5.0 - 2026</title>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -40,7 +40,7 @@
 
     /* KATMAN 3: VARLIK LİSTESİ */
     #detailSection { margin-top: 20px; display: none; padding-bottom: 80px; }
-    .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; background: var(--glass); padding: 10px; border-radius: 10px; }
+    .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; background: rgba(255,255,255,0.02); padding: 10px; border-radius: 10px; }
     .section-title { font-weight: 800; color: var(--accent); font-size: 0.75rem; text-transform: uppercase; }
     .close-btn { color: var(--red); font-size: 0.7rem; font-weight: 800; cursor: pointer; border: 1px solid var(--red); padding: 4px 8px; border-radius: 6px; }
     
@@ -53,7 +53,7 @@
 
     .asset-main { padding: 15px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
 
-    /* KATMAN 4: VARLIK DETAYLARI (ACCORDION) */
+    /* KATMAN 4: VARLIK DETAYLARI (8 TEKNİK VERİ) */
     .asset-expand-detail {
       display: none; padding: 15px; background: rgba(0,0,0,0.4);
       grid-template-columns: 1fr 1fr; gap: 12px; border-top: 1px solid var(--border);
@@ -68,7 +68,6 @@
     .vade-blink { color: var(--red); font-weight: 800; font-size: 0.6rem; animation: blink 1s infinite; margin-top: 3px; display: inline-block; }
     @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
     
-    /* Mobil Kaydırma Çubuğu Güzelleştirme */
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
   </style>
@@ -89,7 +88,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script>
-  // CSV Linkiniz Kodun İçine Gömüldü
+  // GÜNCELLENMİŞ SABİT LİNK
   const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQeTFovlKfvEp9sPepJb9SGxf_2AgMU7eEPTDCc6WWc0o1Z1AizX6K2mJlaWtcvSderiBym7cyhEdsC/pub?gid=0&single=true&output=csv";
   let globalData = [];
 
@@ -99,35 +98,41 @@
     return parseFloat(num) || 0;
   }
 
-  // Sayfa açıldığında veriyi çek
   Papa.parse(csvUrl, {
     download: true,
     complete: function(res) {
-      globalData = res.data.slice(1).filter(r => r[0]).map(r => ({
+      // Yeni 14 sütunlu yapıya göre eşleştirme (r[0] Varlık ... r[11] Toplam K/Z)
+      globalData = res.data.slice(1).filter(r => r[0] && r[0] !== "Varlık").map(r => ({
         ad: r[0], tur: r[1], alis: r[2], vade: r[3], adet: clean(r[4]),
         aFiyat: clean(r[5]), yatirim: clean(r[6]), fiyat: clean(r[7]),
-        tutar: clean(r[8]), gKZ: clean(r[9]), hKZ: clean(r[10]), tKZ: clean(r[11])
+        tutar: clean(r[8]), gKZ: clean(r[9]), hKZ: clean(r[10]), aKZ: clean(r[11]), tKZ: clean(r[12])
       }));
       renderSummaries();
     }
   });
 
   function renderSummaries() {
-    const totals = { yatirim:0, tutar:0, gKZ:0, hKZ:0, tKZ:0 };
+    const totals = { yatirim:0, tutar:0, gKZ:0, hKZ:0, aKZ:0, tKZ:0 };
     const groups = {};
 
     globalData.forEach(item => {
-      if (!groups[item.tur]) groups[item.tur] = { yatirim:0, tutar:0, gKZ:0, hKZ:0, tKZ:0 };
+      if (!groups[item.tur]) groups[item.tur] = { yatirim:0, tutar:0, gKZ:0, hKZ:0, aKZ:0, tKZ:0 };
       groups[item.tur].yatirim += item.yatirim;
       groups[item.tur].tutar += item.tutar;
       groups[item.tur].gKZ += item.gKZ;
       groups[item.tur].hKZ += item.hKZ;
+      groups[item.tur].aKZ += item.aKZ;
       groups[item.tur].tKZ += item.tKZ;
+      
       totals.yatirim += item.yatirim; totals.tutar += item.tutar;
-      totals.gKZ += item.gKZ; totals.hKZ += item.hKZ; totals.tKZ += item.tKZ;
+      totals.gKZ += item.gKZ; totals.hKZ += item.hKZ; totals.aKZ += item.aKZ; totals.tKZ += item.tKZ;
     });
 
-    const keys = [{id:'yatirim', l:'Yatırım'}, {id:'tutar', l:'Portföy'}, {id:'gKZ', l:'Günlük'}, {id:'hKZ', l:'Haftalık'}, {id:'tKZ', l:'Toplam'}];
+    // 5 Ana Kart Başlığı
+    const keys = [
+      {id:'yatirim', l:'Yatırım'}, {id:'tutar', l:'Portföy'}, 
+      {id:'gKZ', l:'Günlük'}, {id:'hKZ', l:'Haftalık'}, {id:'tKZ', l:'Toplam'}
+    ];
 
     document.getElementById("summaryGrid").innerHTML = keys.map(k => {
       const sortedTur = Object.keys(groups).sort((a,b) => groups[b][k.id] - groups[a][k.id]);
@@ -142,7 +147,6 @@
           <span>${k.l}</span>
           <span class="value ${k.id.includes('KZ')?(totals[k.id]>=0?'up':'down'):''}">${totals[k.id].toLocaleString('tr-TR')} ₺</span>
           <div class="dist-container">
-            <div style="font-size:0.5rem; color:var(--accent); margin-bottom:8px; text-align:center;">DETAY İÇİN TÜRE TIKLAYIN</div>
             ${distHtml}
           </div>
         </div>`;
@@ -158,18 +162,20 @@
   function showDetails(filterTur) {
     const detailSection = document.getElementById("detailSection");
     const assetGrid = document.getElementById("assetGrid");
-    document.getElementById("detailTitle").innerText = `${filterTur} VARLIKLARI`;
+    document.getElementById("detailTitle").innerText = `${filterTur} DETAYLARI`;
     
     detailSection.style.display = "block";
     let filtered = globalData.filter(d => d.tur === filterTur).sort((a,b) => b.tutar - a.tutar);
 
     assetGrid.innerHTML = filtered.map(a => {
       let tag = "";
-      if(a.vade && !a.vade.includes("2999")) {
+      if(a.vade && !a.vade.includes("2999") && a.vade !== "0") {
         let p = a.vade.split('.');
-        let vadeDate = new Date(p[2], p[1]-1, p[0]);
-        let fark = Math.ceil((vadeDate - new Date())/(1000*3600*24));
-        if(fark <= 7 && fark >= 0) tag = `<br><span class="vade-blink">! VADE ${fark} GÜN</span>`;
+        if(p.length === 3) {
+            let vd = new Date(p[2], p[1]-1, p[0]);
+            let fark = Math.ceil((vd - new Date())/(1000*3600*24));
+            if(fark <= 7 && fark >= 0) tag = `<br><span class="vade-blink">! VADE ${fark} GÜN</span>`;
+        }
       }
 
       return `
@@ -185,9 +191,9 @@
             <div class="det-box"><span class="det-lbl">Adet</span><span class="det-val">${a.adet.toLocaleString('tr-TR')}</span></div>
             <div class="det-box"><span class="det-lbl">Yatırım Tutarı</span><span class="det-val">${a.yatirim.toLocaleString('tr-TR')} ₺</span></div>
             <div class="det-box"><span class="det-lbl">Güncel Tutar</span><span class="det-val up">${a.tutar.toLocaleString('tr-TR')} ₺</span></div>
-            <div class="det-box"><span class="det-lbl">Alış / Güncel</span><span class="det-val">${a.aFiyat.toLocaleString('tr-TR')} / ${a.fiyat.toLocaleString('tr-TR')} ₺</span></div>
+            <div class="det-box"><span class="det-lbl">Alış / Güncel</span><span class="det-val">${a.aFiyat.toLocaleString('tr-TR')} / ${a.fiyat.toLocaleString('tr-TR')}</span></div>
             <div class="det-box"><span class="det-lbl">Günlük K/Z</span><span class="det-val ${a.gKZ>=0?'up':'down'}">${a.gKZ.toLocaleString('tr-TR')} ₺</span></div>
-            <div class="det-box"><span class="det-lbl">Haftalık K/Z</span><span class="det-val ${a.hKZ>=0?'up':'down'}">${a.hKZ.toLocaleString('tr-TR')} ₺</span></div>
+            <div class="det-box"><span class="det-lbl">Aylık K/Z</span><span class="det-val ${a.aKZ>=0?'up':'down'}">${a.aKZ.toLocaleString('tr-TR')} ₺</span></div>
             <div class="det-box"><span class="det-lbl">Toplam K/Z</span><span class="det-val bold ${a.tKZ>=0?'up':'down'}">${a.tKZ.toLocaleString('tr-TR')} ₺</span></div>
             <div class="det-box"><span class="det-lbl">Vade</span><span class="det-val">${a.vade}</span></div>
           </div>
