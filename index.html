@@ -9,7 +9,7 @@
     :root {
       --bg: #030508; --card-bg: rgba(16, 20, 29, 0.85);
       --accent: #00ff9d; --red: #ff3b5c; --text: #ffffff;
-      --text-muted: #94a3b8; --border: rgba(255, 255, 255, 0.08);
+      --text-muted: #94a3b8; --border: rgba(255, 255, 255, 0.1);
     }
     body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 12px; }
     .container { max-width: 1200px; margin: 0 auto; }
@@ -17,36 +17,38 @@
     /* ANA KARTLAR */
     .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
     @media (max-width: 600px) { .summary-grid { grid-template-columns: repeat(2, 1fr); } }
-    .card { background: var(--card-bg); backdrop-filter: blur(10px); padding: 15px 12px; border-radius: 18px; border: 1px solid var(--border); cursor: pointer; position: relative; transition: 0.3s; }
-    .card.up-card { border-left: 4px solid var(--accent); }
-    .card.down-card { border-left: 4px solid var(--red); }
+    .card { background: var(--card-bg); backdrop-filter: blur(10px); padding: 15px 12px; border-radius: 18px; border: 1px solid var(--border); cursor: pointer; position: relative; }
+    .card.active { border-color: var(--accent); }
     .card span { color: var(--text-muted); font-size: 0.6rem; font-weight: 700; text-transform: uppercase; display: block; margin-bottom: 4px; }
     .card .value { font-size: 0.95rem; font-weight: 800; }
+    .card.up-card { border-left: 4px solid var(--accent); }
+    .card.down-card { border-left: 4px solid var(--red); }
 
-    /* KART DETAYI (TÜRLER) */
+    /* KART TÜRLER LİSTESİ */
     .dist-container { display: none; background: #0b0e11; border: 1px solid var(--border); border-radius: 14px; padding: 10px; margin-top: 10px; position: absolute; left: 0; right: 0; z-index: 100; width: 100%; box-sizing: border-box; }
     .card.active .dist-container { display: block; }
     .dist-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.7rem; }
 
-    /* AKAN YAZI (HIZ: 35s) */
-    .ticker-wrap { width: 100%; overflow: hidden; background: rgba(16, 20, 29, 0.5); border-radius: 10px; border: 1px solid var(--border); padding: 12px 0; margin-bottom: 10px; }
+    /* AKAN YAZI */
+    .ticker-wrap { width: 100%; overflow: hidden; background: rgba(16, 20, 29, 0.5); border-radius: 10px; border: 1px solid var(--border); padding: 12px 0; margin-bottom: 15px; }
     .ticker { display: flex; white-space: nowrap; animation: ticker-move 35s linear infinite; }
     .ticker-item { padding: 0 30px; font-size: 0.75rem; font-weight: 600; flex-shrink: 0; }
     @keyframes ticker-move { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
 
-    /* MARKET LİSTESİ (ALT ALTA TÜM DÖVİZ VE ALTINLAR) */
-    .market-list { background: var(--card-bg); border-radius: 18px; border: 1px solid var(--border); padding: 5px 15px; margin-bottom: 20px; }
-    .m-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); }
+    /* MARKET LİSTESİ (TAM BLOK) */
+    .market-block { background: var(--card-bg); border-radius: 20px; border: 1px solid var(--border); padding: 5px 15px; margin-bottom: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+    .market-header { padding: 12px 0 5px 0; font-size: 0.6rem; font-weight: 800; color: var(--accent); letter-spacing: 1px; border-bottom: 1px solid var(--border); margin-bottom: 5px; }
+    .m-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
     .m-row:last-child { border-bottom: none; }
-    .m-name { font-size: 0.75rem; font-weight: 700; color: var(--text-muted); }
-    .m-price { font-size: 0.85rem; font-weight: 800; }
+    .m-name { font-size: 0.75rem; font-weight: 700; color: #e2e8f0; }
+    .m-price { font-size: 0.9rem; font-weight: 800; font-family: monospace; }
 
-    /* VARLIK DETAYLARI */
+    /* DETAYLAR */
     .asset-item { background: var(--card-bg); border: 1px solid var(--border); border-radius: 14px; margin-bottom: 8px; }
     .asset-main { padding: 14px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
-    .asset-expand { display: none; padding: 15px; grid-template-columns: repeat(2, 1fr); gap: 12px; border-top: 1px solid var(--border); background: rgba(0,0,0,0.3); }
+    .asset-expand { display: none; padding: 15px; grid-template-columns: 1fr 1fr; gap: 12px; border-top: 1px solid var(--border); background: rgba(0,0,0,0.2); }
     .det-box { display: flex; flex-direction: column; }
-    .det-lbl { font-size: 0.55rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 2px; }
+    .det-lbl { font-size: 0.55rem; color: var(--text-muted); text-transform: uppercase; }
     .det-val { font-size: 0.8rem; font-weight: 700; }
     
     .up { color: var(--accent); } .down { color: var(--red); }
@@ -56,15 +58,17 @@
 
 <div class="container">
   <div class="summary-grid" id="summaryGrid"></div>
-  
-  <div class="ticker-wrap"><div class="ticker" id="tickerContent">Veriler yükleniyor...</div></div>
+  <div class="ticker-wrap"><div class="ticker" id="tickerContent">Piyasa verileri taranıyor...</div></div>
 
-  <div class="market-list" id="marketList"></div>
+  <div class="market-block">
+    <div class="market-header">CANLI PİYASA & GÖSTERGELER</div>
+    <div id="marketRows"></div>
+  </div>
 
-  <div id="detailSection" style="display:none; margin-top:20px; padding-bottom:100px;">
+  <div id="detailSection" style="display:none; padding-bottom:100px;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; padding:0 5px;">
-      <div id="detailTitle" style="font-weight:800; color:var(--accent); font-size:0.8rem; text-transform:uppercase;">VARLIK DETAYLARI</div>
-      <div onclick="closeAll()" style="color:var(--red); font-size:0.7rem; font-weight:bold; cursor:pointer;">KAPAT X</div>
+      <div id="detailTitle" style="font-weight:800; color:var(--accent); font-size:0.8rem;">VARLIK ANALİZİ</div>
+      <div onclick="closeAll()" style="color:var(--red); font-size:0.7rem; font-weight:bold; cursor:pointer; border: 1px solid var(--red); padding: 2px 8px; border-radius: 5px;">KAPAT X</div>
     </div>
     <div id="assetGrid"></div>
   </div>
@@ -96,30 +100,33 @@
     complete: function(res) {
       globalData = res.data.slice(1).filter(r => r[0] && r[0] !== "Varlık").map(r => ({
         ad: r[0], tur: r[1], alisTarihi: r[2], vade: r[3], adet: clean(r[4]),
-        aFiyat: clean(r[5]), yatirim: clean(r[6]), fiyat: clean(r[7]), // H Sütunu
+        aFiyat: clean(r[5]), yatirim: clean(r[6]), fiyat: clean(r[7]), // H Sütunu (Fiyat)
         tutar: clean(r[8]), gKZ: clean(r[9]), hKZ: clean(r[10]), aKZ: clean(r[11]), tKZ: clean(r[12])
       }));
       renderSummaries();
       renderTicker();
-      renderMarketList();
+      renderMarketBlock();
     }
   });
 
-  function renderMarketList() {
-    // Döviz ve Altın verileri tek listede toplandı
-    const order = ["USD/TRY", "EURO/TRY", "ALTIN/USD", "ALTINTL", "GRAMALTIN", "ENFLASYON", "MEVDUAT"];
-    const container = document.getElementById("marketList");
+  function renderMarketBlock() {
+    const list = ["USD/TRY", "EURO/TRY", "ALTIN/USD", "ALTINTL", "GRAMALTIN", "ENFLASYON", "MEVDUAT"];
+    const container = document.getElementById("marketRows");
     
-    let html = order.map(isim => {
-      let v = globalData.find(d => d.ad.toUpperCase() === isim.toUpperCase());
-      if(!v) return ""; 
-      let trend = v.gKZ >= 0 ? 'up' : 'down';
-      return `<div class="m-row">
-                <span class="m-name">${isim}</span>
-                <span class="m-price ${trend}">${v.fiyat.toLocaleString('tr-TR')}</span>
-              </div>`;
+    let html = list.map(name => {
+      // İsme göre tam eşleşme arıyoruz
+      let find = globalData.find(d => d.ad.trim().toUpperCase() === name.toUpperCase());
+      if(!find) return ""; // Eğer tablonuzda bu isimle veri yoksa satır oluşturmaz
+      
+      let color = find.gKZ >= 0 ? 'up' : 'down';
+      return `
+        <div class="m-row">
+          <span class="m-name">${name}</span>
+          <span class="m-price ${color}">${find.fiyat.toLocaleString('tr-TR', {minimumFractionDigits: 2})}</span>
+        </div>`;
     }).join('');
-    container.innerHTML = html;
+    
+    container.innerHTML = html || "<div style='font-size:0.7rem; color:gray; padding:10px;'>Tablonuzda USD/TRY vb. isimler bulunamadı.</div>";
   }
 
   function renderSummaries() {
@@ -161,9 +168,9 @@
         </div>
         <div class="asset-expand">
           <div class="det-box"><span class="det-lbl">Adet</span><span class="det-val">${a.adet.toLocaleString('tr-TR')}</span></div>
-          <div class="det-box"><span class="det-lbl">Alış Tarihi / Süre</span><span class="det-val">${a.alisTarihi} (${getDaysBetween(a.alisTarihi)})</span></div>
+          <div class="det-box"><span class="det-lbl">Süre</span><span class="det-val">${getDaysBetween(a.alisTarihi)}</span></div>
           <div class="det-box"><span class="det-lbl">Alış Fiyatı</span><span class="det-val">${a.aFiyat.toLocaleString('tr-TR')}</span></div>
-          <div class="det-box"><span class="det-lbl">Yatırım Tutarı</span><span class="det-val">${a.yatirim.toLocaleString('tr-TR')} ₺</span></div>
+          <div class="det-box"><span class="det-lbl">Yatırım</span><span class="det-val">${a.yatirim.toLocaleString('tr-TR')} ₺</span></div>
           <div class="det-box"><span class="det-lbl">Güncel Fiyat</span><span class="det-val up">${a.fiyat.toLocaleString('tr-TR')}</span></div>
           <div class="det-box"><span class="det-lbl">Güncel Tutar</span><span class="det-val up">${a.tutar.toLocaleString('tr-TR')} ₺</span></div>
           <div class="det-box"><span class="det-lbl">Günlük K/Z</span><span class="det-val ${a.gKZ>=0?'up':'down'}">${a.gKZ.toLocaleString('tr-TR')} ₺</span></div>
