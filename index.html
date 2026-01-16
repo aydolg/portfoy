@@ -145,7 +145,7 @@
 
       // Fiyat Hareketi Kontrolü (%1.5 ve üzeri değişim)
       let yuzde = (a.gKZ / (a.tutar - a.gKZ)) * 100;
-      if (Math.abs(yuzde) >= 1.5) {
+      if (Math.abs(yuzde) >= 0.2) {
         let color = yuzde > 0 ? 'var(--accent)' : 'var(--red)';
         let emoji = yuzde > 0 ? '🚀' : '📉';
         messages.push(`<span style="color:${color}">${emoji} ${a.ad}: ${a.gKZ.toLocaleString('tr-TR')} ₺ (%${yuzde.toFixed(2)})</span>`);
@@ -205,3 +205,4 @@
 </script>
 </body>
 </html>
+
