@@ -309,7 +309,7 @@
   let lastFetchTime = 0;
   const FETCH_COOLDOWN = 30000;
 
-  // GELİŞMİŞ SAYI TEMİZLEME FONKSİYONU
+  // GELİŞMİŞ SAYI TEMİZLEME FONKSİYONU - GOOGLE SHEETS İÇİN DÜZENLENDİ
   function clean(v) {
     if (!v || v === "" || v === "-" || v.toString().includes('#N/A') || v.toString().includes('#REF!')) {
       return 0;
@@ -340,54 +340,59 @@
       const commaCount = (str.match(/,/g) || []).length;
       const dotCount = (str.match(/\./g) || []).length;
       
-      // Türkçe format: 1.234,56
-      if (commaCount === 1 && dotCount > 0) {
-        // Son karakter virgül ise (1.234,56 formatı)
-        if (str.lastIndexOf(',') > str.lastIndexOf('.')) {
-          str = str.replace(/\./g, '').replace(',', '.');
-        }
+      // GOOGLE SHEETS ÖZEL DURUMLARI:
+      // Google Sheets genellikle binlik ayraç için nokta kullanır: 9.909.896
+      
+      if (dotCount > 1 && commaCount === 0) {
+        // Birden fazla nokta varsa (9.909.896) - BİNLİK AYRAÇ
+        str = str.replace(/\./g, '');
       }
-      // İngilizce format: 1,234.56
-      else if (dotCount === 1 && commaCount > 0) {
-        // Son karakter nokta ise (1,234.56 formatı)
-        if (str.lastIndexOf('.') > str.lastIndexOf(',')) {
-          str = str.replace(/,/g, '');
-        }
+      else if (commaCount > 1 && dotCount === 0) {
+        // Birden fazla virgül varsa (9,909,896) - BİNLİK AYRAÇ
+        str = str.replace(/,/g, '');
       }
-      // Sadece virgül varsa
-      else if (commaCount > 0 && dotCount === 0) {
-        // Birden fazla virgül varsa binlik ayraçtır
-        if (commaCount > 1) {
-          str = str.replace(/,/g, '');
+      else if (dotCount === 1 && commaCount === 0) {
+        // Tek nokta varsa: 1234.56 - ONDALIK AYRAÇ
+        // Hiçbir şey yapma, doğru zaten
+      }
+      else if (commaCount === 1 && dotCount === 0) {
+        // Tek virgül varsa: 1234,56 - ONDALIK AYRAÇ (Türkçe)
+        str = str.replace(',', '.');
+      }
+      else if (dotCount > 0 && commaCount > 0) {
+        // Hem nokta hem virgül varsa
+        const lastDotIndex = str.lastIndexOf('.');
+        const lastCommaIndex = str.lastIndexOf(',');
+        
+        if (lastDotIndex > lastCommaIndex) {
+          // Son karakter nokta ise: 1.234,56 (Türkçe) -> 1234.56
+          const beforeDot = str.substring(0, lastDotIndex).replace(/\./g, '');
+          const afterDot = str.substring(lastDotIndex + 1).replace(',', '.');
+          str = beforeDot + afterDot;
         } else {
-          // Tek virgül varsa ondalık ayracıdır
-          str = str.replace(',', '.');
-        }
-      }
-      // Sadece nokta varsa
-      else if (dotCount > 0 && commaCount === 0) {
-        // Birden fazla nokta varsa binlik ayraçtır
-        if (dotCount > 1) {
-          // Son noktayı ondalık ayracı olarak koru
-          const parts = str.split('.');
-          const decimalPart = parts.pop();
-          const integerPart = parts.join('');
-          str = integerPart + '.' + decimalPart;
+          // Son karakter virgül ise: 1,234.56 (İngilizce) -> 1234.56
+          const beforeComma = str.substring(0, lastCommaIndex).replace(/,/g, '');
+          const afterComma = str.substring(lastCommaIndex + 1);
+          str = beforeComma + afterComma;
         }
       }
       
-      // Son kontrol: sadece sayı ve nokta
+      // Son kontrol: sadece sayı, nokta ve eksi
       str = str.replace(/[^\d.-]/g, '');
       
       // Boş mu kontrol et
-      if (str === '' || str === '.') return 0;
+      if (str === '' || str === '.' || str === ',') return 0;
       
       let num = parseFloat(str);
-      if (isNaN(num)) num = 0;
+      if (isNaN(num)) {
+        console.warn('Sayıya çevrilemedi:', v, '->', str);
+        return 0;
+      }
       
       if (isNegative) num = -num;
       
       return num;
+      
     } catch (e) {
       console.error('Temizleme hatası:', e, 'Değer:', v);
       return 0;
@@ -468,7 +473,7 @@
     }, duration);
   }
 
-  // VERİ ÇEKME
+  // VERİ ÇEKME - DÜZELTİLMİŞ
   async function fetchData() {
     const now = Date.now();
     if (now - lastFetchTime < FETCH_COOLDOWN) {
@@ -480,6 +485,7 @@
     lastFetchTime = now;
     
     try {
+      console.log('Veriler yükleniyor...');
       const response = await fetch(csvUrl);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       
@@ -487,28 +493,46 @@
       
       Papa.parse(csvText, {
         complete: function(res) {
+          console.log('CSV parse tamamlandı, satır sayısı:', res.data.length);
+          
           if (!res.data || res.data.length < 2) {
             throw new Error('Geçersiz veri formatı');
           }
           
+          // Test için ilk 3 satırı göster
+          console.log('İlk 3 satırın ham verisi:');
+          for (let i = 0; i < Math.min(3, res.data.length); i++) {
+            console.log(`Satır ${i}:`, res.data[i]);
+          }
+          
+          let totalYatirim = 0;
+          let totalTutar = 0;
+          
           globalData = res.data.slice(1)
             .filter(r => r[0] && r[0].trim() !== "")
             .map((r, index) => {
-              const adet = clean(r[4]);
-              const aFiyat = clean(r[5]);
+              // İlk 3 kayıt için debug bilgisi
+              if (index < 3) {
+                console.log(`=== ${r[0]} ===`);
+                console.log('Yatırım (ham):', r[6], '->', clean(r[6]));
+                console.log('Tutar (ham):', r[8], '->', clean(r[8]));
+              }
+              
               const yatirim = clean(r[6]);
-              const fiyat = clean(r[7]);
               const tutar = clean(r[8]);
+              
+              totalYatirim += yatirim;
+              totalTutar += tutar;
               
               return {
                 ad: sanitizeHTML(r[0].trim()), 
                 tur: sanitizeHTML(r[1] || "Diğer"), 
                 alisTarihi: r[2] || "",
                 vade: r[3] || "",
-                adet: adet,
-                aFiyat: aFiyat, 
+                adet: clean(r[4]),
+                aFiyat: clean(r[5]), 
                 yatirim: yatirim,
-                fiyat: fiyat, 
+                fiyat: clean(r[7]), 
                 tutar: tutar,
                 gKZ: clean(r[9]), 
                 hKZ: clean(r[10]), 
@@ -518,6 +542,14 @@
             })
             .filter(item => item.tutar > 0);
           
+          console.log('TOPLAM HESAPLAMALAR:');
+          console.log('Toplam Yatırım (panel):', totalYatirim.toLocaleString('tr-TR'));
+          console.log('Beklenen Yatırım (Google Sheets): 9.909.896');
+          console.log('Fark:', (totalYatirim - 9909896).toLocaleString('tr-TR'));
+          console.log('Toplam Portföy (panel):', totalTutar.toLocaleString('tr-TR'));
+          console.log('Beklenen Portföy (Google Sheets): ~11.421.000');
+          console.log('Fark:', (totalTutar - 11421000).toLocaleString('tr-TR'));
+          
           filteredData = [...globalData];
           renderAll();
           checkAlerts();
@@ -525,12 +557,32 @@
           document.getElementById('lastUpdateTime').textContent = `Son güncelleme: ${new Date().toLocaleTimeString('tr-TR', {hour: '2-digit', minute:'2-digit'})}`;
           
           showLoading(false);
-          showNotification('Veriler başarıyla güncellendi', 'info', 2000);
+          
+          // Başarılı mesajı
+          const expectedYatirim = 9909896;
+          const expectedPortfoy = 11421000;
+          const yatirimFark = Math.abs(totalYatirim - expectedYatirim);
+          const portfoyFark = Math.abs(totalTutar - expectedPortfoy);
+          
+          if (yatirimFark > 1000 || portfoyFark > 1000) {
+            showNotification(
+              `Yatırım: ${totalYatirim.toLocaleString('tr-TR')} ₺ | Portföy: ${totalTutar.toLocaleString('tr-TR')} ₺<br>` +
+              `Farklar: Yatırım ${yatirimFark.toLocaleString('tr-TR')} ₺ | Portföy ${portfoyFark.toLocaleString('tr-TR')} ₺`,
+              'warning',
+              8000
+            );
+          } else {
+            showNotification(
+              `Yatırım: ${totalYatirim.toLocaleString('tr-TR')} ₺ | Portföy: ${totalTutar.toLocaleString('tr-TR')} ₺`,
+              'info',
+              5000
+            );
+          }
           
         },
         error: function(error) {
           console.error('CSV parse hatası:', error);
-          showNotification('Veri yüklenirken hata oluştu', 'danger');
+          showNotification('CSV parse hatası', 'danger');
           showLoading(false);
         }
       });
@@ -1077,12 +1129,11 @@
   function showAbout() {
     showNotification(`
       <b>Elite Portföy Terminali</b><br>
-      Sadeleştirilmiş portföy takip sistemi<br><br>
-      <b>Özellikler:</b><br>
-      • Gerçek zamanlı veri senkronizasyonu<br>
-      • Detaylı performans analizleri<br>
-      • Responsive tasarım<br>
-      • CSV export desteği
+      Düzeltilmiş sayı formatı ile<br><br>
+      <b>Düzeltilenler:</b><br>
+      • Google Sheets sayı formatı desteği<br>
+      • Binlik ayraç düzeltmeleri (9.909.896)<br>
+      • Toplam yatırım ve portföy kontrolü
     `, 'info', 8000);
   }
 
