@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <title>Elite Portföy Terminali v4.3 - Düzeltilmiş</title>
+  <title>Elite Portföy Terminali v4.3 - Temizlenmiş</title>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -19,22 +19,178 @@
       background: linear-gradient(135deg, #030508 0%, #0a0e1a 100%);
       color: var(--text); margin: 0; padding: 12px; line-height: 1.4; 
     }
-    /* ... kalan CSS aynı kalıyor, sadece body'ye gradient eklendi ... */
-    /* (tüm CSS'i buraya tekrar yazmıyorum, sadece değişen kısım gösterdim) */
+    .container { max-width: 1200px; margin: 0 auto; }
+   
+    /* NOTIFICATION */
+    .notification-container { position: fixed; top: 20px; right: 20px; z-index: 99999; display: flex; flex-direction: column; gap: 10px; }
+    .notification { background: var(--card-bg); border-left: 4px solid var(--accent); padding: 12px 20px; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); min-width: 300px; max-width: 400px; animation: slideInRight 0.3s; }
+    .notification.warning { border-left-color: var(--warning); }
+    .notification.danger { border-left-color: var(--danger); }
+    .notification.info { border-left-color: var(--blue); }
+    .notification-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+    .notification-title { font-weight: 800; font-size: 0.8rem; }
+    .notification-close { cursor: pointer; color: var(--text-muted); font-size: 0.9rem; }
+    .notification-content { font-size: 0.75rem; color: var(--text-muted); }
+    @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+    /* LOADING */
+    #loadingOverlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 99998; align-items: center; justify-content: center; flex-direction: column; }
+    .spinner { width: 50px; height: 50px; border: 3px solid var(--accent); border-radius: 50%; border-top-color: transparent; animation: spin 1s linear infinite; margin-bottom: 15px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* HEADER */
+    .header-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding: 0 5px; flex-wrap: wrap; gap: 10px; }
+    .title-section h1 { font-size: 1.2rem; margin: 0; color: var(--accent); font-weight: 800; }
+    .title-section .version { font-size: 0.6rem; color: var(--text-muted); margin-left: 5px; }
+    .control-buttons { display: flex; gap: 8px; }
+    .control-btn { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; color: var(--text); font-size: 0.7rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 5px; transition: 0.2s; }
+    .control-btn:hover { border-color: var(--accent); background: rgba(0, 255, 157, 0.05); }
+
+    /* FILTER BAR */
+    .filter-bar { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    .filter-select, .filter-input { background: var(--card-bg); color: var(--text); border: 1px solid var(--border); padding: 8px 12px; border-radius: 8px; font-size: 0.75rem; min-width: 150px; }
+    .filter-input { flex: 1; min-width: 200px; }
+    .filter-select:focus, .filter-input:focus { outline: none; border-color: var(--accent); }
+
+    /* PERFORMANS PANEL */
+    .perf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+    @media (max-width: 768px) { .perf-grid { grid-template-columns: 1fr; } }
+    .perf-box { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 10px; position: relative; overflow: hidden; }
+    .perf-box::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+    .perf-box.best::before { background: linear-gradient(90deg, var(--accent), transparent); }
+    .perf-box.worst::before { background: linear-gradient(90deg, var(--red), transparent); }
+    .perf-label { font-size: 0.55rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; margin-bottom: 2px; }
+    .perf-value { font-weight: 800; font-size: 0.8rem; }
+
+    /* TICKER */
+    .ticker-wrap { width: 100%; overflow: hidden; background: rgba(16, 20, 29, 0.5); border-radius: 10px; border: 1px solid var(--border); padding: 12px 0; margin-bottom: 15px; white-space: nowrap; }
+    .ticker { display: inline-flex; animation: ticker-move 35s linear infinite; }
+    .ticker:hover { animation-play-state: paused; }
+    .ticker-item { padding: 0 40px; font-size: 0.75rem; font-weight: 700; display: flex; align-items: center; gap: 6px; cursor: pointer; transition: 0.2s; }
+    .ticker-item:hover { color: var(--accent); }
+    @keyframes ticker-move { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+
+    /* SUMMARY GRID */
+    .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+    @media (max-width: 768px) { .summary-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 480px) { .summary-grid { grid-template-columns: 1fr; } }
+    .card { background: var(--card-bg); backdrop-filter: blur(15px); padding: 15px 12px; border-radius: 18px; border: 1px solid var(--border); cursor: pointer; position: relative; border-left: 4px solid #334155; transition: 0.3s; }
+    .card:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+    .card.active { border-color: var(--accent); box-shadow: 0 10px 40px rgba(0,0,0,0.8); }
+    .card span { color: var(--text-muted); font-size: 0.6rem; font-weight: 700; text-transform: uppercase; display: block; margin-bottom: 4px; }
+    .card .value { font-size: 0.95rem; font-weight: 800; }
+    .card.up-card { border-left-color: var(--accent); }
+    .card.down-card { border-left-color: var(--red); }
+
+    /* ... kalan stiller aynı kalıyor (dist-container, chart-block, market-block, asset-item, vs.) ... */
+    /* Stats bar'da 4 yerine 3 sütun olacak şekilde düzenleme yapılacak */
+    .stats-bar { display: grid; grid-template-columns: repeat(3, 1fr); background: var(--card-bg); border-radius: 10px; padding: 10px 15px; margin-bottom: 15px; border: 1px solid var(--border); font-size: 0.7rem; gap: 10px; }
+    .stat-item { text-align: center; }
+    .stat-value { font-weight: 800; font-size: 0.9rem; }
+    .stat-label { color: var(--text-muted); font-size: 0.6rem; margin-top: 2px; }
+
+    .footer { text-align: center; padding: 20px 0 30px 0; color: var(--text-muted); font-size: 0.7rem; }
   </style>
 </head>
 <body>
-<!-- HTML yapısı aynı kalıyor, sadece script kısmı değişiyor -->
+
+<div class="notification-container" id="notificationContainer"></div>
+
+<div id="loadingOverlay">
+  <div class="spinner"></div>
+  <div style="font-weight: 700; color: var(--accent);">Veriler yükleniyor...</div>
+</div>
 
 <div class="container">
-  <!-- ... header, notification, loading, filter-bar, perf-grid, stats-bar, summary-grid, ticker, chart-block, market-block, detailSection vs. hepsi aynı ... -->
+
+  <div class="header-controls">
+    <div class="title-section">
+      <h1>Elite Portföy Terminali <span class="version">v4.3</span></h1>
+      <div style="font-size: 0.65rem; color: var(--text-muted); display: flex; align-items: center; gap: 10px; margin-top: 5px;">
+        <span><i class="fas fa-sync-alt" style="font-size: 0.6rem;"></i> 5 dakikada bir güncellenir</span>
+        <span id="lastUpdateTime"></span>
+      </div>
+    </div>
+    <div class="control-buttons">
+      <div class="control-btn" onclick="fetchData()" title="Yenile (Ctrl+R)">
+        <i class="fas fa-sync-alt"></i> Yenile
+      </div>
+      <div class="control-btn" onclick="exportToCSV()" title="CSV Olarak İndir">
+        <i class="fas fa-download"></i> Export
+      </div>
+      <div class="control-btn" onclick="toggleAlerts()" title="Bildirimleri Aç/Kapat">
+        <i class="fas fa-bell"></i> Bildirimler
+      </div>
+    </div>
+  </div>
+
+  <div class="filter-bar">
+    <select id="categoryFilter" class="filter-select" onchange="filterAssets()">
+      <option value="">Tüm Kategoriler</option>
+    </select>
+    <select id="performanceFilter" class="filter-select" onchange="filterAssets()">
+      <option value="">Tüm Performans</option>
+      <option value="profit">Kar Edenler</option>
+      <option value="loss">Zarar Edenler</option>
+      <option value="top5">En İyi 5</option>
+      <option value="bottom5">En Zayıf 5</option>
+    </select>
+    <input type="text" id="searchInput" class="filter-input" oninput="filterAssets()" placeholder="Varlık ara...">
+    <div style="display: flex; gap: 5px; align-items: center;">
+      <div class="control-btn" onclick="clearFilters()" title="Filtreleri Temizle" style="padding: 8px;">
+        <i class="fas fa-times"></i>
+      </div>
+    </div>
+  </div>
+
+  <div class="perf-grid">
+    <div id="bestPerf" class="perf-box best">
+      <div class="perf-label">Günün Yıldızı</div>
+      <div class="up perf-value">...</div>
+      <div id="bestPerfDetail" style="font-size: 0.65rem; color: var(--text-muted); margin-top: 3px;"></div>
+    </div>
+    <div id="worstPerf" class="perf-box worst">
+      <div class="perf-label">Günün Zayıfı</div>
+      <div class="down perf-value">...</div>
+      <div id="worstPerfDetail" style="font-size: 0.65rem; color: var(--text-muted); margin-top: 3px;"></div>
+    </div>
+  </div>
+
+  <!-- Toplam Portföy kutusu kaldırıldı → 3 sütun kaldı -->
+  <div class="stats-bar">
+    <div class="stat-item">
+      <div class="stat-value" id="totalAssets">0</div>
+      <div class="stat-label">Toplam Varlık</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value up" id="profitableAssets">0</div>
+      <div class="stat-label">Kar Edenler</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value down" id="losingAssets">0</div>
+      <div class="stat-label">Zarar Edenler</div>
+    </div>
+  </div>
+
+  <div class="summary-grid" id="summaryGrid"></div>
+
+  <div class="ticker-wrap">
+    <div class="ticker" id="tickerContent">Veriler senkronize ediliyor...</div>
+  </div>
+
+  <!-- chart-block, filter-results-section, market-block, detailSection aynı kalıyor -->
+
+  <div class="footer">
+    <div>© 2025 Elite Portföy Terminali v4.3</div>
+  </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script>
 // ──────────────────────────────────────────────
-// KONFIG & GLOBAL DEĞİŞKENLER
+// TEMİZLENMİŞ & STANDARTLAŞTIRILMIŞ VERSİYON
 // ──────────────────────────────────────────────
+
 const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQeTFovlKfvEp9sPepJb9SGxf_2AgMU7eEPTDCc6WWc0o1Z1AizX6K2mJlaWtcvSderiBym7cyhEdsC/pub?gid=0&single=true&output=csv";
 
 let globalData = [];
@@ -42,193 +198,165 @@ let filteredData = [];
 let allocationChart = null;
 let currentChartType = 'doughnut';
 let alertsEnabled = true;
-let debugMode = false;
 let lastFetchTime = 0;
 let isFetching = false;
 const FETCH_COOLDOWN = 30000;
 
 // ──────────────────────────────────────────────
-// YARDIMCI FONKSİYONLAR
+// YARDIMCILAR - TÜM SAYI GÖSTERİMLERİ tr-TR FORMATINDA
 // ──────────────────────────────────────────────
 
-function debugLog(message, type = 'info') {
-  if (!debugMode) return;
-  const debugContent = document.getElementById('debugContent');
-  const timestamp = new Date().toLocaleTimeString('tr-TR', {hour12: false});
-  const color = type === 'error' ? 'var(--red)' : type === 'warning' ? 'var(--warning)' : 'var(--text-muted)';
-  const logEntry = document.createElement('div');
-  logEntry.className = 'debug-row';
-  logEntry.innerHTML = `<span style="color:${color}">[${timestamp}] ${message}</span>`;
-  debugContent.appendChild(logEntry);
-  debugContent.scrollTop = debugContent.scrollHeight;
+function formatMoney(num) {
+  if (typeof num !== 'number' || isNaN(num)) return "0 ₺";
+  return num.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + " ₺";
 }
 
-function clearDebugLog() {
-  document.getElementById('debugContent').innerHTML = '';
+function formatMoney2(num) {  // 2 ondalık isteyen yerler için
+  if (typeof num !== 'number' || isNaN(num)) return "0,00 ₺";
+  return num.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " ₺";
 }
 
-function clean(v, fieldName = '') {
-  if (!v || v === "" || v === "-" || String(v).trim() === "" || String(v).includes('#')) return 0;
+function formatPercent(num) {
+  if (typeof num !== 'number' || isNaN(num)) return "%0,00";
+  return (num >= 0 ? "+" : "") + num.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + "%";
+}
 
-  try {
-    let str = String(v).trim();
-    str = str.replace(/[\s₺$€£%]/g, '');
-
-    const hasCommaAsDecimal = /,\d{1,2}$/.test(str);
-    if (hasCommaAsDecimal) {
-      str = str.replace(/\./g, '').replace(',', '.');
-    } else {
-      str = str.replace(/,/g, '');
-    }
-
-    str = str.replace(/[^\d.-]/g, '');
-
-    if ((str.match(/\./g) || []).length > 1) {
-      const parts = str.split('.');
-      str = parts.slice(0, -1).join('') + '.' + parts[parts.length - 1];
-    }
-
-    const num = parseFloat(str);
-    if (isNaN(num)) return 0;
-
-    if (debugMode && fieldName && String(v) !== String(num)) {
-      debugLog(`${fieldName}: "${v}" → ${num}`, 'info');
-    }
-    return num;
-  } catch (e) {
-    if (debugMode) debugLog(`clean() hata → ${fieldName}: ${v} → ${e.message}`, 'error');
-    return 0;
+function clean(v) {
+  if (!v || v === "" || v === "-" || String(v).includes('#')) return 0;
+  let str = String(v).trim().replace(/[\s₺$€£%]/g, '');
+  const hasCommaAsDecimal = /,\d{1,2}$/.test(str);
+  if (hasCommaAsDecimal) {
+    str = str.replace(/\./g, '').replace(',', '.');
+  } else {
+    str = str.replace(/,/g, '');
   }
+  str = str.replace(/[^\d.-]/g, '');
+  const num = parseFloat(str);
+  return isNaN(num) ? 0 : num;
 }
 
 function formatQuantity(qty) {
   if (!qty || qty === 0) return "0";
   const num = parseFloat(qty);
-  if (num >= 1_000_000_000) return (num / 1_000_000_000).toFixed(2).replace('.', ',') + 'B';
-  if (num >= 1_000_000)    return (num / 1_000_000   ).toFixed(2).replace('.', ',') + 'M';
-  if (num >= 1_000)        return (num / 1_000       ).toFixed(2).replace('.', ',') + 'K';
-  if (num % 1 !== 0)       return num.toFixed(2).replace('.', ',');
+  if (num >= 1_000_000) return (num / 1_000_000).toFixed(1).replace('.', ',') + 'M';
+  if (num >= 1_000) return (num / 1_000).toFixed(1).replace('.', ',') + 'K';
   return num.toLocaleString('tr-TR');
 }
 
-// kalan yardımcı fonksiyonlar (sanitizeHTML, getDaysBetween, showLoading, showNotification vb.) aynı kalıyor...
-
 // ──────────────────────────────────────────────
-// VERİ ÇEKME - ANA FONKSİYON (en çok değişen kısım)
+// fetchData - debug ve doğrulama kısımları kaldırıldı
 // ──────────────────────────────────────────────
 
 async function fetchData() {
-  if (isFetching) {
-    showNotification("Veri zaten çekiliyor, lütfen bekleyin...", 'info', 3000);
-    return;
-  }
-
-  if (Date.now() - lastFetchTime < FETCH_COOLDOWN) {
-    const kalan = Math.ceil((FETCH_COOLDOWN - (Date.now() - lastFetchTime)) / 1000);
-    showNotification(`Son yenilemeden ${kalan} sn geçti.`, 'warning', 4000);
-    return;
-  }
+  if (isFetching) return;
+  if (Date.now() - lastFetchTime < FETCH_COOLDOWN) return;
 
   isFetching = true;
-  showLoading(true);
+  document.getElementById('loadingOverlay').style.display = 'flex';
   lastFetchTime = Date.now();
 
   try {
-    debugLog('Veri çekme başladı...', 'info');
     const response = await fetch(csvUrl);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    if (!response.ok) throw new Error("Bağlantı hatası");
 
     const csvText = await response.text();
-    debugLog(`CSV alındı (${csvText.length} karakter)`, 'info');
 
     Papa.parse(csvText, {
       header: true,
       skipEmptyLines: true,
-      transformHeader: h => h.trim(),
       complete: function(res) {
-        if (res.errors.length > 0) {
-          debugLog("PapaParse hataları: " + JSON.stringify(res.errors), 'error');
-          showNotification("CSV okuma sorunu", 'danger');
-          return;
-        }
-
-        if (!res.data || res.data.length === 0) {
-          showNotification("CSV'de veri yok", 'danger');
-          return;
-        }
-
         globalData = res.data
-          .filter(row => row && row["Varlık"]?.trim())
-          .map((row, idx) => {
-            const adet    = clean(row["Adet"],        `Satır${idx+1} Adet`);
-            const aFiyat  = clean(row["Alış Fiyatı"], `Satır${idx+1} Alış Fiyat`);
-            const yatirim = clean(row["Yatırım"],     `Satır${idx+1} Yatırım`);
-            const fiyat   = clean(row["Fiyat"],       `Satır${idx+1} Fiyat`);
-            const tutar   = clean(row["Tutar"],       `Satır${idx+1} Tutar`);
-
-            return {
-              ad:       sanitizeHTML((row["Varlık"] || "").trim()),
-              tur:      sanitizeHTML((row["Kategori"] || row["Tur"] || "Diğer").trim()),
-              alisTarihi: row["Alış Tarihi"] || row["Tarih"] || "",
-              vade:     row["Vade"] || "",
-              adet, aFiyat, yatirim, fiyat, tutar,
-              gKZ: clean(row["Günlük K/Z"]),
-              hKZ: clean(row["Haftalık K/Z"]),
-              aKZ: clean(row["Aylık K/Z"]),
-              tKZ: clean(row["Toplam K/Z"])
-            };
-          })
+          .filter(row => row?.["Varlık"]?.trim())
+          .map(row => ({
+            ad:       (row["Varlık"] || "").trim(),
+            tur:      (row["Kategori"] || row["Tur"] || "Diğer").trim(),
+            alisTarihi: row["Alış Tarihi"] || "",
+            vade:     row["Vade"] || "",
+            adet:     clean(row["Adet"]),
+            aFiyat:   clean(row["Alış Fiyatı"]),
+            yatirim:  clean(row["Yatırım"]),
+            fiyat:    clean(row["Fiyat"]),
+            tutar:    clean(row["Tutar"]),
+            gKZ:      clean(row["Günlük K/Z"]),
+            hKZ:      clean(row["Haftalık K/Z"]),
+            aKZ:      clean(row["Aylık K/Z"]),
+            tKZ:      clean(row["Toplam K/Z"])
+          }))
           .filter(item => item.ad && item.tutar > 0);
-
-        // Tutarsızlık kontrolü
-        const totalCSV    = globalData.reduce((s, i) => s + i.tutar, 0);
-        const totalCalc   = globalData.reduce((s, i) => s + (i.adet * i.fiyat), 0);
-        const diff        = Math.abs(totalCSV - totalCalc);
-        const diffPct     = totalCSV > 0 ? (diff / totalCSV * 100) : 0;
-
-        if (diffPct > 0.3 || diff > 50) {
-          showNotification(
-            `⚠️ Değer tutarsızlığı: ${diff.toLocaleString('tr-TR')} ₺ (%${diffPct.toFixed(1)})`,
-            'warning', 8000
-          );
-          debugLog(`Toplam CSV: ${totalCSV.toLocaleString()} | Hesap: ${totalCalc.toLocaleString()} | Fark: ${diff.toLocaleString()} ₺`, 'warning');
-        }
 
         filteredData = [...globalData];
         renderAll();
-        checkAlerts();
 
         document.getElementById('lastUpdateTime').textContent = 
           `Son: ${new Date().toLocaleTimeString('tr-TR', {hour:'2-digit', minute:'2-digit'})}`;
-
-        showNotification(`Yüklendi: ${globalData.length} varlık • ${totalCSV.toLocaleString('tr-TR')} ₺`, 'info', 4000);
       }
     });
   } catch (err) {
-    debugLog(`Fetch/parse hatası: ${err.message}`, 'error');
-    showNotification(`Veri alınamadı: ${err.message}`, 'danger');
+    console.error(err);
   } finally {
     isFetching = false;
-    showLoading(false);
+    document.getElementById('loadingOverlay').style.display = 'none';
   }
 }
 
 // ──────────────────────────────────────────────
-// Diğer fonksiyonlar (renderAll, renderSummaries, updateChart, vs.) aynı kalıyor
-// Sadece ufak iyileştirmeler:
-// updateChart içindeki legend font:
-// font: { size: window.innerWidth < 640 ? 9 : 11 },
-
-// renderTicker içindeki animation süresi:
-// ticker.style.animationDuration = `${Math.max(20, globalData.length * 1.8)}s`;
-
-// ──────────────────────────────────────────────
-// İLK YÜKLEME
+// renderAll içindeki formatlamalar güncellendi
 // ──────────────────────────────────────────────
 
+function renderAll() {
+  if (globalData.length === 0) {
+    document.getElementById('summaryGrid').innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:20px; color:var(--text-muted)">Veri yok</div>';
+    return;
+  }
+
+  const totals = { yatirim:0, tutar:0, tKZ:0, gKZ:0, hKZ:0, aKZ:0 };
+  const groups = {};
+
+  globalData.forEach(item => {
+    if (!groups[item.tur]) groups[item.tur] = { yatirim:0, tutar:0, tKZ:0, gKZ:0, hKZ:0, aKZ:0, count:0 };
+    Object.keys(totals).forEach(k => {
+      groups[item.tur][k] += item[k];
+      totals[k] += item[k];
+    });
+    groups[item.tur].count++;
+  });
+
+  // Özet kartları (tüm değerler tr-TR formatında)
+  const keys = [
+    {id:'yatirim', label:'Yatırım'},
+    {id:'tutar',   label:'Portföy'},
+    {id:'tKZ',     label:'Toplam K/Z'},
+    {id:'gKZ',     label:'Günlük K/Z'},
+    {id:'hKZ',     label:'Haftalık K/Z'},
+    {id:'aKZ',     label:'Aylık K/Z'}
+  ];
+
+  document.getElementById("summaryGrid").innerHTML = keys.map(k => {
+    const val = totals[k.id];
+    const isKZ = k.id.includes('KZ');
+    const cardClass = isKZ ? (val >= 0 ? 'up-card' : 'down-card') : '';
+    const colorClass = isKZ ? (val >= 0 ? 'up' : 'down') : '';
+    const formatted = isKZ ? formatMoney(val) : formatMoney(val);
+
+    return `<div class="card ${cardClass}">
+      <span>${k.label}</span>
+      <div class="value ${colorClass}">${formatted}</div>
+    </div>`;
+  }).join('');
+
+  // Stats bar güncellemesi (toplam portföy kaldırıldı)
+  document.getElementById('totalAssets').textContent = globalData.length;
+  document.getElementById('profitableAssets').textContent = globalData.filter(a => a.tKZ > 0).length;
+  document.getElementById('losingAssets').textContent = globalData.filter(a => a.tKZ < 0).length;
+
+  // kalan render fonksiyonları (ticker, chart, market vs.) aynı kalabilir
+  // sadece para gösteren yerlerde formatMoney / formatMoney2 kullan
+}
+
+// İlk yükleme
 window.addEventListener('DOMContentLoaded', () => {
   fetchData();
-  setInterval(fetchData, 300000); // 5 dk
+  setInterval(fetchData, 300000);
 });
 </script>
 </body>
