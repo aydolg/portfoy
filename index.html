@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <title>Elite Portföy Terminali v4.0</title>
+  <title>Elite Portföy Terminali v4.1</title>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -95,7 +95,7 @@
     .chart-btn.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
     .chart-container { height: 200px; position: relative; }
     
-    .market-block { background: var(--card-bg); border-radius: 20px; border: 1px solid var(--border); padding: 5px 15px; margin-bottom: 25px; }
+    .market-block { background: var(--card-bg); border-radius: 20px; border: 1px solid var(--border); padding: 5px 15px; margin-bottom: 15px; }
     .market-header { padding: 12px 0 8px 0; font-size: 0.65rem; font-weight: 800; color: var(--accent); letter-spacing: 1px; border-bottom: 1px solid var(--border); margin-bottom: 10px; }
     .m-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; transition: 0.2s; }
     .m-row:hover { background: rgba(255,255,255,0.02); }
@@ -110,6 +110,15 @@
     .det-box { display: flex; flex-direction: column; background: rgba(255,255,255,0.02); padding: 8px; border-radius: 8px; }
     .det-lbl { font-size: 0.5rem; color: var(--text-muted); text-transform: uppercase; font-weight: 800; }
     .det-val { font-size: 0.75rem; font-weight: 700; color: #f1f5f9; }
+    
+    /* FILTER RESULTS */
+    .filter-results-table { width: 100%; border-collapse: collapse; }
+    .filter-results-table th { text-align: left; padding: 10px; font-size: 0.65rem; color: var(--text-muted); border-bottom: 1px solid var(--border); font-weight: 800; }
+    .filter-results-table td { padding: 10px; font-size: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .filter-results-table tr { cursor: pointer; transition: 0.2s; }
+    .filter-results-table tr:hover { background: rgba(255,255,255,0.03); }
+    .filter-results-table .positive { color: var(--accent); }
+    .filter-results-table .negative { color: var(--red); }
     
     /* COLOR CLASSES */
     .up { color: var(--accent); } .down { color: var(--red); }
@@ -144,7 +153,7 @@
   <!-- HEADER CONTROLS -->
   <div class="header-controls">
     <div class="title-section">
-      <h1>Elite Portföy Terminali <span class="version">v4.0</span></h1>
+      <h1>Elite Portföy Terminali <span class="version">v4.1</span></h1>
       <div style="font-size: 0.65rem; color: var(--text-muted); display: flex; align-items: center; gap: 10px; margin-top: 5px;">
         <span><i class="fas fa-sync-alt" style="font-size: 0.6rem;"></i> 5 dakikada bir güncellenir</span>
         <span id="lastUpdateTime"></span>
@@ -160,8 +169,8 @@
       <div class="control-btn" onclick="toggleAlerts()" title="Bildirimleri Aç/Kapat">
         <i class="fas fa-bell"></i> Bildirimler
       </div>
-      <div class="control-btn" onclick="showHelp()" title="Yardım">
-        <i class="fas fa-question-circle"></i> Yardım
+      <div class="control-btn" onclick="toggleDebugMode()" title="Debug Modu">
+        <i class="fas fa-bug"></i> Debug
       </div>
     </div>
   </div>
@@ -183,6 +192,9 @@
     <div style="display: flex; gap: 5px; align-items: center;">
       <div class="control-btn" onclick="clearFilters()" title="Filtreleri Temizle" style="padding: 8px;">
         <i class="fas fa-times"></i>
+      </div>
+      <div class="control-btn" onclick="showFilterResults()" id="showResultsBtn" style="display: none; padding: 8px 15px; background: var(--accent); color: var(--bg); border: none;">
+        <i class="fas fa-chart-bar"></i> Sonuçları Göster
       </div>
     </div>
   </div>
@@ -244,6 +256,23 @@
     </div>
   </div>
 
+  <!-- FILTER RESULTS SECTION -->
+  <div class="chart-block" id="filterResultsSection" style="display: none;">
+    <div class="chart-header">
+      <div class="chart-title">FİLTRE SONUÇLARI</div>
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <div id="filterResultsCount" style="font-size: 0.7rem; color: var(--text-muted);"></div>
+        <div class="control-btn" onclick="exportFilteredResults()" style="padding: 4px 8px; font-size: 0.6rem;">
+          <i class="fas fa-download"></i> Export
+        </div>
+        <div class="control-btn" onclick="hideFilterResults()" style="padding: 4px 8px; font-size: 0.6rem;">
+          <i class="fas fa-times"></i> Kapat
+        </div>
+      </div>
+    </div>
+    <div id="filterResultsGrid" style="max-height: 400px; overflow-y: auto; padding-right: 5px;"></div>
+  </div>
+
   <!-- MARKET BLOCK -->
   <div class="market-block">
     <div class="market-header">GÜNCEL FİYATLAR</div>
@@ -263,7 +292,7 @@
 
   <!-- FOOTER -->
   <div class="footer">
-    <div>© 2023 Elite Portföy Terminali v4.0</div>
+    <div>© 2023 Elite Portföy Terminali v4.1</div>
     <div class="footer-links">
       <a href="javascript:void(0)" onclick="showHelp()">Yardım</a>
       <a href="javascript:void(0)" onclick="showAbout()">Hakkında</a>
@@ -275,42 +304,127 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script>
   const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQeTFovlKfvEp9sPepJb9SGxf_2AgMU7eEPTDCc6WWc0o1Z1AizX6K2mJlaWtcvSderiBym7cyhEdsC/pub?gid=0&single=true&output=csv";
-  const backupUrl = "data/backup.csv"; // Yedek URL'nizi buraya ekleyin
+  const backupUrl = "data/backup.csv";
   
   let globalData = [];
   let filteredData = [];
   let allocationChart = null;
   let currentChartType = 'doughnut';
   let alertsEnabled = true;
+  let debugMode = false;
   let lastFetchTime = 0;
-  const FETCH_COOLDOWN = 30000; // 30 saniye
+  const FETCH_COOLDOWN = 30000;
   let notificationQueue = [];
 
-  // Gelişmiş veri temizleme fonksiyonu
+  // GELİŞMİŞ VERİ TEMİZLEME FONKSİYONU
   function clean(v) {
-    if (!v || v === "" || v.toString().includes('#N/A') || v.toString().includes('#REF!')) return 0;
+    if (!v || v === "" || v === "-" || v.toString().includes('#N/A') || v.toString().includes('#REF!')) {
+        return 0;
+    }
     
     try {
-      let str = v.toString().trim();
-      str = str.replace(/\s+/g, ''); // Boşlukları temizle
-      
-      // Türkçe sayı formatı: 1.234,56 veya 1234,56
-      if (str.includes('.') && str.includes(',')) {
-        // Binlik ayraç ve ondalık ayraç: 1.234,56
-        str = str.replace(/\./g, '').replace(',', '.');
-      } else if (str.includes(',') && !str.includes('.')) {
-        // Sadece ondalık ayraç: 1234,56
-        str = str.replace(',', '.');
-      }
-      
-      // Sadece sayılar, nokta ve eksi işaretine izin ver
-      str = str.replace(/[^0-9.-]+/g, '');
-      
-      const num = parseFloat(str);
-      return isNaN(num) ? 0 : Math.round(num * 100) / 100; // 2 ondalık hassasiyet
+        let str = v.toString().trim();
+        
+        // Boşlukları temizle
+        str = str.replace(/\s+/g, '');
+        
+        if (debugMode) {
+            console.log('Orijinal değer:', v, '->', str);
+        }
+        
+        // Özel durum: Eğer sadece sayılardan oluşuyorsa ve nokta/virgül yoksa
+        if (/^\d+$/.test(str)) {
+            return parseFloat(str);
+        }
+        
+        // Kaç tane nokta ve virgül olduğunu say
+        const dotCount = (str.match(/\./g) || []).length;
+        const commaCount = (str.match(/,/g) || []).length;
+        
+        // 1.234,56 formatı (Türkçe)
+        if (dotCount > 0 && commaCount === 1) {
+            // Son karakter virgül mü kontrol et
+            const lastCommaIndex = str.lastIndexOf(',');
+            if (lastCommaIndex > str.lastIndexOf('.')) {
+                // Binlik ayraçları kaldır, ondalık ayracı nokta yap
+                str = str.replace(/\./g, '').replace(',', '.');
+            }
+        }
+        // 1,234.56 formatı (İngilizce/Uluslararası)
+        else if (commaCount > 0 && dotCount === 1) {
+            // Son karakter nokta mı kontrol et
+            const lastDotIndex = str.lastIndexOf('.');
+            if (lastDotIndex > str.lastIndexOf(',')) {
+                // Binlik ayraçları kaldır
+                str = str.replace(/,/g, '');
+            }
+        }
+        // Sadece virgül varsa
+        else if (commaCount === 1 && dotCount === 0) {
+            // Virgül ondalık ayracı olarak kabul edilir
+            str = str.replace(',', '.');
+        }
+        // Sadece nokta varsa ve birden fazla ise
+        else if (dotCount > 1 && commaCount === 0) {
+            // Binlik ayraçları kaldır
+            str = str.replace(/\./g, '');
+        }
+        // Birden fazla nokta ve virgül varsa
+        else if (dotCount > 0 && commaCount > 0) {
+            // Son ayracın ne olduğuna bak
+            const lastChar = str[str.length - 1];
+            if (lastChar === ',') {
+                // Son karakter virgül ise, tüm noktalar binlik ayraçtır
+                str = str.replace(/\./g, '').replace(',', '.');
+            } else if (lastChar === '.') {
+                // Son karakter nokta ise, tüm virgüller binlik ayraçtır
+                str = str.replace(/,/g, '').replace(/\.(?=\d+$)/, '.');
+            }
+        }
+        
+        // Son kontroller
+        str = str.replace(/[^\d.-]/g, '');
+        
+        // Birden fazla nokta varsa, sadece son noktayı tut
+        if ((str.match(/\./g) || []).length > 1) {
+            const parts = str.split('.');
+            const decimalPart = parts.pop();
+            const integerPart = parts.join('');
+            str = integerPart + '.' + decimalPart;
+        }
+        
+        const num = parseFloat(str);
+        
+        if (isNaN(num)) {
+            console.warn('Sayıya çevrilemedi:', v, '->', str);
+            return 0;
+        }
+        
+        if (debugMode) {
+            console.log('Dönüştürülen:', v, '->', str, '->', num);
+        }
+        
+        return num;
     } catch (e) {
-      console.error('Temizleme hatası:', e, 'Değer:', v);
-      return 0;
+        console.error('Temizleme hatası:', e, 'Değer:', v);
+        return 0;
+    }
+  }
+
+  // ADET FORMATLAMA FONKSİYONU
+  function formatQuantity(qty) {
+    if (qty === 0 || !qty) return "0";
+    
+    const num = parseFloat(qty);
+    
+    if (num >= 1000000) {
+        return (num / 1000000).toFixed(2).replace('.', ',') + 'M';
+    } else if (num >= 1000) {
+        return (num / 1000).toFixed(2).replace('.', ',') + 'K';
+    } else if (num % 1 !== 0) {
+        return num.toFixed(2).replace('.', ',');
+    } else {
+        return num.toLocaleString('tr-TR');
     }
   }
 
@@ -332,7 +446,6 @@
       let diff = Math.floor((new Date() - d) / (1000 * 60 * 60 * 24));
       return diff >= 0 ? diff + " Gün" : "-";
     } catch(e) { 
-      console.error('Tarih parse hatası:', e);
       return "-"; 
     }
   }
@@ -360,22 +473,48 @@
     
     document.getElementById('notificationContainer').appendChild(notification);
     
-    // Eski bildirimleri temizle (max 5)
     const notifications = document.querySelectorAll('.notification');
     if (notifications.length > 5) {
       notifications[0].remove();
     }
     
-    // Otomatik kapanma
     setTimeout(() => {
       if (notification.parentElement) {
         notification.remove();
       }
     }, duration);
     
-    // Bildirim kuyruğuna ekle
     notificationQueue.push({message, type, time: new Date()});
     if (notificationQueue.length > 20) notificationQueue.shift();
+  }
+
+  // DEBUG MODU
+  function toggleDebugMode() {
+    debugMode = !debugMode;
+    const btn = event.target.closest('.control-btn');
+    if (btn) {
+      if (debugMode) {
+        btn.innerHTML = '<i class="fas fa-bug"></i> Debug ON';
+        btn.style.background = 'var(--warning)';
+        showNotification('Debug modu açıldı. Console\'a bakın.', 'info');
+        
+        console.group('PORTFÖY VERİLERİ');
+        console.table(globalData.map(d => ({
+          'Varlık': d.ad,
+          'Adet': d.adet,
+          'Adet (Formatlı)': formatQuantity(d.adet),
+          'Yatırım': d.yatirim,
+          'Güncel Değer': d.tutar,
+          'Fiyat': d.fiyat,
+          'Toplam K/Z': d.tKZ
+        })));
+        console.groupEnd();
+      } else {
+        btn.innerHTML = '<i class="fas fa-bug"></i> Debug';
+        btn.style.background = '';
+        showNotification('Debug modu kapandı', 'info');
+      }
+    }
   }
 
   // Veri çekme
@@ -390,7 +529,6 @@
     lastFetchTime = now;
     
     try {
-      // Ana kaynaktan veri çek
       const response = await fetch(csvUrl);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       
@@ -398,9 +536,16 @@
       
       Papa.parse(csvText, {
         complete: function(res) {
+          if (debugMode) {
+            console.log('CSV Parse tamamlandı, satır sayısı:', res.data.length);
+            console.log('İlk 3 satır:');
+            for (let i = 0; i < Math.min(3, res.data.length); i++) {
+              console.log(`Satır ${i}:`, res.data[i]);
+            }
+          }
+          
           if (res.errors && res.errors.length > 0) {
             console.warn('Parse hataları:', res.errors);
-            showNotification(`${res.errors.length} parse hatası oluştu`, 'warning');
           }
           
           if (!res.data || res.data.length < 2) {
@@ -409,34 +554,47 @@
           
           globalData = res.data.slice(1)
             .filter(r => r[0] && r[0].trim() !== "")
-            .map(r => ({
-              ad: sanitizeHTML(r[0].trim()), 
-              tur: sanitizeHTML(r[1] || "Diğer"), 
-              alisTarihi: r[2] || "",
-              vade: r[3] || "",
-              adet: clean(r[4]),
-              aFiyat: clean(r[5]), 
-              yatirim: clean(r[6]), 
-              fiyat: clean(r[7]), 
-              tutar: clean(r[8]), 
-              gKZ: clean(r[9]), 
-              hKZ: clean(r[10]), 
-              aKZ: clean(r[11]), 
-              tKZ: clean(r[12])
-            }))
-            .filter(item => item.tutar > 0); // 0 değerli varlıkları filtrele
+            .map((r, index) => {
+              const adet = clean(r[4]);
+              const yatirim = clean(r[6]);
+              const fiyat = clean(r[7]);
+              const tutar = clean(r[8]);
+              
+              if (debugMode && index < 3) {
+                console.log(`Varlık ${r[0]}:`);
+                console.log('  Orijinal adet:', r[4], '-> Temizlenmiş:', adet);
+                console.log('  Orijinal yatırım:', r[6], '-> Temizlenmiş:', yatirim);
+                console.log('  Orijinal fiyat:', r[7], '-> Temizlenmiş:', fiyat);
+                console.log('  Orijinal tutar:', r[8], '-> Temizlenmiş:', tutar);
+              }
+              
+              return {
+                ad: sanitizeHTML(r[0].trim()), 
+                tur: sanitizeHTML(r[1] || "Diğer"), 
+                alisTarihi: r[2] || "",
+                vade: r[3] || "",
+                adet: adet,
+                aFiyat: clean(r[5]), 
+                yatirim: yatirim, 
+                fiyat: fiyat, 
+                tutar: tutar, 
+                gKZ: clean(r[9]), 
+                hKZ: clean(r[10]), 
+                aKZ: clean(r[11]), 
+                tKZ: clean(r[12])
+              };
+            })
+            .filter(item => item.tutar > 0);
           
           filteredData = [...globalData];
           renderAll();
           checkAlerts();
           
-          // Son güncelleme zamanını güncelle
           document.getElementById('lastUpdateTime').textContent = `Son güncelleme: ${new Date().toLocaleTimeString('tr-TR', {hour: '2-digit', minute:'2-digit'})}`;
           
           showLoading(false);
           showNotification('Veriler başarıyla güncellendi', 'info', 2000);
           
-          // LocalStorage'a kaydet
           try {
             localStorage.setItem('portfolioCache', JSON.stringify({
               data: globalData,
@@ -448,7 +606,6 @@
         },
         error: function(error) {
           console.error('CSV parse hatası:', error);
-          // Yedek verileri dene
           loadBackupData();
         }
       });
@@ -467,7 +624,7 @@
         const cache = JSON.parse(cached);
         const cacheAge = Date.now() - cache.timestamp;
         
-        if (cacheAge < 24 * 60 * 60 * 1000) { // 24 saatten eski değilse
+        if (cacheAge < 24 * 60 * 60 * 1000) {
           globalData = cache.data;
           filteredData = [...globalData];
           renderAll();
@@ -477,17 +634,42 @@
         }
       }
       
-      // Harici yedek dosyayı dene
       Papa.parse(backupUrl, {
         download: true,
         complete: function(res) {
-          // Ana veri işleme mantığı buraya...
+          globalData = res.data.slice(1)
+            .filter(r => r[0] && r[0].trim() !== "")
+            .map(r => ({
+              ad: sanitizeHTML(r[0].trim()), 
+              tur: sanitizeHTML(r[1] || "Diğer"), 
+              alisTarihi: r[2] || "",
+              vade: r[3] || "",
+              adet: clean(r[4]),
+              aFiyat: clean(r[5]), 
+              yatirim: clean(r[6]), 
+              fiyat: clean(r[7]), 
+              tutar: clean(r[8]), 
+              gKZ: clean(r[9]), 
+              hKZ: clean(r[10]), 
+              aKZ: clean(r[11]), 
+              tKZ: clean(r[12])
+            }))
+            .filter(item => item.tutar > 0);
+          
+          filteredData = [...globalData];
+          renderAll();
+          showLoading(false);
+          showNotification('Yedek veriler yüklendi', 'warning');
+        },
+        error: function(e) {
+          console.error('Yedek yükleme hatası:', e);
+          showNotification('Yedek veriler de yüklenemedi. Lütfen internet bağlantınızı kontrol edin.', 'danger');
           showLoading(false);
         }
       });
     } catch (e) {
       console.error('Yedek yükleme hatası:', e);
-      showNotification('Yedek veriler de yüklenemedi. Lütfen internet bağlantınızı kontrol edin.', 'danger');
+      showNotification('Yedek veriler yüklenemedi', 'danger');
       showLoading(false);
     }
   }
@@ -520,6 +702,7 @@
     updateChart(groups);
     updateStats();
     populateCategoryFilter(groups);
+    updateFilterButton();
   }
 
   // Özet kartları render et
@@ -617,21 +800,7 @@
                 font: { size: 10 },
                 padding: 15
               } 
-            },
-            tooltip: {
-              callbacks: {
-                label: function(context) {
-                  const label = context.label || '';
-                  const value = context.raw || 0;
-                  const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                  const percentage = Math.round((value / total) * 100);
-                  return `${label}: ${value.toLocaleString('tr-TR')} ₺ (${percentage}%)`;
-                }
-              }
             }
-          },
-          animation: {
-            duration: 1000
           }
         }
       });
@@ -646,7 +815,6 @@
     allocationChart.config.type = type;
     allocationChart.update();
     
-    // Buton aktif durumunu güncelle
     document.querySelectorAll('.chart-btn').forEach(btn => btn.classList.remove('active'));
     event.target.classList.add('active');
   }
@@ -717,13 +885,11 @@
     const filter = document.getElementById('categoryFilter');
     const categories = Object.keys(groups).sort();
     
-    // Mevcut seçili değeri koru
     const currentValue = filter.value;
     
     filter.innerHTML = '<option value="">Tüm Kategoriler</option>' +
       categories.map(cat => `<option value="${cat}">${cat}</option>`).join('');
     
-    // Seçili değeri geri yükle
     if (categories.includes(currentValue)) {
       filter.value = currentValue;
     }
@@ -736,20 +902,16 @@
     const search = document.getElementById('searchInput').value.toLowerCase().trim();
     
     filteredData = globalData.filter(item => {
-      // Kategori filtresi
       if (category && item.tur !== category) return false;
       
-      // Arama filtresi
       if (search && !item.ad.toLowerCase().includes(search) && !item.tur.toLowerCase().includes(search)) return false;
       
-      // Performans filtresi
       if (performance === 'profit' && item.tKZ <= 0) return false;
       if (performance === 'loss' && item.tKZ >= 0) return false;
       
       return true;
     });
     
-    // Sıralama
     if (performance === 'top5') {
       filteredData = filteredData
         .sort((a, b) => ((b.tKZ / b.yatirim) || 0) - ((a.tKZ / a.yatirim) || 0))
@@ -760,10 +922,121 @@
         .slice(0, 5);
     }
     
-    // Sonuç sayısını göster
-    if (search || category || performance) {
-      showNotification(`${filteredData.length} varlık bulundu`, 'info', 2000);
+    updateFilterButton();
+  }
+
+  // Filtre butonunu güncelle
+  function updateFilterButton() {
+    const category = document.getElementById('categoryFilter').value;
+    const performance = document.getElementById('performanceFilter').value;
+    const search = document.getElementById('searchInput').value;
+    
+    const hasActiveFilter = category || performance || search;
+    const showResultsBtn = document.getElementById('showResultsBtn');
+    
+    if (hasActiveFilter) {
+      showResultsBtn.style.display = 'flex';
+      showResultsBtn.innerHTML = `<i class="fas fa-chart-bar"></i> Sonuçları Göster (${filteredData.length})`;
+    } else {
+      showResultsBtn.style.display = 'none';
+      hideFilterResults();
     }
+  }
+
+  // Filtre sonuçlarını göster
+  function showFilterResults() {
+    if (filteredData.length === 0) {
+      showNotification('Filtreleme sonucu bulunamadı', 'warning');
+      return;
+    }
+    
+    const section = document.getElementById('filterResultsSection');
+    const countElement = document.getElementById('filterResultsCount');
+    const grid = document.getElementById('filterResultsGrid');
+    
+    const totalCount = globalData.length;
+    const filteredCount = filteredData.length;
+    countElement.innerHTML = `<span class="${filteredCount === totalCount ? 'text-warning' : 'up'}">${filteredCount}</span> / ${totalCount} varlık`;
+    
+    let tableHTML = `
+        <table class="filter-results-table">
+            <thead>
+                <tr>
+                    <th>Varlık</th>
+                    <th>Kategori</th>
+                    <th style="text-align:center">Adet</th>
+                    <th style="text-align:right">Yatırım</th>
+                    <th style="text-align:right">Güncel Değer</th>
+                    <th style="text-align:right">Toplam K/Z</th>
+                    <th style="text-align:right">Getiri %</th>
+                </tr>
+            </thead>
+            <tbody>`;
+    
+    const sortedResults = [...filteredData].sort((a, b) => {
+        const aReturn = (a.tKZ / a.yatirim) || 0;
+        const bReturn = (b.tKZ / b.yatirim) || 0;
+        return bReturn - aReturn;
+    });
+    
+    sortedResults.forEach(asset => {
+        const totalReturn = ((asset.tKZ / asset.yatirim) * 100) || 0;
+        const returnClass = totalReturn >= 0 ? 'positive' : 'negative';
+        
+        tableHTML += `
+            <tr onclick="showAssetDetail('${asset.ad}')">
+                <td style="font-weight:700;">${asset.ad}</td>
+                <td style="color:var(--text-muted); font-size:0.7rem;">${asset.tur}</td>
+                <td style="text-align:center;">${formatQuantity(asset.adet)}</td>
+                <td style="text-align:right;">${asset.yatirim.toLocaleString('tr-TR')} ₺</td>
+                <td style="text-align:right; font-weight:700;">${asset.tutar.toLocaleString('tr-TR')} ₺</td>
+                <td style="text-align:right;" class="${returnClass}">${asset.tKZ >= 0 ? '+' : ''}${asset.tKZ.toLocaleString('tr-TR')} ₺</td>
+                <td style="text-align:right; font-weight:800;" class="${returnClass}">${totalReturn >= 0 ? '+' : ''}${totalReturn.toFixed(2)}%</td>
+            </tr>`;
+    });
+    
+    tableHTML += `</tbody></table>`;
+    grid.innerHTML = tableHTML;
+    
+    section.style.display = 'block';
+    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    
+    showNotification(`${filteredCount} varlık filtrelendi`, 'info', 3000);
+  }
+
+  // Filtre sonuçlarını gizle
+  function hideFilterResults() {
+    document.getElementById('filterResultsSection').style.display = 'none';
+  }
+
+  // Filtrelenmiş sonuçları export et
+  function exportFilteredResults() {
+    if (filteredData.length === 0) {
+      showNotification('İndirilecek veri bulunamadı', 'warning');
+      return;
+    }
+    
+    const headers = ['Varlık', 'Kategori', 'Adet', 'Alış Fiyatı', 'Yatırım', 'Güncel Fiyat', 'Güncel Değer', 'Toplam K/Z', 'Günlük K/Z', 'Getiri %'];
+    const rows = filteredData.map(a => {
+      const returnPercent = ((a.tKZ / a.yatirim) * 100).toFixed(2);
+      return [a.ad, a.tur, a.adet, a.aFiyat, a.yatirim, a.fiyat, a.tutar, a.tKZ, a.gKZ, returnPercent];
+    });
+    
+    const csvContent = [headers, ...rows]
+      .map(row => row.map(cell => `"${cell}"`).join(','))
+      .join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `filtre-sonuclari-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    showNotification('Filtre sonuçları indiriliyor...', 'info', 2000);
   }
 
   // Filtreleri temizle
@@ -772,6 +1045,10 @@
     document.getElementById('performanceFilter').value = '';
     document.getElementById('searchInput').value = '';
     filteredData = [...globalData];
+    
+    document.getElementById('filterResultsSection').style.display = 'none';
+    document.getElementById('showResultsBtn').style.display = 'none';
+    
     showNotification('Filtreler temizlendi', 'info', 2000);
   }
 
@@ -784,7 +1061,7 @@
     sect.style.display = "block";
     title.textContent = `${tur} - Varlık Analizi`;
     
-    const assets = filteredData.filter(d => d.tur === tur).sort((a,b) => b.tutar - a.tutar);
+    const assets = globalData.filter(d => d.tur === tur).sort((a,b) => b.tutar - a.tutar);
     
     if (assets.length === 0) {
       grid.innerHTML = '<div style="text-align:center; padding:30px; color:var(--text-muted)">Bu kategoride varlık bulunamadı</div>';
@@ -810,7 +1087,7 @@
                   </div>
                 </div>
                 <div class="asset-expand">
-                  <div class="det-box"><span class="det-lbl">Adet</span><span class="det-val">${a.adet.toLocaleString('tr-TR')}</span></div>
+                  <div class="det-box"><span class="det-lbl">Adet</span><span class="det-val">${formatQuantity(a.adet)}</span></div>
                   <div class="det-box"><span class="det-lbl">Alış Fiyatı</span><span class="det-val">${a.aFiyat.toLocaleString('tr-TR')} ₺</span></div>
                   <div class="det-box"><span class="det-lbl">Güncel Fiyat</span><span class="det-val">${a.fiyat.toLocaleString('tr-TR')} ₺</span></div>
                   <div class="det-box"><span class="det-lbl">Yatırım</span><span class="det-val">${a.yatirim.toLocaleString('tr-TR')} ₺</span></div>
@@ -833,7 +1110,6 @@
     
     showDetails(asset.tur);
     
-    // İlgili varlığı otomatik aç
     setTimeout(() => {
       const assetItems = document.querySelectorAll('.asset-item');
       assetItems.forEach(item => {
@@ -853,7 +1129,6 @@
       const dailyChange = (asset.gKZ / (asset.tutar - asset.gKZ)) * 100;
       const totalChange = (asset.tKZ / asset.yatirim) * 100;
       
-      // Günlük büyük değişimler
       if (Math.abs(dailyChange) > 10) {
         showNotification(
           `${asset.ad} günlük %${Math.abs(dailyChange).toFixed(1)} ${dailyChange > 0 ? 'artış' : 'düşüş'}!`, 
@@ -861,7 +1136,6 @@
         );
       }
       
-      // Büyük zararlar
       if (totalChange < -20) {
         showNotification(
           `${asset.ad} %${Math.abs(totalChange).toFixed(1)} zararda!`, 
@@ -869,7 +1143,6 @@
         );
       }
       
-      // Büyük karlar
       if (totalChange > 50) {
         showNotification(
           `${asset.ad} %${totalChange.toFixed(1)} kar!`, 
@@ -933,21 +1206,24 @@
       • Kartlara tıkla: Detayları gör<br>
       • Ticker üzerine gel: Duraklat<br>
       • Varlıklara tıkla: Detayları aç<br>
-      • Filtreleme: Kategori ve performansa göre
+      • Filtrele: Kategori ve performansa göre<br>
+      • Debug modu: Veri dönüşümlerini kontrol et
     `, 'info', 8000);
   }
 
   // Hakkında göster
   function showAbout() {
     showNotification(`
-      <b>Elite Portföy Terminali v4.0</b><br>
+      <b>Elite Portföy Terminali v4.1</b><br>
       Gelişmiş portföy takip ve analiz sistemi<br><br>
       <b>Özellikler:</b><br>
       • Gerçek zamanlı veri senkronizasyonu<br>
       • Detaylı performans analizleri<br>
       • Akıllı bildirim sistemi<br>
       • Responsive tasarım<br>
-      • CSV export desteği
+      • CSV export desteği<br>
+      • Filtreleme sistemi<br>
+      • Debug modu
     `, 'info', 8000);
   }
 
@@ -996,7 +1272,6 @@
 
   document.addEventListener('touchend', (e) => {
     const endY = e.changedTouches[0].clientY;
-    // Swipe down to refresh
     if (startY - endY > 100) {
       fetchData();
     }
@@ -1005,7 +1280,6 @@
   // İlk yükleme
   window.addEventListener('DOMContentLoaded', () => {
     fetchData();
-    // 5 dakikada bir otomatik güncelle
     setInterval(fetchData, 300000);
   });
 </script>
