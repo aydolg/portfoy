@@ -7,9 +7,13 @@
     name="viewport"
     content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
   />
-  <title>Elite Portföy Terminali v3.2</title>
-  https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap
-  https://cdn.jsdelivr.net/npm/chart.js</script>
+  <title>Elite Portföy Terminali v3.1</title>
+
+  <!-- Fonts & Libs -->
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
   <style>
     :root {
       --bg: #030508; --card-bg: rgba(16, 20, 29, 0.95);
@@ -69,7 +73,10 @@
     .det-lbl { font-size: 0.5rem; color: var(--text-muted); text-transform: uppercase; font-weight: 800; }
     .det-val { font-size: 0.75rem; font-weight: 700; color: #f1f5f9; }
 
-    /* TABLO SIRALAMA İPUCU */
+    /* TABLO SIRALAMA BUTONLARI */
+    .srt { background:none; border:none; color:#e2e8f0; font-weight:800; font-size:0.7rem; cursor:pointer; padding:0; }
+    .srt:hover { color: var(--accent); }
+
     .sort-hint { font-size:11px;color:var(--text-muted);margin-bottom:6px }
 
     .up { color: var(--accent); } .down { color: var(--red); }
@@ -130,7 +137,6 @@
   </div>
 </div>
 
-https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js</script>
 <script>
   /* ============== CONFIG ================= */
   const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQeTFovlKfvEp9sPepJb9SGxf_2AgMU7eEPTDCc6WWc0o1Z1AizX6K2mJlaWtcvSderiBym7cyhEdsC/pub?gid=0&single=true&output=csv";
@@ -398,7 +404,7 @@ https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js</script>
 
   function renderTypeTabs(types){
     const tabs = document.getElementById('typeTabs');
-    tabs.innerHTML = types.map((t,i)=>`<button class="type-tab" data-t="${t}">${t}</button>`).join('');
+    tabs.innerHTML = types.map((t)=>`<button class="type-tab" data-t="${t}">${t}</button>`).join('');
     tabs.querySelectorAll('.type-tab').forEach(btn=>{
       btn.addEventListener('click', ()=>{
         tabs.querySelectorAll('.type-tab').forEach(b=>b.classList.remove('active'));
@@ -479,7 +485,6 @@ https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js</script>
       const dir = y >= 0 ? '▲' : '▼';
       return `<div class="ticker-item"><span>${a.ad}</span><span class="${y>=0?'up':'down'}">${dir} %${Math.abs(y).toFixed(2)}</span></div>`;
     });
-    // boşsa placeholder
     ticker.innerHTML = moves.length ? (moves.join('') + moves.join('') + moves.join('')) : '<div class="ticker-item">Veri yok</div>';
     ticker.style.animationDuration = `${Math.max(meaningful.length * 4, 25)}s`;
   }
@@ -492,7 +497,7 @@ https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js</script>
 
     let items = globalData.filter(d => d.tur === tur);
 
-    // Sıralama
+    // Sıralama fonksiyonları
     const sorters = {
       ad: (a,b)=> a.ad.localeCompare(b.ad, 'tr'),
       adet: (a,b)=> (a.adet - b.adet),
@@ -503,22 +508,37 @@ https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js</script>
       aKZ: (a,b)=> (a.aKZ - b.aKZ),
       tKZ: (a,b)=> (a.tKZ - b.tKZ)
     };
+
+    // Comparator (HATA DÜZELTİLDİ)
+    const sorterFn = sorters[currentSort.key] || sorters.tutar;
     items.sort((a,b)=>{
-      const cmp = sortersa,b;
+      const cmp = sorterFn(a,b);
       return currentSort.dir === 'asc' ? cmp : -cmp;
     });
 
-    // Tablo başlıkları
+    // Başlık (tıklanabilir sıralama butonları)
     const header = `
       <div class="asset-item" style="background:transparent;border:none">
         <div class="asset-main" style="cursor:default; padding:8px 14px;">
-          <div style="flex:1;font-weight:800;font-size:0.7rem">Varlık #↕</a></div>
+          <div style="flex:1;font-weight:800;font-size:0.7rem">
+            <button class="srt" data-k="ad">Varlık</button>
+          </div>
           <div style="display:flex;gap:18px;align-items:center">
-            <div style="width:110px;text-align:right;font-weight:800;font-size:0.7rem">Tutar #↕</a></div>
-            <div style="width:90px;text-align:right;font-weight:800;font-size:0.7rem">Top. K/Z #↕</a></div>
-            <div style="width:90px;text-align:right;font-weight:800;font-size:0.7rem">Günlük #↕</a></div>
-            <div style="width:90px;text-align:right;font-weight:800;font-size:0.7rem">Haftalık #↕</a></div>
-            <div style="width:90px;text-align:right;font-weight:800;font-size:0.7rem">Aylık #↕</a></div>
+            <div style="width:110px;text-align:right;font-weight:800;font-size:0.7rem">
+              <button class="srt" data-k="tutar">Tutar</button>
+            </div>
+            <div style="width:90px;text-align:right;font-weight:800;font-size:0.7rem">
+              <button class="srt" data-k="tKZ">Top. K/Z</button>
+            </div>
+            <div style="width:90px;text-align:right;font-weight:800;font-size:0.7rem">
+              <button class="srt" data-k="gKZ">Günlük</button>
+            </div>
+            <div style="width:90px;text-align:right;font-weight:800;font-size:0.7rem">
+              <button class="srt" data-k="hKZ">Haftalık</button>
+            </div>
+            <div style="width:90px;text-align:right;font-weight:800;font-size:0.7rem">
+              <button class="srt" data-k="aKZ">Aylık</button>
+            </div>
           </div>
         </div>
       </div>`;
@@ -545,18 +565,18 @@ https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js</script>
         </div>
       </div>`).join('');
 
-    document.getElementById("assetGrid").innerHTML = header + rows;
+    grid.innerHTML = header + rows;
 
-    // Sıralama linkleri
-    document.querySelectorAll('#assetGrid .srt').forEach(a=>{
-      a.addEventListener('click', (e)=>{
+    // Sıralama event’leri
+    grid.querySelectorAll('.srt').forEach(btn=>{
+      btn.addEventListener('click', (e)=>{
         e.preventDefault();
         const k = e.currentTarget.getAttribute('data-k');
-        // aynı kolona tıklarsa yön değişsin
-        if(currentSort.key === k){
+        if(currentSort.key === k) {
           currentSort.dir = currentSort.dir === 'asc' ? 'desc' : 'asc';
         } else {
-          currentSort.key = k; currentSort.dir = 'desc';
+          currentSort.key = k;
+          currentSort.dir = 'desc';
         }
         showDetails(tur); // yeniden çiz
       });
