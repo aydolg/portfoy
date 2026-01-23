@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="tr">
 <head>
@@ -22,8 +23,10 @@
       --accent: #00ff9d; --red: #ff3b5c; --text: #ffffff;
       --text-muted: #94a3b8; --border: rgba(255, 255, 255, 0.1);
     }
-    body { font-family: 'Plus Jakarta Sans', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-           background: var(--bg); color: var(--text); margin: 0; padding: 12px; line-height: 1.4; }
+    body {
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg); color: var(--text); margin: 0; padding: 12px; line-height: 1.4;
+    }
     .container { max-width: 1200px; margin: 0 auto; }
 
     /* Performans paneli */
@@ -177,9 +180,13 @@
     return colorMap.get(label);
   }
   function setLastUpdated(d = new Date()){
-    document.getElementById('lastUpdated').textContent = 'Son güncelleme: ' + d.toLocaleString('tr-TR');
+    const el = document.getElementById('lastUpdated');
+    if (el) el.textContent = 'Son güncelleme: ' + d.toLocaleString('tr-TR');
   }
-  function showLoading(v){ document.getElementById('loadingOverlay').style.display = v ? 'flex' : 'none'; }
+  function showLoading(v){
+    const el = document.getElementById('loadingOverlay');
+    if (el) el.style.display = v ? 'flex' : 'none';
+  }
 
   function normalizeHeader(h) {
     if (!h) return '';
@@ -353,13 +360,16 @@
     });
 
     renderAll();
+
     // Varsayılan grafik seçimlerini UI'a yansıt
-    document.getElementById('chartMode').value = currentChartMode;
-    document.getElementById('chartMetric').value = currentChartMetric;
+    const m = document.getElementById('chartMode');
+    const t = document.getElementById('chartMetric');
+    if (m) m.value = currentChartMode;
+    if (t) t.value = currentChartMetric;
   }
 
   /* ================= RENDER ================= */
-  function renderAll() {
+  function recalcGroups(){
     const totals = { yatirim:0, tutar:0, tKZ:0, gKZ:0, hKZ:0, aKZ:0 };
     const groups = {};
     globalData.forEach(item => {
@@ -370,7 +380,11 @@
         totals[key] += v;
       });
     });
+    return { totals, groups };
+  }
 
+  function renderAll() {
+    const { totals, groups } = recalcGroups();
     renderSummaries(totals, groups);
     renderTypeTabs(Object.keys(groups));
     renderTicker();
@@ -459,7 +473,9 @@
     // Pasta negatif desteklemez → metrik K/Z ise bar'a geç
     if(mode === 'donut' && metric !== 'tutar'){ mode = 'bar'; }
 
-    const ctx = document.getElementById('allocationChart').getContext('2d');
+    const canvas = document.getElementById('allocationChart');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
     if(allocationChart) allocationChart.destroy();
 
     if(mode === 'donut'){
@@ -514,13 +530,15 @@
       const t = labels.map(l => Number(groups[l].tKZ)||0);
       allocationChart = new Chart(ctx, {
         type: 'bar',
-        data: { labels,
+        data: {
+          labels,
           datasets: [
             { label:'Günlük K/Z', data:g, backgroundColor:'#22c55e' },
             { label:'Haftalık K/Z', data:h, backgroundColor:'#f59e0b' },
             { label:'Aylık K/Z', data:a, backgroundColor:'#8b5cf6' },
             { label:'Toplam K/Z', data:t, backgroundColor:'#ef4444' }
-          ]},
+          ]
+        },
         options:{
           responsive:true, maintainAspectRatio:false,
           scales:{ x:{ stacked:true, ticks:{ color:'#cbd5e1' }}, y:{ stacked:true, ticks:{ color:'#cbd5e1' } } },
@@ -625,12 +643,7 @@
     doc.text('Tarih: ' + new Date().toLocaleString('tr-TR'), margin, y); y += 10;
 
     // Toplamlar & gruplar
-    const totals = { yatirim:0, tutar:0, tKZ:0, gKZ:0, hKZ:0, aKZ:0 };
-    const groups = {};
-    globalData.forEach(it=>{
-      if(!groups[it.tur]) groups[it.tur] = { yatirim:0, tutar:0, tKZ:0, gKZ:0, hKZ:0, aKZ:0 };
-      Object.keys(totals).forEach(k=>{ totals[k]+=Number(it[k])||0; groups[it.tur][k]+=Number(it[k])||0; });
-    });
+    const { totals, groups } = recalcGroups();
 
     y += 8;
     doc.setFont('times','bold'); doc.setFontSize(12);
@@ -654,12 +667,14 @@
     // Grafik görseli
     try{
       const canvas = document.getElementById('allocationChart');
-      const img = canvas.toDataURL('image/png', 1.0);
-      const imgW = doc.internal.pageSize.getWidth() - margin*2;
-      const imgH = imgW * 0.45;
-      doc.setFont('times','bold'); doc.setFontSize(12);
-      doc.text('Görsel Analiz', margin, y); y += 6;
-      doc.addImage(img, 'PNG', margin, y+6, imgW, imgH, '', 'FAST'); y += imgH + 18;
+      if (canvas) {
+        const img = canvas.toDataURL('image/png', 1.0);
+        const imgW = doc.internal.pageSize.getWidth() - margin*2;
+        const imgH = imgW * 0.45;
+        doc.setFont('times','bold'); doc.setFontSize(12);
+        doc.text('Görsel Analiz', margin, y); y += 6;
+        doc.addImage(img, 'PNG', margin, y+6, imgW, imgH, '', 'FAST'); y += imgH + 18;
+      }
     }catch(e){}
 
     // Tür dağılımı
@@ -704,50 +719,41 @@
     XLSX.writeFile(wb, fileName);
   }
 
-
-<script>
   /* ================= BAŞLATMA & EVENTS ================= */
-  window.addEventListener('DOMContentLoaded', () => {
+  window.addEventListener('DOMContentLoaded', ()=>{
     // Grafik seçimlerini UI'a yansıt
-    document.getElementById('chartMode').value   = currentChartMode;
-    document.getElementById('chartMetric').value = currentChartMetric;
+    const modeSel = document.getElementById('chartMode');
+    const metSel  = document.getElementById('chartMetric');
+    if (modeSel) modeSel.value = currentChartMode;
+    if (metSel)  metSel.value  = currentChartMetric;
 
     fetchData();
     setInterval(() => { fetchData(); }, 300000);
 
     // Grafik seçiciler
-    document.getElementById('chartMode').addEventListener('change', (e)=>{
+    function recalcAndRender(){
+      const { groups } = recalcGroups();
+      renderChart(groups);
+    }
+
+    if (modeSel) modeSel.addEventListener('change', (e)=>{
       currentChartMode = e.target.value;
       localStorage.setItem('chartMode', currentChartMode);
-
-      // grupları yeniden hesapla ve çiz
-      const totals = { yatirim:0, tutar:0, tKZ:0, gKZ:0, hKZ:0, aKZ:0 };
-      const groups = {};
-      globalData.forEach(item => {
-        if (!groups[item.tur]) groups[item.tur] = { yatirim:0, tutar:0, tKZ:0, gKZ:0, hKZ:0, aKZ:0 };
-        Object.keys(totals).forEach(key => { groups[item.tur][key] += Number(item[key]) || 0; });
-      });
-      renderChart(groups);
+      recalcAndRender();
     });
 
-    document.getElementById('chartMetric').addEventListener('change', (e)=>{
+    if (metSel) metSel.addEventListener('change', (e)=>{
       currentChartMetric = e.target.value;
       localStorage.setItem('chartMetric', currentChartMetric);
-
-      const totals = { yatirim:0, tutar:0, tKZ:0, gKZ:0, hKZ:0, aKZ:0 };
-      const groups = {};
-      globalData.forEach(item => {
-        if (!groups[item.tur]) groups[item.tur] = { yatirim:0, tutar:0, tKZ:0, gKZ:0, hKZ:0, aKZ:0 };
-        Object.keys(totals).forEach(key => { groups[item.tur][key] += Number(item[key]) || 0; });
-      });
-      renderChart(groups);
+      recalcAndRender();
     });
 
-    // Rapor butonları (🟢 düzeltildi)
-    document.getElementById('btnPdf').addEventListener('click', buildPDF);
-    document.getElementById('btnXlsx').addEventListener('click', buildXLSX);
+    // Rapor butonları (düzeltilmiş)
+    const btnPdf  = document.getElementById('btnPdf');
+    const btnXlsx = document.getElementById('btnXlsx');
+    if (btnPdf)  btnPdf.addEventListener('click', buildPDF);
+    if (btnXlsx) btnXlsx.addEventListener('click', buildXLSX);
   });
 </script>
 </body>
 </html>
-
