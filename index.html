@@ -145,7 +145,7 @@ async function fetchData() {
   document.getElementById('loadingOverlay').style.display = 'flex';
   try {
     const target = SHEET_CSV_URL;
-    const url = PROXY + encodeURIComponent(target);
+    const url = 'https://cors.sh/' + SHEET_CSV_URL;
     const res = await fetch(url);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
@@ -292,3 +292,4 @@ window.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
