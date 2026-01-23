@@ -7,12 +7,9 @@
     name="viewport"
     content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
   />
-  <title>Elite Portföy Terminali v3.1</title>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap"
-    rel="stylesheet"
-  />
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <title>Elite Portföy Terminali v3.2</title>
+  https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap
+  https://cdn.jsdelivr.net/npm/chart.js</script>
   <style>
     :root {
       --bg: #030508; --card-bg: rgba(16, 20, 29, 0.95);
@@ -23,18 +20,22 @@
     .container { max-width: 1200px; margin: 0 auto; }
 
     /* PERFORMANS PANELİ */
-    .perf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+    .perf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
     .perf-box { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 10px; }
     .perf-label { font-size: 0.55rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; margin-bottom: 2px; }
 
+    /* HEADER BİLGİ */
+    .top-info { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; gap:10px; }
+    #lastUpdated{color:var(--text-muted);font-size:12px;}
+
     /* AKAN YAZI */
-    .ticker-wrap { width: 100%; overflow: hidden; background: rgba(16, 20, 29, 0.5); border-radius: 10px; border: 1px solid var(--border); padding: 12px 0; margin-bottom: 15px; white-space: nowrap; }
+    .ticker-wrap { width: 100%; overflow: hidden; background: rgba(16, 20, 29, 0.5); border-radius: 10px; border: 1px solid var(--border); padding: 12px 0; margin: 10px 0 15px; white-space: nowrap; }
     .ticker { display: inline-flex; animation: ticker-move 35s linear infinite; }
     .ticker-item { padding: 0 40px; font-size: 0.75rem; font-weight: 700; display: flex; align-items: center; gap: 6px; }
     @keyframes ticker-move { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
 
     /* ANA KARTLAR VE Z-INDEX */
-    .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; position: relative; }
+    .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 12px; position: relative; }
     @media (max-width: 600px) { .summary-grid { grid-template-columns: repeat(2, 1fr); } }
     .card { background: var(--card-bg); backdrop-filter: blur(15px); padding: 15px 12px; border-radius: 18px; border: 1px solid var(--border); cursor: pointer; position: relative; border-left: 4px solid #334155; transition: 0.3s; z-index: 1; }
     .card.active { border-color: var(--accent); z-index: 999 !important; box-shadow: 0 10px 40px rgba(0,0,0,0.8); }
@@ -48,13 +49,18 @@
     .card.active .dist-container { display: block; }
     .dist-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.75rem; font-weight: 600; }
 
+    /* TÜR SEKMELERİ */
+    .type-tabs { display:flex; gap:8px; flex-wrap:wrap; margin: 10px 0 20px; }
+    .type-tab { background: rgba(255,255,255,0.06); border:1px solid var(--border); color:#e2e8f0; padding:6px 10px; border-radius:999px; font-size:12px; cursor:pointer; }
+    .type-tab.active { color:#111; background: var(--accent); border-color: var(--accent); font-weight:800; }
+
     /* GRAFİK VE MARKET */
     .chart-block { background: var(--card-bg); border-radius: 20px; border: 1px solid var(--border); padding: 20px; margin-bottom: 15px; }
     .market-block { background: var(--card-bg); border-radius: 20px; border: 1px solid var(--border); padding: 5px 15px; margin-bottom: 25px; }
     .market-header { padding: 12px 0 8px 0; font-size: 0.65rem; font-weight: 800; color: var(--accent); letter-spacing: 1px; border-bottom: 1px solid var(--border); margin-bottom: 10px; }
     .m-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
 
-    /* ASSET DETAY (ÖNERİLEN TAM YAPI) */
+    /* ASSET DETAY */
     .asset-item { background: var(--card-bg); border: 1px solid var(--border); border-radius: 14px; margin-bottom: 8px; overflow: hidden; }
     .asset-main { padding: 14px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
     .asset-expand { display: none; padding: 15px; grid-template-columns: repeat(2, 1fr); gap: 10px; border-top: 1px solid var(--border); background: rgba(0,0,0,0.2); }
@@ -63,9 +69,12 @@
     .det-lbl { font-size: 0.5rem; color: var(--text-muted); text-transform: uppercase; font-weight: 800; }
     .det-val { font-size: 0.75rem; font-weight: 700; color: #f1f5f9; }
 
+    /* TABLO SIRALAMA İPUCU */
+    .sort-hint { font-size:11px;color:var(--text-muted);margin-bottom:6px }
+
     .up { color: var(--accent); } .down { color: var(--red); }
 
-    /* Basit yükleniyor katmanı */
+    /* YÜKLENİYOR KATMANI */
     #loadingOverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;align-items:center;justify-content:center;flex-direction:column;}
     .spinner{width:46px;height:46px;border:3px solid var(--accent);border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite;}
     @keyframes spin{to{transform:rotate(360deg)}}
@@ -90,12 +99,20 @@
     </div>
   </div>
 
+  <div class="top-info">
+    <div id="lastUpdated">Son güncelleme: -</div>
+    <div style="font-size:12px;color:var(--text-muted)">v3.1 • Elite Portföy Terminali</div>
+  </div>
+
   <div class="summary-grid" id="summaryGrid"></div>
+
   <div class="ticker-wrap"><div class="ticker" id="tickerContent">Veriler senkronize ediliyor...</div></div>
+
+  <div class="type-tabs" id="typeTabs"></div>
 
   <div class="chart-block">
     <div class="market-header">VARLIK DAĞILIMI (%)</div>
-    <div style="height: 200px;"><canvas id="allocationChart"></canvas></div>
+    <div style="height: 220px;"><canvas id="allocationChart"></canvas></div>
   </div>
 
   <div class="market-block">
@@ -104,19 +121,18 @@
   </div>
 
   <div id="detailSection" style="display:none; padding-bottom:100px;">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; padding: 0 5px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding: 0 5px;">
       <div id="detailTitle" style="font-weight:800; color:var(--accent); font-size:0.8rem;">VARLIK ANALİZİ</div>
       <div onclick="closeAll()" style="color:var(--red); font-size:0.7rem; font-weight:bold; cursor:pointer;">[KAPAT]</div>
     </div>
+    <div class="sort-hint">Tablo başlıklarına tıklayarak sıralayabilirsiniz.</div>
     <div id="assetGrid"></div>
   </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js</script>
 <script>
-  /* ==============================
-     CONFIG
-  =============================== */
+  /* ============== CONFIG ================= */
   const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQeTFovlKfvEp9sPepJb9SGxf_2AgMU7eEPTDCc6WWc0o1Z1AizX6K2mJlaWtcvSderiBym7cyhEdsC/pub?gid=0&single=true&output=csv";
   const PROXY = "https://corsproxy.io/?";
 
@@ -124,15 +140,18 @@
   let allocationChart = null;
   let currentFetch = null;
   let cleanAnomalies = 0;
+  let currentSort = { key: 'tutar', dir: 'desc' };
 
-  /* ==============================
-     HELPERS
-  =============================== */
+  /* ============== HELPERS ================= */
   const palette = ['#00ff9d','#3b82f6','#f59e0b','#ef4444','#8b5cf6','#22d3ee','#84cc16','#d946ef','#f97316','#06b6d4'];
   const colorMap = new Map();
   function colorFor(label){
     if(!colorMap.has(label)) colorMap.set(label, palette[colorMap.size % palette.length]);
     return colorMap.get(label);
+  }
+
+  function setLastUpdated(d = new Date()){
+    document.getElementById('lastUpdated').textContent = 'Son güncelleme: ' + d.toLocaleString('tr-TR');
   }
 
   function showLoading(v){
@@ -152,6 +171,12 @@
     if(!t) return '';
     const map = { 'ı':'i','ğ':'g','ü':'u','ş':'s','ö':'o','ç':'c','İ':'i','Ğ':'g','Ü':'u','Ş':'s','Ö':'o','Ç':'c' };
     return String(t).toLowerCase().replace(/[ığüşöçİĞÜŞÖÇ]/g, c => map[c] || c);
+  }
+
+  function fmt(n, max=2){
+    const v = Number(n);
+    if(!Number.isFinite(v)) return '0';
+    return v.toLocaleString('tr-TR', { maximumFractionDigits: max });
   }
 
   function clean(v){
@@ -211,17 +236,39 @@
     } catch(e) { return "-"; }
   }
 
-  /* ==============================
-     FETCH (Failover + Abort)
-  =============================== */
+  /* ==== K/Z TÜRETME (eksikse doldur) ==== */
+  function deriveKZ(item){
+    const adet = Number(item.adet) || 0;
+    const fiyat = Number(item.fiyat) || 0;
+
+    // Toplam K/Z
+    if(!Number.isFinite(item.tKZ) || item.tKZ === 0){
+      const cand = (Number(item.tutar)||0) - (Number(item.yatirim)||0);
+      if(Math.abs(cand) > 0) item.tKZ = cand;
+    }
+
+    // Günlük K/Z
+    if((!Number.isFinite(item.gKZ) || item.gKZ === 0) && adet > 0 && Number(item.oncekiKapanis)){
+      item.gKZ = adet * (fiyat - Number(item.oncekiKapanis));
+    }
+    // Haftalık K/Z
+    if((!Number.isFinite(item.hKZ) || item.hKZ === 0) && adet > 0 && Number(item.haftaKapanis)){
+      item.hKZ = adet * (fiyat - Number(item.haftaKapanis));
+    }
+    // Aylık K/Z
+    if((!Number.isFinite(item.aKZ) || item.aKZ === 0) && adet > 0 && Number(item.ayKapanis)){
+      item.aKZ = adet * (fiyat - Number(item.ayKapanis));
+    }
+    return item;
+  }
+
+  /* ============== FETCH ================= */
   async function fetchWithFallback(url, options = {}){
-    // Birincil dene
     try{
       const res = await fetch(url, { cache: "no-store", ...options });
       if(res.ok) return res;
       throw new Error(`HTTP ${res.status}`);
     }catch(e){
-      // Proxy ile dene
       const viaProxy = PROXY + encodeURIComponent(url);
       const res2 = await fetch(viaProxy, { cache: "no-store", ...options });
       if(!res2.ok) throw new Error(`Proxy HTTP ${res2.status}`);
@@ -250,6 +297,7 @@
         complete: (result)=>{
           const rows = (result.data || []);
           buildDataFromRows(rows);
+          setLastUpdated();
         }
       });
 
@@ -263,9 +311,7 @@
     }
   }
 
-  /* ==============================
-     CSV → DATA
-  =============================== */
+  /* ============== CSV → DATA ================= */
   function buildDataFromRows(rows){
     cleanAnomalies = 0;
 
@@ -283,40 +329,37 @@
         gKZ: clean(r['gkz']),
         hKZ: clean(r['hkz']),
         aKZ: clean(r['akz']),
-        tKZ: clean(r['tkz'])
+        tKZ: clean(r['tkz']),
+        oncekiKapanis: clean(r['oncekikapanis'] || r['öncekikapanis']),
+        haftaKapanis: clean(r['haftakapanis'] || r['haftakapanış']),
+        ayKapanis: clean(r['aykapanis'] || r['aykapanış'])
       };
-      return item;
+      return deriveKZ(item);
     });
 
-    const zeros = [];
-    mapped.forEach(x => { if (x.ad && !x.tutar) zeros.push({ ad:x.ad, fiyat:x.fiyat, tutar:x.tutar }); });
-    if (zeros.length) console.warn('Tutarı 0 kalan ilk kayıtlar:', zeros.slice(0,10));
-
-    // Portföyü hesaplamada 0 tutarları da göstermek isteyebilirsin.
-    // Ancak dağılım ve performans için anlamlısı >0.
     globalData = mapped;
 
-    console.log(`CSV satır: ${rows.length} | temizlenen anomaliler: ${cleanAnomalies} | anlamlı (tutar>0): ${mapped.filter(d=>d.tutar>0).length}`);
+    console.log(`CSV satır: ${rows.length} | clean anomalileri: ${cleanAnomalies} | tutar>0: ${mapped.filter(d=>d.tutar>0).length}`);
 
     renderAll();
   }
 
-  /* ==============================
-     RENDER
-  =============================== */
+  /* ============== RENDER ================= */
   function renderAll() {
     // Toplamlar ve gruplar
     const totals = { yatirim:0, tutar:0, tKZ:0, gKZ:0, hKZ:0, aKZ:0 };
     const groups = {};
     globalData.forEach(item => {
       if (!groups[item.tur]) groups[item.tur] = { yatirim:0, tutar:0, tKZ:0, gKZ:0, hKZ:0, aKZ:0 };
-      Object.keys(totals).forEach(key => { 
-        groups[item.tur][key] += Number(item[key]) || 0;
-        totals[key] += Number(item[key]) || 0;
+      Object.keys(totals).forEach(key => {
+        const v = Number(item[key]) || 0;
+        groups[item.tur][key] += v;
+        totals[key] += v;
       });
     });
 
     renderSummaries(totals, groups);
+    renderTypeTabs(Object.keys(groups));
     renderTicker();
     renderMarketRows();
     renderPerformance();
@@ -342,15 +385,27 @@
       let distHtml = sortedTur.map(t => `
         <div class="dist-row" onclick="event.stopPropagation(); showDetails('${t.replace(/'/g,"\\'")}')">
           <span>${t}</span>
-          <span class="${groups[t][k.id] >= 0 ? 'up':'down'}">${groups[t][k.id].toLocaleString('tr-TR')} ₺</span>
+          <span class="${groups[t][k.id] >= 0 ? 'up':'down'}">${fmt(groups[t][k.id])} ₺</span>
         </div>`).join('');
       return `
         <div class="card ${cardStatus}" onclick="toggleCard(this)">
           <span>${k.l}</span>
-          <div class="value ${color}">${val.toLocaleString('tr-TR')} ₺</div>
+          <div class="value ${color}">${fmt(val)} ₺</div>
           <div class="dist-container">${distHtml}</div>
         </div>`;
     }).join('');
+  }
+
+  function renderTypeTabs(types){
+    const tabs = document.getElementById('typeTabs');
+    tabs.innerHTML = types.map((t,i)=>`<button class="type-tab" data-t="${t}">${t}</button>`).join('');
+    tabs.querySelectorAll('.type-tab').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        tabs.querySelectorAll('.type-tab').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        showDetails(btn.dataset.t);
+      });
+    });
   }
 
   function renderPerformance() {
@@ -393,7 +448,7 @@
         responsive: true, maintainAspectRatio: false,
         plugins: {
           legend: { position: 'right', labels: { color: '#94a3b8', font: { size: 10 } } },
-          tooltip: { callbacks: { label: (c) => `${c.label}: ${Number(c.raw).toLocaleString('tr-TR')} ₺` } }
+          tooltip: { callbacks: { label: (c) => `${c.label}: ${fmt(c.raw)} ₺` } }
         }
       }
     });
@@ -408,8 +463,8 @@
       return `
         <div class="m-row">
           <span style="font-size:0.75rem; font-weight:700;">${name}</span>
-          <span class="${found.gKZ >= 0 ? 'up' : 'down'}" style="font-weight:800; font-family:monospace;">
-            ${Number(found.fiyat).toLocaleString('tr-TR')}
+          <span class="${Number(found.gKZ) >= 0 ? 'up' : 'down'}" style="font-weight:800; font-family:monospace;">
+            ${fmt(found.fiyat)}
           </span>
         </div>`;
     }).join('');
@@ -424,38 +479,89 @@
       const dir = y >= 0 ? '▲' : '▼';
       return `<div class="ticker-item"><span>${a.ad}</span><span class="${y>=0?'up':'down'}">${dir} %${Math.abs(y).toFixed(2)}</span></div>`;
     });
-    // Sürekli akış için üç kez tekrarla
-    ticker.innerHTML = moves.join('') + moves.join('') + moves.join('');
-    // Eleman sayısına göre hız
+    // boşsa placeholder
+    ticker.innerHTML = moves.length ? (moves.join('') + moves.join('') + moves.join('')) : '<div class="ticker-item">Veri yok</div>';
     ticker.style.animationDuration = `${Math.max(meaningful.length * 4, 25)}s`;
   }
 
+  /* ============== DETAY & SIRALAMA ================= */
   function showDetails(tur) {
     const sect = document.getElementById("detailSection"), grid = document.getElementById("assetGrid");
     sect.style.display = "block";
     document.getElementById("detailTitle").textContent = `VARLIK ANALİZİ — ${tur}`;
 
-    const items = globalData.filter(d => d.tur === tur).sort((a,b) => b.tutar - a.tutar);
-    grid.innerHTML = items.map(a => `
+    let items = globalData.filter(d => d.tur === tur);
+
+    // Sıralama
+    const sorters = {
+      ad: (a,b)=> a.ad.localeCompare(b.ad, 'tr'),
+      adet: (a,b)=> (a.adet - b.adet),
+      fiyat: (a,b)=> (a.fiyat - b.fiyat),
+      tutar: (a,b)=> (a.tutar - b.tutar),
+      gKZ: (a,b)=> (a.gKZ - b.gKZ),
+      hKZ: (a,b)=> (a.hKZ - b.hKZ),
+      aKZ: (a,b)=> (a.aKZ - b.aKZ),
+      tKZ: (a,b)=> (a.tKZ - b.tKZ)
+    };
+    items.sort((a,b)=>{
+      const cmp = sortersa,b;
+      return currentSort.dir === 'asc' ? cmp : -cmp;
+    });
+
+    // Tablo başlıkları
+    const header = `
+      <div class="asset-item" style="background:transparent;border:none">
+        <div class="asset-main" style="cursor:default; padding:8px 14px;">
+          <div style="flex:1;font-weight:800;font-size:0.7rem">Varlık #↕</a></div>
+          <div style="display:flex;gap:18px;align-items:center">
+            <div style="width:110px;text-align:right;font-weight:800;font-size:0.7rem">Tutar #↕</a></div>
+            <div style="width:90px;text-align:right;font-weight:800;font-size:0.7rem">Top. K/Z #↕</a></div>
+            <div style="width:90px;text-align:right;font-weight:800;font-size:0.7rem">Günlük #↕</a></div>
+            <div style="width:90px;text-align:right;font-weight:800;font-size:0.7rem">Haftalık #↕</a></div>
+            <div style="width:90px;text-align:right;font-weight:800;font-size:0.7rem">Aylık #↕</a></div>
+          </div>
+        </div>
+      </div>`;
+
+    const rows = items.map(a => `
       <div class="asset-item">
         <div class="asset-main" onclick="toggleAsset(this)">
-          <div style="font-weight:700; font-size:0.8rem;">${a.ad}</div>
-          <div style="text-align:right">
-            <div class="up" style="font-weight:800; font-size:0.85rem;">${Number(a.tutar).toLocaleString('tr-TR')} ₺</div>
-            <div class="${a.tKZ>=0?'up':'down'}" style="font-size:0.6rem;">${Number(a.tKZ).toLocaleString('tr-TR')} ₺</div>
+          <div style="font-weight:700; font-size:0.8rem; flex:1">${a.ad}</div>
+          <div style="text-align:right; display:flex; gap:18px; align-items:center;">
+            <div class="up" style="font-weight:800; font-size:0.85rem; width:110px; text-align:right">${fmt(a.tutar)} ₺</div>
+            <div class="${a.tKZ>=0?'up':'down'}" style="width:90px">${fmt(a.tKZ)} ₺</div>
+            <div class="${a.gKZ>=0?'up':'down'}" style="width:90px">${fmt(a.gKZ)} ₺</div>
+            <div class="${a.hKZ>=0?'up':'down'}" style="width:90px">${fmt(a.hKZ)} ₺</div>
+            <div class="${a.aKZ>=0?'up':'down'}" style="width:90px">${fmt(a.aKZ)} ₺</div>
           </div>
         </div>
         <div class="asset-expand">
-          <div class="det-box"><span class="det-lbl">Adet</span><span class="det-val">${Number(a.adet).toLocaleString('tr-TR')}</span></div>
-          <div class="det-box"><span class="det-lbl">Alış Fiyatı</span><span class="det-val">${Number(a.aFiyat).toLocaleString('tr-TR')}</span></div>
-          <div class="det-box"><span class="det-lbl">Yatırım</span><span class="det-val">${Number(a.yatirim).toLocaleString('tr-TR')} ₺</span></div>
+          <div class="det-box"><span class="det-lbl">Adet</span><span class="det-val">${fmt(a.adet)}</span></div>
+          <div class="det-box"><span class="det-lbl">Alış Fiyatı</span><span class="det-val">${fmt(a.aFiyat)}</span></div>
+          <div class="det-box"><span class="det-lbl">Yatırım</span><span class="det-val">${fmt(a.yatirim)} ₺</span></div>
           <div class="det-box"><span class="det-lbl">Süre</span><span class="det-val">${getDaysBetween(a.alisTarihi)}</span></div>
-          <div class="det-box"><span class="det-lbl">Günlük K/Z</span><span class="det-val ${a.gKZ>=0?'up':'down'}">${Number(a.gKZ).toLocaleString('tr-TR')} ₺</span></div>
-          <div class="det-box"><span class="det-lbl">Haftalık K/Z</span><span class="det-val ${a.hKZ>=0?'up':'down'}">${Number(a.hKZ).toLocaleString('tr-TR')} ₺</span></div>
-          <div class="det-box"><span class="det-lbl">Aylık K/Z</span><span class="det-val ${a.aKZ>=0?'up':'down'}">${Number(a.aKZ).toLocaleString('tr-TR')} ₺</span></div>
-          <div class="det-box"><span class="det-lbl">Toplam K/Z</span><span class="det-val ${a.tKZ>=0?'up':'down'}">${Number(a.tKZ).toLocaleString('tr-TR')} ₺</span></div>
+          <div class="det-box"><span class="det-lbl">Günlük %</span><span class="det-val ${safeDailyPct(a.gKZ,a.tutar)>=0?'up':'down'}">%${safeDailyPct(a.gKZ,a.tutar).toFixed(2)}</span></div>
+          <div class="det-box"><span class="det-lbl">Vade</span><span class="det-val">${a.vade || '-'}</span></div>
         </div>
       </div>`).join('');
+
+    document.getElementById("assetGrid").innerHTML = header + rows;
+
+    // Sıralama linkleri
+    document.querySelectorAll('#assetGrid .srt').forEach(a=>{
+      a.addEventListener('click', (e)=>{
+        e.preventDefault();
+        const k = e.currentTarget.getAttribute('data-k');
+        // aynı kolona tıklarsa yön değişsin
+        if(currentSort.key === k){
+          currentSort.dir = currentSort.dir === 'asc' ? 'desc' : 'asc';
+        } else {
+          currentSort.key = k; currentSort.dir = 'desc';
+        }
+        showDetails(tur); // yeniden çiz
+      });
+    });
+
     sect.scrollIntoView({ behavior: 'smooth' });
   }
 
@@ -479,11 +585,7 @@
 
   // Başlat
   fetchData();
-  setInterval(() => {
-    // detay/scroll sırasında yenilemek istemiyorsan buraya koşul ekleyebilirsin
-    fetchData();
-  }, 300000);
+  setInterval(() => { fetchData(); }, 300000);
 </script>
 </body>
 </html>
-``
