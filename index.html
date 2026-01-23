@@ -704,10 +704,12 @@
     XLSX.writeFile(wb, fileName);
   }
 
+
+<script>
   /* ================= BAŞLATMA & EVENTS ================= */
-  window.addEventListener('DOMContentLoaded', ()=>{
+  window.addEventListener('DOMContentLoaded', () => {
     // Grafik seçimlerini UI'a yansıt
-    document.getElementById('chartMode').value = currentChartMode;
+    document.getElementById('chartMode').value   = currentChartMode;
     document.getElementById('chartMetric').value = currentChartMetric;
 
     fetchData();
@@ -717,6 +719,7 @@
     document.getElementById('chartMode').addEventListener('change', (e)=>{
       currentChartMode = e.target.value;
       localStorage.setItem('chartMode', currentChartMode);
+
       // grupları yeniden hesapla ve çiz
       const totals = { yatirim:0, tutar:0, tKZ:0, gKZ:0, hKZ:0, aKZ:0 };
       const groups = {};
@@ -726,18 +729,25 @@
       });
       renderChart(groups);
     });
+
     document.getElementById('chartMetric').addEventListener('change', (e)=>{
       currentChartMetric = e.target.value;
       localStorage.setItem('chartMetric', currentChartMetric);
+
       const totals = { yatirim:0, tutar:0, tKZ:0, gKZ:0, hKZ:0, aKZ:0 };
       const groups = {};
       globalData.forEach(item => {
         if (!groups[item.tur]) groups[item.tur] = { yatirim:0, tutar:0, tKZ:0, gKZ:0, hKZ:0, aKZ:0 };
         Object.keys(totals).forEach(key => { groups[item.tur][key] += Number(item[key]) || 0; });
       });
-     er('click', buildPDF);
+      renderChart(groups);
+    });
+
+    // Rapor butonları (🟢 düzeltildi)
+    document.getElementById('btnPdf').addEventListener('click', buildPDF);
     document.getElementById('btnXlsx').addEventListener('click', buildXLSX);
   });
 </script>
 </body>
 </html>
+
