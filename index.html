@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="tr">
 <head>
@@ -73,12 +72,6 @@
     .det-lbl { font-size: 0.5rem; color: var(--text-muted); text-transform: uppercase; font-weight: 800; }
     .det-val { font-size: 0.75rem; font-weight: 700; color: #f1f5f9; }
 
-    /* TABLO SIRALAMA BUTONLARI */
-    .srt { background:none; border:none; color:#e2e8f0; font-weight:800; font-size:0.7rem; cursor:pointer; padding:0; }
-    .srt:hover { color: var(--accent); }
-
-    .sort-hint { font-size:11px;color:var(--text-muted);margin-bottom:6px }
-
     .up { color: var(--accent); } .down { color: var(--red); }
 
     /* YÜKLENİYOR KATMANI */
@@ -132,7 +125,6 @@
       <div id="detailTitle" style="font-weight:800; color:var(--accent); font-size:0.8rem;">VARLIK ANALİZİ</div>
       <div onclick="closeAll()" style="color:var(--red); font-size:0.7rem; font-weight:bold; cursor:pointer;">[KAPAT]</div>
     </div>
-    <div class="sort-hint">Tablo başlıklarına tıklayarak sıralayabilirsiniz.</div>
     <div id="assetGrid"></div>
   </div>
 </div>
@@ -145,8 +137,6 @@
   let globalData = [];
   let allocationChart = null;
   let currentFetch = null;
-  let cleanAnomalies = 0;
-  let currentSort = { key: 'tutar', dir: 'desc' };
 
   /* ============== HELPERS ================= */
   const palette = ['#00ff9d','#3b82f6','#f59e0b','#ef4444','#8b5cf6','#22d3ee','#84cc16','#d946ef','#f97316','#06b6d4'];
@@ -155,15 +145,12 @@
     if(!colorMap.has(label)) colorMap.set(label, palette[colorMap.size % palette.length]);
     return colorMap.get(label);
   }
-
   function setLastUpdated(d = new Date()){
     document.getElementById('lastUpdated').textContent = 'Son güncelleme: ' + d.toLocaleString('tr-TR');
   }
+  function showLoading(v){ document.getElementById('loadingOverlay').style.display = v ? 'flex' : 'none'; }
 
-  function showLoading(v){
-    document.getElementById('loadingOverlay').style.display = v ? 'flex' : 'none';
-  }
-
+  // Başlık & metin normalize
   function normalizeHeader(h) {
     if (!h) return '';
     let s = String(h).trim().toLowerCase();
@@ -172,30 +159,28 @@
     s = s.replace(/\s+/g, '').replace(/[^a-z0-9]/g, '');
     return s;
   }
-
   function normalizeText(t){
     if(!t) return '';
     const map = { 'ı':'i','ğ':'g','ü':'u','ş':'s','ö':'o','ç':'c','İ':'i','Ğ':'g','Ü':'u','Ş':'s','Ö':'o','Ç':'c' };
     return String(t).toLowerCase().replace(/[ığüşöçİĞÜŞÖÇ]/g, c => map[c] || c);
   }
 
+  // Sayı biçimleyici
   function fmt(n, max=2){
     const v = Number(n);
     if(!Number.isFinite(v)) return '0';
     return v.toLocaleString('tr-TR', { maximumFractionDigits: max });
   }
 
-  function clean(v){
-    if(v === null || v === undefined) return 0;
+  // Boş ise null dönen temizleyici (K/Z için kullan)
+  function cleanNull(v){
+    if(v === null || v === undefined) return null;
     let s = String(v).trim();
-    if(!s || s === '-' || s === '0,00' || s.includes('#')) return 0;
+    if(!s || s === '-' || s === '0,00' || s.includes('#')) return null;
 
-    // parantezli negatif: (1.234,56)
+    // (1.234,56) -> negatif
     let negative = false;
-    if(s.startsWith('(') && s.endsWith(')')){
-      negative = true;
-      s = s.slice(1,-1);
-    }
+    if(s.startsWith('(') && s.endsWith(')')){ negative = true; s = s.slice(1,-1); }
 
     try{
       s = s
@@ -212,14 +197,14 @@
       if(Number.isFinite(num) && Math.abs(num) <= 1e12){
         return negative ? -num : num;
       }
-      cleanAnomalies++;
-      console.warn('clean() anomalisi:', v, '→', s);
-      return 0;
-    }catch(e){
-      cleanAnomalies++;
-      console.error('clean() hatası:', v, e);
-      return 0;
-    }
+      return null;
+    }catch(e){ return null; }
+  }
+
+  // Boşsa 0 dönen temizleyici (tutar, fiyat vb. için)
+  function clean0(v){
+    const n = cleanNull(v);
+    return n === null ? 0 : n;
   }
 
   function safeDailyPct(gKZ, tutar){
@@ -242,29 +227,32 @@
     } catch(e) { return "-"; }
   }
 
-  /* ==== K/Z TÜRETME (eksikse doldur) ==== */
+  /* ==== K/Z TÜRETME: sadece NULL ise doldur ==== */
   function deriveKZ(item){
     const adet = Number(item.adet) || 0;
     const fiyat = Number(item.fiyat) || 0;
 
-    // Toplam K/Z
-    if(!Number.isFinite(item.tKZ) || item.tKZ === 0){
-      const cand = (Number(item.tutar)||0) - (Number(item.yatirim)||0);
-      if(Math.abs(cand) > 0) item.tKZ = cand;
+    // tKZ: yoksa türet
+    if(item.tKZ === null){
+      item.tKZ = (Number(item.tutar)||0) - (Number(item.yatirim)||0);
     }
 
-    // Günlük K/Z
-    if((!Number.isFinite(item.gKZ) || item.gKZ === 0) && adet > 0 && Number(item.oncekiKapanis)){
+    // g/h/aKZ: sadece NULL ise türet (0 ise olduğu gibi bırak)
+    if(item.gKZ === null && adet > 0 && Number.isFinite(item.oncekiKapanis)){
       item.gKZ = adet * (fiyat - Number(item.oncekiKapanis));
     }
-    // Haftalık K/Z
-    if((!Number.isFinite(item.hKZ) || item.hKZ === 0) && adet > 0 && Number(item.haftaKapanis)){
+    if(item.hKZ === null && adet > 0 && Number.isFinite(item.haftaKapanis)){
       item.hKZ = adet * (fiyat - Number(item.haftaKapanis));
     }
-    // Aylık K/Z
-    if((!Number.isFinite(item.aKZ) || item.aKZ === 0) && adet > 0 && Number(item.ayKapanis)){
+    if(item.aKZ === null && adet > 0 && Number.isFinite(item.ayKapanis)){
       item.aKZ = adet * (fiyat - Number(item.ayKapanis));
     }
+    // Son güvenlik: null kalanları 0 yap (gösterim/sum için)
+    if(item.gKZ === null) item.gKZ = 0;
+    if(item.hKZ === null) item.hKZ = 0;
+    if(item.aKZ === null) item.aKZ = 0;
+    if(item.tKZ === null) item.tKZ = 0;
+
     return item;
   }
 
@@ -319,33 +307,32 @@
 
   /* ============== CSV → DATA ================= */
   function buildDataFromRows(rows){
-    cleanAnomalies = 0;
-
-    const mapped = rows.map(r=>{
+    // haritalama
+    globalData = rows.map(r=>{
       const item = {
         ad: (r['varlik'] || r['varlık'] || '').toString().trim(),
         tur: (r['tur'] || r['tür'] || 'Diğer').toString().trim(),
         alisTarihi: r['alistarihi'] || r['alıştarihi'] || '',
         vade: r['vadetarihi'] || '',
-        adet: clean(r['adet']),
-        aFiyat: clean(r['alisfiyati'] || r['alışfiyatı']),
-        yatirim: clean(r['yatirimtutari'] || r['yatırımtutarı']),
-        fiyat: clean(r['guncelfiyat'] || r['güncelfiyat']),
-        tutar: clean(r['gunceltutar'] || r['günceltutar']),
-        gKZ: clean(r['gkz']),
-        hKZ: clean(r['hkz']),
-        aKZ: clean(r['akz']),
-        tKZ: clean(r['tkz']),
-        oncekiKapanis: clean(r['oncekikapanis'] || r['öncekikapanis']),
-        haftaKapanis: clean(r['haftakapanis'] || r['haftakapanış']),
-        ayKapanis: clean(r['aykapanis'] || r['aykapanış'])
+        adet: clean0(r['adet']),
+        aFiyat: clean0(r['alisfiyati'] || r['alışfiyatı']),
+        yatirim: clean0(r['yatirimtutari'] || r['yatırımtutarı']),
+        fiyat: clean0(r['guncelfiyat'] || r['güncelfiyat']),
+        tutar: clean0(r['gunceltutar'] || r['günceltutar']),
+
+        // K/Z — CSV değeri boşsa null, doluysa sayı
+        gKZ: cleanNull(r['gkz']),
+        hKZ: cleanNull(r['hkz']),
+        aKZ: cleanNull(r['akz']),
+        tKZ: cleanNull(r['tkz']),
+
+        // Kapanışlar — türetmede kullanılabilir
+        oncekiKapanis: clean0(r['oncekikapanis'] || r['öncekikapanis']),
+        haftaKapanis: clean0(r['haftakapanis'] || r['haftakapanış']),
+        ayKapanis: clean0(r['aykapanis'] || r['aykapanış'])
       };
       return deriveKZ(item);
     });
-
-    globalData = mapped;
-
-    console.log(`CSV satır: ${rows.length} | clean anomalileri: ${cleanAnomalies} | tutar>0: ${mapped.filter(d=>d.tutar>0).length}`);
 
     renderAll();
   }
@@ -415,9 +402,11 @@
   }
 
   function renderPerformance() {
-    const sorted = globalData
-      .filter(d => d.tutar > 50)
-      .sort((a, b) => safeDailyPct(b.gKZ, b.tutar) - safeDailyPct(a.gKZ, a.tutar));
+    // gKZ'e göre günlük % (gKZ null olsa bile deriveKZ sonrası 0 veya hesaplanmış olacak)
+    const eligible = globalData.filter(d => d.tutar > 50);
+    const sorted = eligible
+      .map(d => ({ ...d, _pct: safeDailyPct(d.gKZ, d.tutar) }))
+      .sort((a,b) => b._pct - a._pct);
 
     const bestBox = document.getElementById("bestPerf").querySelector('.up');
     const worstBox = document.getElementById("worstPerf").querySelector('.down');
@@ -425,8 +414,8 @@
     if(sorted.length > 0) {
       const best = sorted[0];
       const worst = sorted[sorted.length - 1];
-      bestBox.textContent = `${best.ad}  (%${safeDailyPct(best.gKZ,best.tutar).toFixed(2)})`;
-      worstBox.textContent = `${worst.ad}  (%${safeDailyPct(worst.gKZ,worst.tutar).toFixed(2)})`;
+      bestBox.textContent = `${best.ad}  (%${best._pct.toFixed(2)})`;
+      worstBox.textContent = `${worst.ad}  (%${worst._pct.toFixed(2)})`;
     } else {
       bestBox.textContent = 'Veri yok';
       worstBox.textContent = 'Veri yok';
@@ -489,59 +478,15 @@
     ticker.style.animationDuration = `${Math.max(meaningful.length * 4, 25)}s`;
   }
 
-  /* ============== DETAY & SIRALAMA ================= */
+  /* ============== DETAY ================= */
   function showDetails(tur) {
     const sect = document.getElementById("detailSection"), grid = document.getElementById("assetGrid");
     sect.style.display = "block";
     document.getElementById("detailTitle").textContent = `VARLIK ANALİZİ — ${tur}`;
 
-    let items = globalData.filter(d => d.tur === tur);
-
-    // Sıralama fonksiyonları
-    const sorters = {
-      ad: (a,b)=> a.ad.localeCompare(b.ad, 'tr'),
-      adet: (a,b)=> (a.adet - b.adet),
-      fiyat: (a,b)=> (a.fiyat - b.fiyat),
-      tutar: (a,b)=> (a.tutar - b.tutar),
-      gKZ: (a,b)=> (a.gKZ - b.gKZ),
-      hKZ: (a,b)=> (a.hKZ - b.hKZ),
-      aKZ: (a,b)=> (a.aKZ - b.aKZ),
-      tKZ: (a,b)=> (a.tKZ - b.tKZ)
-    };
-
-    // Comparator (HATA DÜZELTİLDİ)
-    const sorterFn = sorters[currentSort.key] || sorters.tutar;
-    items.sort((a,b)=>{
-      const cmp = sorterFn(a,b);
-      return currentSort.dir === 'asc' ? cmp : -cmp;
-    });
-
-    // Başlık (tıklanabilir sıralama butonları)
-    const header = `
-      <div class="asset-item" style="background:transparent;border:none">
-        <div class="asset-main" style="cursor:default; padding:8px 14px;">
-          <div style="flex:1;font-weight:800;font-size:0.7rem">
-            <button class="srt" data-k="ad">Varlık</button>
-          </div>
-          <div style="display:flex;gap:18px;align-items:center">
-            <div style="width:110px;text-align:right;font-weight:800;font-size:0.7rem">
-              <button class="srt" data-k="tutar">Tutar</button>
-            </div>
-            <div style="width:90px;text-align:right;font-weight:800;font-size:0.7rem">
-              <button class="srt" data-k="tKZ">Top. K/Z</button>
-            </div>
-            <div style="width:90px;text-align:right;font-weight:800;font-size:0.7rem">
-              <button class="srt" data-k="gKZ">Günlük</button>
-            </div>
-            <div style="width:90px;text-align:right;font-weight:800;font-size:0.7rem">
-              <button class="srt" data-k="hKZ">Haftalık</button>
-            </div>
-            <div style="width:90px;text-align:right;font-weight:800;font-size:0.7rem">
-              <button class="srt" data-k="aKZ">Aylık</button>
-            </div>
-          </div>
-        </div>
-      </div>`;
+    const items = globalData
+      .filter(d => d.tur === tur)
+      .sort((a,b) => b.tutar - a.tutar);
 
     const rows = items.map(a => `
       <div class="asset-item">
@@ -565,23 +510,7 @@
         </div>
       </div>`).join('');
 
-    grid.innerHTML = header + rows;
-
-    // Sıralama event’leri
-    grid.querySelectorAll('.srt').forEach(btn=>{
-      btn.addEventListener('click', (e)=>{
-        e.preventDefault();
-        const k = e.currentTarget.getAttribute('data-k');
-        if(currentSort.key === k) {
-          currentSort.dir = currentSort.dir === 'asc' ? 'desc' : 'asc';
-        } else {
-          currentSort.key = k;
-          currentSort.dir = 'desc';
-        }
-        showDetails(tur); // yeniden çiz
-      });
-    });
-
+    grid.innerHTML = rows;
     sect.scrollIntoView({ behavior: 'smooth' });
   }
 
@@ -590,14 +519,12 @@
     document.querySelectorAll('.card').forEach(c => { c.classList.remove('active'); c.style.zIndex = "1"; });
     if (!active) { el.classList.add('active'); el.style.zIndex = "999"; }
   }
-
   function toggleAsset(el) {
     const exp = el.parentElement.querySelector('.asset-expand');
     const open = exp.style.display === 'grid';
     document.querySelectorAll('.asset-expand').forEach(d => d.style.display = 'none');
     exp.style.display = open ? 'none' : 'grid';
   }
-
   function closeAll() {
     document.getElementById('detailSection').style.display = 'none';
     document.querySelectorAll('.card').forEach(c => c.classList.remove('active'));
