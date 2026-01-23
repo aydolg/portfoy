@@ -5,15 +5,18 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Elite Portföy Terminali</title>
-  <link rel="icon" href="data:;base64,iVBORw0KGgo=">
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+
+  <!-- Libraries -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 
   <style>
     :root{
-      --bg:#030rder:rgba(255,255,255,0.1);
+      --bg:#030508; --card-bg:rgba(16,20,29,0.95);
+      --accent:#00ff9d; --red:#ff3b5c; --text:#ffffff; --text-muted:#94a3b8; --border:rgba(255,255,255,0.1);
     }
     body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--text);margin:0;padding:12px;}
     .container{max-width:1200px;margin:0 auto;}
@@ -23,11 +26,12 @@
     #loadingOverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:99998;align-items:center;justify-content:center;flex-direction:column;}
     .spinner{width:50px;height:50px;border:3px solid var(--accent);border-radius:50%;border-top-color:transparent;animation:spin 1s linear infinite;}
     @keyframes spin{to{transform:rotate(360deg);}}
-    .header-controls{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;flex-wrap:wrap;gap:10px;}
-    .header-controls h1{margin:0;font-size:clamp(18px,3.5vw,24px);}
+    .header-controls{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:15px;}
+    .header-controls h1{margin:0;font-size:clamp(18px,3.5vw,24px);flex:0 0 auto;}
+    .header-right{display:flex;align-items:center;gap:8px;margin-left:auto;}
     .control-btn{background:var(--card-bg);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);cursor:pointer;font-weight:600;}
     .filter-bar{display:flex;gap:10px;margin-bottom:15px;flex-wrap:wrap;}
-    .filter-select,.filter-input{background:var(--card-bg);color:var(--text);border:1px solid var(--border);padding:8px 12px;border-radius:8px;min-width:140px;}
+    .filter-select,.filter-input{background:var(--card-bg);color:var(--text);border:1px solid var(--border);padding:8px 12px;border-radius:8px;min-width:200px;}
     .perf-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:15px;}
     @media (max-width:768px){.perf-grid{grid-template-columns:1fr;}}
     .summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:20px;}
@@ -36,6 +40,7 @@
     table{width:100%;border-collapse:collapse;}
     th,td{padding:8px;border-bottom:1px solid var(--border);text-align:right;}
     th{text-align:left;}
+    #lastUpdated{color:var(--text-muted);font-size:12px;}
     @media (prefers-reduced-motion: reduce){
       .notification{animation:none;}
       .spinner{animation:none;}
@@ -54,8 +59,10 @@
 <div class="container">
   <div class="header-controls">
     <h1>Elite Portföy Terminali</h1>
-    <div id="lastUpdated" style="color:var(--text-muted);font-size:12px;"></div>
-    <div>
+    <div id="lastUpdated"></div>
+    <div class="header-right">
+      <input type="file" id="fileInput" accept=".csv" style="display:none" />
+      <button class="control-btn" id="uploadBtn" title="Yerel CSV yükle"><i class="fa-solid fa-file-arrow-up"></i> CSV Yükle</button>
       <button class="control-btn" id="refreshBtn"><i class="fas fa-sync"></i> Yenile</button>
     </div>
   </div>
@@ -92,6 +99,7 @@ const PROXY = "https://corsproxy.io/?";
 let globalData = [];
 let allocationChart = null;
 let currentFetch = null;
+let cleanAnomalies = 0;
 
 /* ────────────────────────────────────────────────
    UTILS
@@ -103,7 +111,15 @@ function colorFor(label){
   return colorMap.get(label);
 }
 
-let cleanAnomalies = 0;
+function normalizeHeader(h) {
+  if (!h) return '';
+  let s = String(h).trim().toLowerCase();
+  const map = { 'ı':'i','ğ':'g','ü':'u','ş':'s','ö':'o','ç':'c','İ':'i','Ğ':'g','Ü':'u','Ş':'s','Ö':'o','Ç':'c' };
+  s = s.replace(/[ığüşöçİĞÜŞÖÇ]/g, c => map[c] || c);
+  s = s.replace(/\s+/g, '').replace(/[^a-z0-9]/g, '');
+  return s;
+}
+
 function clean(v){
   if(v === null || v === undefined) return 0;
   let s = String(v).trim();
@@ -172,13 +188,11 @@ function debounce(fn, ms=250){
    FETCH (Failover + AbortController)
 ──────────────────────────────────────────────── */
 async function fetchWithFallback(url, options={}){
-  // Direkt dene
   try{
     const res = await fetch(url, { cache: "no-store", ...options });
     if(res.ok) return res;
     throw new Error(`Birincil başarısız: HTTP ${res.status}`);
   }catch(e){
-    // Proxy ile dene
     const viaProxy = PROXY + encodeURIComponent(url);
     const res2 = await fetch(viaProxy, { cache: "no-store", ...options });
     if(!res2.ok) throw new Error(`Proxy başarısız: HTTP ${res2.status}`);
@@ -194,7 +208,7 @@ async function fetchData(){
   try{
     const res = await fetchWithFallback(SHEET_CSV_URL, { signal: currentFetch.signal });
     const text = await res.text();
-    // PapaParse: header bazlı okuma
+
     Papa.parse(text, {
       header: true,
       delimiter: ',',
@@ -202,39 +216,14 @@ async function fetchData(){
       escapeChar: '"',
       skipEmptyLines: true,
       dynamicTyping: false,
+      transformHeader: (h) => normalizeHeader(h),
+      beforeFirstChunk: (chunk) => chunk.replace(/^\uFEFF?/, '').trim(),
       complete: (result)=>{
-        // Mapping by header names
         const rows = (result.data || []);
-        globalData = rows
-          .map(r=>{
-            const item = {
-              ad: (r['Varlık'] || '').toString().trim(),
-              tur: (r['Tür'] || 'Diğer').toString().trim(),
-              alisTarihi: r['AlışTarihi'] || '',
-              vade: r['VadeTarihi'] || '',
-              adet: clean(r['Adet']),
-              aFiyat: clean(r['AlışFiyatı']),
-              yatirim: clean(r['YatırımTutarı']),
-              fiyat: clean(r['GüncelFiyat']),
-              tutar: clean(r['GüncelTutar']),
-              gKZ: clean(r['gKZ']),
-              hKZ: clean(r['hKZ']),
-              aKZ: clean(r['aKZ']),
-              tKZ: clean(r['tKZ']),
-              faizOrani: clean(r['FaizOranı']),
-              oncekiKapanis: clean(r['öncekikapanış']),
-              haftaKapanis: clean(r['HaftaKapanış']),
-              ayKapanis: clean(r['AyKapanış'])
-            };
-            return item;
-          })
-          .filter(d => d.ad && d.tutar > 0);
-
-        renderAll();
-        setLastUpdated();
-        showNotification(`Yükleme tamamlandı (${globalData.length} varlık)`, 'success');
+        buildDataFromRows(rows, 'uzak');
       }
     });
+
   }catch(err){
     if(err.name !== 'AbortError'){
       console.error(err);
@@ -247,6 +236,50 @@ async function fetchData(){
 }
 
 /* ────────────────────────────────────────────────
+   CSV -> DATA MAPPING (normalize edilmiş başlıklarla)
+──────────────────────────────────────────────── */
+function buildDataFromRows(rows, kaynak='uzak'){
+  cleanAnomalies = 0;
+
+  const mapped = rows.map(r=>{
+    const item = {
+      ad: (r['varlık'] || r['varlik'] || '').toString().trim(),
+      tur: (r['tür'] || r['tur'] || 'Diğer').toString().trim(),
+      alisTarihi: r['alıştarihi'] || r['alistarihi'] || '',
+      vade: r['vadetarihi'] || '',
+      adet: clean(r['adet']),
+      aFiyat: clean(r['alışfiyatı'] || r['alisfiyati']),
+      yatirim: clean(r['yatırımtutarı'] || r['yatirimtutari']),
+      fiyat: clean(r['güncelfiyat'] || r['guncelfiyat']),
+      tutar: clean(r['günceltutar'] || r['gunceltutar']),
+      gKZ: clean(r['gkz']),
+      hKZ: clean(r['hkz']),
+      aKZ: clean(r['akz']),
+      tKZ: clean(r['tkz']),
+      faizOrani: clean(r['faizoranı'] || r['faizorani']),
+      oncekiKapanis: clean(r['öncekikapanış'] || r['oncekikapanis']),
+      haftaKapanis: clean(r['haftakapanış'] || r['haftakapanis']),
+      ayKapanis: clean(r['aykapanış'] || r['aykapanis'])
+    };
+    return item;
+  });
+
+  const zeros = [];
+  mapped.forEach(x => { if (x.ad && !x.tutar) zeros.push({ ad:x.ad, fiyat:x.fiyat, tutar:x.tutar }); });
+  if (zeros.length) console.warn('Tutarı 0 kalan ilk kayıtlar:', zeros.slice(0,10));
+
+  globalData = mapped.filter(d => d.ad && d.tutar > 0);
+
+  const totalRows = rows.length;
+  const kept = globalData.length;
+  console.log(`Kaynak: ${kaynak} | CSV satır: ${totalRows} | işlenen: ${kept} | clean anomalileri: ${cleanAnomalies}`);
+
+  renderAll();
+  setLastUpdated();
+  showNotification(`Yükleme tamamlandı: ${kept}/${totalRows} satır`, kept ? 'success' : 'warn');
+}
+
+/* ────────────────────────────────────────────────
    RENDER
 ──────────────────────────────────────────────── */
 function renderAll(){
@@ -255,7 +288,7 @@ function renderAll(){
   const worstEl = document.getElementById('worstPerf');
 
   if(!globalData.length){
-    summaryEl.innerHTML = '<p style="text-align:center; padding:30px;">Veri bulunamadı</p>';
+    summaryEl.innerHTML = '<p style="text-align:center; padding:30px;">Veri bulunamadı. Olası nedenler: CSV başlıkları beklenenden farklı, tüm “Güncel Tutar” değerleri 0 görünüyor veya veri çekilemedi.</p>';
     bestEl.textContent = 'En İyi: veri yok';
     worstEl.textContent = 'En Kötü: veri yok';
     if(allocationChart){ allocationChart.destroy(); allocationChart = null; }
@@ -310,7 +343,7 @@ function renderAll(){
 }
 
 /* ────────────────────────────────────────────────
-   FİLTRELEME (XSS güvenli DOM üretimi + Debounce)
+   FİLTRELEME (XSS güvenli DOM + Debounce)
 ──────────────────────────────────────────────── */
 function createCell(tag, text, className){
   const el = document.createElement(tag);
@@ -363,12 +396,41 @@ function clearFilters(){
 }
 
 /* ────────────────────────────────────────────────
+   YEREL CSV YÜKLEME (Dosyadan)
+──────────────────────────────────────────────── */
+function loadFromFile(file){
+  if(!file) return;
+  document.getElementById('loadingOverlay').style.display = 'flex';
+  Papa.parse(file, {
+    header: true,
+    delimiter: ',',
+    quoteChar: '"',
+    escapeChar: '"',
+    skipEmptyLines: true,
+    dynamicTyping: false,
+    transformHeader: (h) => normalizeHeader(h),
+    beforeFirstChunk: (chunk) => chunk.replace(/^\uFEFF?/, '').trim(),
+    complete: (result)=>{
+      const rows = (result.data || []);
+      buildDataFromRows(rows, 'yerel');
+      document.getElementById('loadingOverlay').style.display = 'none';
+    },
+    error: (err)=>{
+      document.getElementById('loadingOverlay').style.display = 'none';
+      showNotification('CSV okunamadı: ' + err.message, 'error');
+    }
+  });
+}
+
+/* ────────────────────────────────────────────────
    BAŞLATMA
 ──────────────────────────────────────────────── */
 window.addEventListener('DOMContentLoaded', ()=>{
   const refreshBtn = document.getElementById('refreshBtn');
   const clearBtn = document.getElementById('clearBtn');
   const searchInput = document.getElementById('searchInput');
+  const uploadBtn = document.getElementById('uploadBtn');
+  const fileInput = document.getElementById('fileInput');
 
   // Debounce’lu arama + kalıcılık
   const filterAssetsDebounced = debounce(filterAssets, 250);
@@ -382,11 +444,18 @@ window.addEventListener('DOMContentLoaded', ()=>{
   const saved = sessionStorage.getItem('search');
   if(saved){ searchInput.value = saved; }
 
-  // Yenile butonu
+  // Yenile (uzak kaynaktan çek)
   refreshBtn.addEventListener('click', ()=> fetchData());
 
-  // Temizle butonu
+  // Temizle
   clearBtn.addEventListener('click', ()=> clearFilters());
+
+  // Yerel CSV yükle
+  uploadBtn.addEventListener('click', ()=> fileInput.click());
+  fileInput.addEventListener('change', (e)=> {
+    const file = e.target.files?.[0];
+    if(file) loadFromFile(file);
+  });
 
   // Sayfa yüklenince çek
   fetchData();
@@ -400,3 +469,4 @@ window.addEventListener('DOMContentLoaded', ()=>{
 </script>
 </body>
 </html>
+``
