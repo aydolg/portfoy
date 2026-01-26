@@ -2,111 +2,157 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Yatırımcı Portföy Paneli</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lite Portföy Terminali v2</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    :root{
-      --bg:#020617;--card:#0f172a;--border:#1e293b;
-      --text:#e5e7eb;--muted:#94a3b8;
-      --up:#22c55e;--down:#ef4444;--accent:#38bdf8;
+    :root {
+      --bg: #0b1220;
+      --card: #111a2e;
+      --muted: #7f8db3;
+      --accent: #4fd1c5;
+      --danger: #f56565;
+      --warning: #ecc94b;
+      --ok: #48bb78;
+      --text: #e6eaf5;
     }
-    body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,sans-serif}
-    .wrap{max-width:1200px;margin:auto;padding:16px}
-    h1{font-size:1.2rem;margin:0 0 12px 0}
-    .grid{display:grid;gap:12px}
-    .cards{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
-    .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px}
-    .lbl{font-size:.65rem;color:var(--muted);font-weight:700;text-transform:uppercase}
-    .val{font-size:1.1rem;font-weight:800;margin-top:4px}
-    .sub{font-size:.7rem;color:var(--muted);margin-top:4px}
-    .up{color:var(--up)} .down{color:var(--down)}
-    .badge{display:inline-block;padding:4px 8px;border-radius:999px;font-size:.65rem;font-weight:800;margin-top:6px}
-    .badge.up{background:rgba(34,197,94,.15)}
-    .badge.down{background:rgba(239,68,68,.15)}
-    .panel{margin-top:16px}
-    canvas{max-height:260px}
+    * { box-sizing: border-box; font-family: Inter, system-ui, sans-serif; }
+    body { margin:0; background:var(--bg); color:var(--text); }
+    h1 { font-size: 1.4rem; margin: 0; }
+    h2 { font-size: 1rem; margin: 0 0 .5rem 0; color:var(--muted); }
+    .container { padding: 20px; max-width: 1400px; margin:auto; }
+
+    .grid { display:grid; grid-template-columns: 2fr 1fr; gap:20px; }
+    .stack { display:grid; gap:20px; }
+
+    .card {
+      background: linear-gradient(180deg, #121c33, #0f172a);
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+    }
+
+    .summary { display:grid; grid-template-columns: repeat(4,1fr); gap:15px; }
+    .metric {
+      background: var(--card);
+      border-radius: 14px;
+      padding: 14px;
+    }
+    .metric .label { font-size:.8rem; color:var(--muted); }
+    .metric .value { font-size:1.2rem; font-weight:600; margin-top:6px; }
+
+    .value.positive { color: var(--ok); }
+    .value.negative { color: var(--danger); }
+
+    table { width:100%; border-collapse: collapse; }
+    th, td { padding:10px; text-align:right; font-size:.85rem; }
+    th { color:var(--muted); font-weight:500; }
+    td:first-child, th:first-child { text-align:left; }
+    tr:not(:last-child) td { border-bottom:1px solid rgba(255,255,255,.05); }
+
+    .badge { padding:4px 10px; border-radius:20px; font-size:.75rem; }
+    .ok { background:rgba(72,187,120,.15); color:var(--ok); }
+    .warn { background:rgba(236,201,75,.15); color:var(--warning); }
+    .bad { background:rgba(245,101,101,.15); color:var(--danger); }
+
+    footer { text-align:center; color:var(--muted); font-size:.75rem; margin-top:20px; }
   </style>
 </head>
 <body>
-<div class="wrap">
-  <h1>📊 Yatırımcı Portföy Paneli</h1>
+  <div class="container">
+    <h1>📊 Lite Portföy Terminali <span style="color:var(--muted)">v2</span></h1>
 
-  <!-- ÖZET KARTLAR -->
-  <div class="grid cards" id="summary"></div>
+    <div class="summary" style="margin-top:20px">
+      <div class="metric"><div class="label">Toplam Portföy</div><div id="total" class="value">—</div></div>
+      <div class="metric"><div class="label">Günlük Değişim</div><div id="daily" class="value">—</div></div>
+      <div class="metric"><div class="label">Getiri (%)</div><div id="return" class="value">—</div></div>
+      <div class="metric"><div class="label">Risk Modu</div><div id="risk" class="value">—</div></div>
+    </div>
 
-  <!-- GRAFİK -->
-  <div class="panel card">
-    <div class="lbl">Portföy Değeri (Zaman)</div>
-    <canvas id="trendChart"></canvas>
+    <div class="grid" style="margin-top:20px">
+      <div class="stack">
+        <div class="card">
+          <h2>Portföy Dağılımı</h2>
+          <table id="portfolioTable"></table>
+        </div>
+        <div class="card">
+          <h2>Portföy Zaman Serisi</h2>
+          <canvas id="portfolioChart" height="120"></canvas>
+        </div>
+      </div>
+
+      <div class="stack">
+        <div class="card">
+          <h2>Makro Gösterge Paneli</h2>
+          <table id="macroTable"></table>
+        </div>
+      </div>
+    </div>
+
+    <footer>Veri kaynağı: Google Sheets • Yatırımcı Odaklı Görünüm</footer>
   </div>
-
-  <!-- MAKRO -->
-  <div class="panel card">
-    <div class="lbl">Makro Göstergeler</div>
-    <div class="grid cards" id="macro"></div>
-  </div>
-</div>
 
 <script>
-/* ================= CONFIG ================= */
 const PORTFOY_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQeTFovlKfvEp9sPepJb9SGxf_2AgMU7eEPTDCc6WWc0o1Z1AizX6K2mJlaWtcvSderiBym7cyhEdsC/pub?gid=0&single=true&output=csv";
 const DATA_CSV    = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQeTFovlKfvEp9sPepJb9SGxf_2AgMU7eEPTDCc6WWc0o1Z1AizX6K2mJlaWtcvSderiBym7cyhEdsC/pub?gid=2136415211&single=true&output=csv";
 const MACRO_CSV   = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQeTFovlKfvEp9sPepJb9SGxf_2AgMU7eEPTDCc6WWc0o1Z1AizX6K2mJlaWtcvSderiBym7cyhEdsC/pub?gid=1018386005&single=true&output=csv";
 
-/* ================= HELPERS ================= */
-const clean=v=>parseFloat((v||'').toString().replace(/\./g,'').replace(',','.').replace(/[^0-9.-]/g,''))||0;
-const pDate=s=>{if(!s) return null;let p=s.split('.');if(p.length!==3) return null;return new Date(p[2],p[1]-1,p[0])};
-const fetchCSV=url=>new Promise(res=>Papa.parse(url,{download:true,complete:r=>res(r.data.slice(1).filter(x=>x.length))}));
+function csvToArray(text){
+  const lines=text.trim().split("\n");
+  const headers=lines.shift().split(",");
+  return lines.map(l=>{
+    const obj={};
+    l.split(",").forEach((v,i)=>obj[headers[i]]=v);
+    return obj;
+  });
+}
 
-(async function init(){
-  const [pRows,dRows,mRows]=await Promise.all([fetchCSV(PORTFOY_CSV),fetchCSV(DATA_CSV),fetchCSV(MACRO_CSV)]);
-  renderSummary(pRows,dRows,mRows);
-  renderChart(dRows);
-  renderMacro(mRows);
-})();
+async function loadCSV(url){
+  const r=await fetch(url);
+  const t=await r.text();
+  return csvToArray(t);
+}
 
-/* ================= SUMMARY ================= */
-function renderSummary(pRows,dRows,mRows){
-  const sumBox=document.getElementById('summary');
-  const total=pRows.reduce((a,r)=>a+clean(r[8]),0);
+function fmt(n){return new Intl.NumberFormat('tr-TR',{maximumFractionDigits:2}).format(n)}
 
-  const series=dRows.map(r=>({d:pDate(r[0]),v:clean(r[1])})).filter(x=>x.d).sort((a,b)=>a.d-b.d);
-  let daily='–', cls='';
-  if(series.length>1){
-    const l=series.at(-1), p=series.at(-2);
-    const diff=l.v-p.v;
-    cls=diff>=0?'up':'down';
-    daily=`${diff>=0?'▲':'▼'} ${diff.toLocaleString('tr-TR')} ₺`;
+(async()=>{
+  const portfolio=await loadCSV(PORTFOY_CSV);
+  const data=await loadCSV(DATA_CSV);
+  const macro=await loadCSV(MACRO_CSV);
+
+  let total=0;
+  portfolio.forEach(p=> total+=Number(p.Deger||0));
+  document.getElementById('total').innerText=fmt(total)+" ₺";
+
+  if(data.length>1){
+    const today=Number(data[data.length-1].Toplam);
+    const yesterday=Number(data[data.length-2].Toplam);
+    const diff=today-yesterday;
+    const pct=diff/yesterday*100;
+    const dEl=document.getElementById('daily');
+    dEl.innerText=(diff>0?"+":"")+fmt(diff)+" ₺";
+    dEl.classList.add(diff>=0?'positive':'negative');
+    document.getElementById('return').innerText=fmt(pct)+" %";
+    document.getElementById('risk').innerHTML=pct>1?'<span class="badge ok">Risk Açık</span>':pct<-1?'<span class="badge bad">Defansif</span>':'<span class="badge warn">Dengeli</span>';
   }
 
-  const enfRow=mRows.find(r=>r[0]==='ENFLASYON_Y');
-  const enf=enfRow?clean(enfRow[1]):0;
-  const annual=series.length>30?((series.at(-1).v/series.at(0).v-1)*100):0;
-  const real=annual-enf;
+  const pt=document.getElementById('portfolioTable');
+  pt.innerHTML='<tr><th>Varlık</th><th>Değer (₺)</th><th>Ağırlık</th></tr>'+
+    portfolio.map(p=>`<tr><td>${p.Varlik}</td><td>${fmt(p.Deger)}</td><td>${fmt(p.Deger/total*100)}%</td></tr>`).join('');
 
-  sumBox.innerHTML=`
-    <div class="card"><div class="lbl">Toplam Portföy</div><div class="val">${total.toLocaleString('tr-TR')} ₺</div></div>
-    <div class="card"><div class="lbl">Günlük Değişim</div><div class="val ${cls}">${daily}</div></div>
-    <div class="card"><div class="lbl">Reel Getiri</div><div class="val ${real>=0?'up':'down'}">%${real.toFixed(1)}</div>
-      <div class="badge ${real>=0?'up':'down'}">${real>=0?'Enflasyon Üstü':'Enflasyon Altı'}</div>
-    </div>`;
-}
+  const ctx=document.getElementById('portfolioChart');
+  new Chart(ctx,{
+    type:'line',
+    data:{
+      labels:data.map(d=>d.Tarih),
+      datasets:[{data:data.map(d=>Number(d.Toplam)), tension:.3}]
+    },
+    options:{plugins:{legend:{display:false}}, scales:{x:{display:false}}}
+  });
 
-/* ================= CHART ================= */
-function renderChart(rows){
-  const ctx=document.getElementById('trendChart');
-  const data=rows.map(r=>({d:pDate(r[0]),v:clean(r[1])})).filter(x=>x.d).sort((a,b)=>a.d-b.d);
-  new Chart(ctx,{type:'line',data:{labels:data.map(x=>x.d.toLocaleDateString('tr-TR')),datasets:[{data:data.map(x=>x.v),borderWidth:2}]},options:{plugins:{legend:{display:false}}}});
-}
-
-/* ================= MACRO ================= */
-function renderMacro(rows){
-  const box=document.getElementById('macro');
-  box.innerHTML=rows.map(r=>`<div class="card"><div class="lbl">${r[0]}</div><div class="val">${r[1]}</div></div>`).join('');
-}
+  const mt=document.getElementById('macroTable');
+  mt.innerHTML=macro.map(m=>`<tr><td>${m.Gosterge}</td><td>${m.Deger}</td></tr>`).join('');
+})();
 </script>
 </body>
 </html>
