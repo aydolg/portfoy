@@ -1,44 +1,55 @@
-```html
 <!DOCTYPE html>
 <html lang="tr">
 <head>
   <meta charset="UTF-8" />
-  <title>Lite Portföy Terminali</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Yatırımcı Portföy Paneli</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; background:#0f172a; color:#e5e7eb; margin:0; padding:20px; }
-    h1 { margin-bottom:10px; }
-    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; }
-    .card { background:#020617; border-radius:10px; padding:12px; box-shadow:0 0 0 1px #1e293b; }
-    .title { font-size:12px; color:#94a3b8; }
-    .value { font-size:20px; font-weight:bold; margin-top:4px; }
-    table { width:100%; border-collapse:collapse; margin-top:20px; }
-    th, td { padding:8px; border-bottom:1px solid #1e293b; font-size:13px; }
-    th { text-align:left; color:#94a3b8; }
-    .up { color:#22c55e; }
-    .down { color:#ef4444; }
+    :root{
+      --bg:#020617;--card:#0f172a;--border:#1e293b;
+      --text:#e5e7eb;--muted:#94a3b8;
+      --up:#22c55e;--down:#ef4444;--accent:#38bdf8;
+    }
+    body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,sans-serif}
+    .wrap{max-width:1200px;margin:auto;padding:16px}
+    h1{font-size:1.2rem;margin:0 0 12px 0}
+    .grid{display:grid;gap:12px}
+    .cards{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px}
+    .lbl{font-size:.65rem;color:var(--muted);font-weight:700;text-transform:uppercase}
+    .val{font-size:1.1rem;font-weight:800;margin-top:4px}
+    .sub{font-size:.7rem;color:var(--muted);margin-top:4px}
+    .up{color:var(--up)} .down{color:var(--down)}
+    .badge{display:inline-block;padding:4px 8px;border-radius:999px;font-size:.65rem;font-weight:800;margin-top:6px}
+    .badge.up{background:rgba(34,197,94,.15)}
+    .badge.down{background:rgba(239,68,68,.15)}
+    .panel{margin-top:16px}
+    canvas{max-height:260px}
   </style>
 </head>
 <body>
+<div class="wrap">
+  <h1>📊 Yatırımcı Portföy Paneli</h1>
 
-<h1>Lite Portföy Terminali</h1>
+  <!-- ÖZET KARTLAR -->
+  <div class="grid cards" id="summary"></div>
 
-<div id="macro" class="grid"></div>
+  <!-- GRAFİK -->
+  <div class="panel card">
+    <div class="lbl">Portföy Değeri (Zaman)</div>
+    <canvas id="trendChart"></canvas>
+  </div>
 
-<h2>Portföy Özeti</h2>
-<div id="summary" class="grid"></div>
+  <!-- MAKRO -->
+  <div class="panel card">
+    <div class="lbl">Makro Göstergeler</div>
+    <div class="grid cards" id="macro"></div>
+  </div>
+</div>
 
-<h2>Varlıklar</h2>
-<table id="assets">
-  <thead>
-    <tr>
-      <th>Varlık</th><th>Tür</th><th>Tutar</th><th>Değer</th>
-    </tr>
-  </thead>
-  <tbody></tbody>
-</table>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script>
 /* ================= CONFIG ================= */
 const PORTFOY_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQeTFovlKfvEp9sPepJb9SGxf_2AgMU7eEPTDCc6WWc0o1Z1AizX6K2mJlaWtcvSderiBym7cyhEdsC/pub?gid=0&single=true&output=csv";
@@ -46,123 +57,56 @@ const DATA_CSV    = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQeTFovlKfv
 const MACRO_CSV   = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQeTFovlKfvEp9sPepJb9SGxf_2AgMU7eEPTDCc6WWc0o1Z1AizX6K2mJlaWtcvSderiBym7cyhEdsC/pub?gid=1018386005&single=true&output=csv";
 
 /* ================= HELPERS ================= */
-function clean(v){
-  if(!v) return 0;
-  return parseFloat(
-    v.toString()
-     .replace(/\./g,'')
-     .replace(',','.')
-     .replace(/[^0-9.-]/g,'')
-  ) || 0;
-}
+const clean=v=>parseFloat((v||'').toString().replace(/\./g,'').replace(',','.').replace(/[^0-9.-]/g,''))||0;
+const pDate=s=>{if(!s) return null;let p=s.split('.');if(p.length!==3) return null;return new Date(p[2],p[1]-1,p[0])};
+const fetchCSV=url=>new Promise(res=>Papa.parse(url,{download:true,complete:r=>res(r.data.slice(1).filter(x=>x.length))}));
 
-function parseDate(s){
-  if(!s || typeof s !== "string") return null;
-  const p = s.split('.');
-  if(p.length !== 3) return null;
-  return new Date(p[2], p[1]-1, p[0]);
-}
-
-function fetchCSV(url){
-  return new Promise(res=>{
-    Papa.parse(url,{
-      download:true,
-      complete:r=>{
-        const rows = r.data.slice(1).filter(x=>x && x.length);
-        res(rows);
-      }
-    });
-  });
-}
-
-/* ================= LOAD ================= */
 (async function init(){
-  try{
-    const [portfoyRows, dataRows, macroRows] = await Promise.all([
-      fetchCSV(PORTFOY_CSV),
-      fetchCSV(DATA_CSV),
-      fetchCSV(MACRO_CSV)
-    ]);
-
-    loadMacro(macroRows);
-    loadPortfolio(portfoyRows);
-    loadSummary(dataRows);
-
-  }catch(e){
-    console.error("Panel init error:", e);
-  }
+  const [pRows,dRows,mRows]=await Promise.all([fetchCSV(PORTFOY_CSV),fetchCSV(DATA_CSV),fetchCSV(MACRO_CSV)]);
+  renderSummary(pRows,dRows,mRows);
+  renderChart(dRows);
+  renderMacro(mRows);
 })();
 
-/* ================= MACRO ================= */
-function loadMacro(rows){
-  const box = document.getElementById("marketRows");
-  if(!box) return;
+/* ================= SUMMARY ================= */
+function renderSummary(pRows,dRows,mRows){
+  const sumBox=document.getElementById('summary');
+  const total=pRows.reduce((a,r)=>a+clean(r[8]),0);
 
-  box.innerHTML = rows.map(r=>{
-    return `
-      <div class="m-row">
-        <span>${r[0]}</span>
-        <span style="font-weight:800">${r[1]}</span>
-      </div>
-    `;
-  }).join('');
-}
-
-/* ================= PORTFÖY ================= */
-function loadPortfolio(rows){
-  const grid = document.getElementById("summaryGrid");
-  if(!grid) return;
-
-  let total = 0;
-  rows.forEach(r=>{
-    total += clean(r[8]);
-  });
-
-  grid.innerHTML = `
-    <div class="card up-card">
-      <span>Toplam Portföy</span>
-      <div class="value up">${total.toLocaleString('tr-TR')} ₺</div>
-    </div>
-  `;
-}
-
-/* ================= DATA SUMMARY ================= */
-function loadSummary(rows){
-  const valid = rows
-    .map(r=>{
-      return {
-        date: parseDate(r[0]),
-        val: clean(r[1])
-      };
-    })
-    .filter(x=>x.date && x.val > 0)
-    .sort((a,b)=>a.date-b.date);
-
-  if(valid.length === 0) return;
-
-  const last = valid[valid.length-1];
-  const prev = valid.length > 1 ? valid[valid.length-2] : null;
-
-  let diffTxt = "–";
-  if(prev){
-    const diff = last.val - prev.val;
-    const pct  = diff / prev.val * 100;
-    diffTxt = `
-      ${diff >= 0 ? "▲" : "▼"}
-      ${diff.toLocaleString('tr-TR')} ₺ (%${pct.toFixed(2)})
-    `;
+  const series=dRows.map(r=>({d:pDate(r[0]),v:clean(r[1])})).filter(x=>x.d).sort((a,b)=>a.d-b.d);
+  let daily='–', cls='';
+  if(series.length>1){
+    const l=series.at(-1), p=series.at(-2);
+    const diff=l.v-p.v;
+    cls=diff>=0?'up':'down';
+    daily=`${diff>=0?'▲':'▼'} ${diff.toLocaleString('tr-TR')} ₺`;
   }
 
-  document.getElementById("bestPerf").querySelector("div:last-child").innerHTML =
-    `${last.val.toLocaleString('tr-TR')} ₺`;
+  const enfRow=mRows.find(r=>r[0]==='ENFLASYON_Y');
+  const enf=enfRow?clean(enfRow[1]):0;
+  const annual=series.length>30?((series.at(-1).v/series.at(0).v-1)*100):0;
+  const real=annual-enf;
 
-  document.getElementById("worstPerf").querySelector("div:last-child").innerHTML =
-    diffTxt;
+  sumBox.innerHTML=`
+    <div class="card"><div class="lbl">Toplam Portföy</div><div class="val">${total.toLocaleString('tr-TR')} ₺</div></div>
+    <div class="card"><div class="lbl">Günlük Değişim</div><div class="val ${cls}">${daily}</div></div>
+    <div class="card"><div class="lbl">Reel Getiri</div><div class="val ${real>=0?'up':'down'}">%${real.toFixed(1)}</div>
+      <div class="badge ${real>=0?'up':'down'}">${real>=0?'Enflasyon Üstü':'Enflasyon Altı'}</div>
+    </div>`;
+}
+
+/* ================= CHART ================= */
+function renderChart(rows){
+  const ctx=document.getElementById('trendChart');
+  const data=rows.map(r=>({d:pDate(r[0]),v:clean(r[1])})).filter(x=>x.d).sort((a,b)=>a.d-b.d);
+  new Chart(ctx,{type:'line',data:{labels:data.map(x=>x.d.toLocaleDateString('tr-TR')),datasets:[{data:data.map(x=>x.v),borderWidth:2}]},options:{plugins:{legend:{display:false}}}});
+}
+
+/* ================= MACRO ================= */
+function renderMacro(rows){
+  const box=document.getElementById('macro');
+  box.innerHTML=rows.map(r=>`<div class="card"><div class="lbl">${r[0]}</div><div class="val">${r[1]}</div></div>`).join('');
 }
 </script>
-
-
 </body>
 </html>
-```
-
