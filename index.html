@@ -34,7 +34,7 @@ body{margin:0;font-family:'Plus Jakarta Sans',system-ui;background:var(--bg);col
 </div>
 </div>
 <script>
-const MACRO_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQeTFovlKfvEp9sPepJb9SGxf_2AgMU7eEPTDCc6WWc0o1Z1AizX6K2mJlaWtcvSderiBym7cyhEdsC/pub?output=csvE";
+const MACRO_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQeTFovlKfvEp9sPepJb9SGxf_2AgMU7eEPTDCc6WWc0o1Z1AizX6K2mJlaWtcvSderiBym7cyhEdsC/pub?gid=1018386005&single=true&output=csv";
 let MACRO = {};
 function fmt(n){return Number(n).toLocaleString('tr-TR',{maximumFractionDigits:2})}
 async function fetchMacro(){
@@ -63,4 +63,5 @@ setInterval(fetchMacro,600000);
 </script>
 </body>
 </html>
+
 
