@@ -38,115 +38,131 @@
   <tbody></tbody>
 </table>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script>
 /* ================= CONFIG ================= */
 const PORTFOY_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQeTFovlKfvEp9sPepJb9SGxf_2AgMU7eEPTDCc6WWc0o1Z1AizX6K2mJlaWtcvSderiBym7cyhEdsC/pub?gid=0&single=true&output=csv";
 const DATA_CSV    = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQeTFovlKfvEp9sPepJb9SGxf_2AgMU7eEPTDCc6WWc0o1Z1AizX6K2mJlaWtcvSderiBym7cyhEdsC/pub?gid=2136415211&single=true&output=csv";
 const MACRO_CSV   = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQeTFovlKfvEp9sPepJb9SGxf_2AgMU7eEPTDCc6WWc0o1Z1AizX6K2mJlaWtcvSderiBym7cyhEdsC/pub?gid=1018386005&single=true&output=csv";
 
-/* =============== HELPERS =============== */
-function csvToRows(text) {
-  return text.trim().split("\n").map(r => r.split(","));
+/* ================= HELPERS ================= */
+function clean(v){
+  if(!v) return 0;
+  return parseFloat(
+    v.toString()
+     .replace(/\./g,'')
+     .replace(',','.')
+     .replace(/[^0-9.-]/g,'')
+  ) || 0;
 }
 
-function parseDate(v) {
-  if (!v) return null;
-  const s = String(v).trim();
-  if (s.includes('.')) {
-    const [d,m,y] = s.split('.').map(Number);
-    return new Date(y, m-1, d);
-  }
-  if (s.includes('-')) {
-    const [y,m,d] = s.split('-').map(Number);
-    return new Date(y, m-1, d);
-  }
-  return null;
+function parseDate(s){
+  if(!s || typeof s !== "string") return null;
+  const p = s.split('.');
+  if(p.length !== 3) return null;
+  return new Date(p[2], p[1]-1, p[0]);
 }
 
-function card(title, value, cls="") {
-  return `<div class="card"><div class="title">${title}</div><div class="value ${cls}">${value}</div></div>`;
-}
-
-async function fetchCSV(url) {
-  const r = await fetch(url);
-  return csvToRows(await r.text());
-}
-
-/* =============== LOAD MACRO =============== */
-async function loadMacro() {
-  const rows = await fetchCSV(MACRO_CSV);
-  const data = Object.fromEntries(rows.slice(1));
-  const el = document.getElementById("macro");
-  el.innerHTML = "";
-  for (const [k,v] of Object.entries(data)) {
-    el.innerHTML += card(k, v);
-  }
-}
-
-/* =============== LOAD SUMMARY =============== */
-async function loadSummary(dataRows);
-
-/* syntax fix: removed stray parenthesis */
-  const vals = rows.slice(1)
-    .map(r => ({ date: parseDate(r[0]), val: Number(r[1]) }))
-    .filter(r => r.date && !isNaN(r.val));
-
-  const el = document.getElementById("summary");
-  el.innerHTML = "";
-
-  if (vals.length === 0) {
-    el.innerHTML += card("Toplam Değer", "Veri yok");
-    return;
-  }
-
-  vals.sort((a,b)=>a.date-b.date);
-  const last = vals[vals.length-1];
-  const prev = vals.length > 1 ? vals[vals.length-2] : null;
-
-  el.innerHTML += card("Toplam Değer", last.val.toLocaleString("tr-TR"));
-
-  if (prev) {
-    const diff = last.val - prev.val;
-    const pct = diff / prev.val * 100;
-    el.innerHTML += card("Günlük Değişim", diff.toLocaleString("tr-TR"), diff>=0?"up":"down");
-    el.innerHTML += card("Değişim %", pct.toFixed(2)+"%", pct>=0?"up":"down");
-  } else {
-    el.innerHTML += card("Günlük Değişim", "–");
-    el.innerHTML += card("Değişim %", "–");
-  }
-}))
-    .filter(r => r.date && r.val);
-  vals.sort((a,b)=>a.date-b.date);
-  const last = vals[vals.length-1];
-  const prev = vals[vals.length-2];
-  const diff = last.val - prev.val;
-  const pct = diff / prev.val * 100;
-  const el = document.getElementById("summary");
-  el.innerHTML = "";
-  el.innerHTML += card("Toplam Değer", last.val.toLocaleString("tr-TR"));
-  el.innerHTML += card("Günlük Değişim", diff.toLocaleString("tr-TR"), diff>=0?"up":"down");
-  el.innerHTML += card("Değişim %", pct.toFixed(2)+"%", pct>=0?"up":"down");
-}
-
-/* =============== LOAD ASSETS =============== */
-async function loadAssets() {
-  const rows = await fetchCSV(PORTFOY_CSV);
-  const body = document.querySelector("#assets tbody");
-  body.innerHTML = "";
-  rows.slice(1).forEach(r => {
-    if (!r[0]) return;
-    body.innerHTML += `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`;
+function fetchCSV(url){
+  return new Promise(res=>{
+    Papa.parse(url,{
+      download:true,
+      complete:r=>{
+        const rows = r.data.slice(1).filter(x=>x && x.length);
+        res(rows);
+      }
+    });
   });
 }
 
-/* =============== INIT =============== */
-(async ()=>{
-  await loadMacro();
-  await loadSummary();
-  await loadAssets();
+/* ================= LOAD ================= */
+(async function init(){
+  try{
+    const [portfoyRows, dataRows, macroRows] = await Promise.all([
+      fetchCSV(PORTFOY_CSV),
+      fetchCSV(DATA_CSV),
+      fetchCSV(MACRO_CSV)
+    ]);
+
+    loadMacro(macroRows);
+    loadPortfolio(portfoyRows);
+    loadSummary(dataRows);
+
+  }catch(e){
+    console.error("Panel init error:", e);
+  }
 })();
+
+/* ================= MACRO ================= */
+function loadMacro(rows){
+  const box = document.getElementById("marketRows");
+  if(!box) return;
+
+  box.innerHTML = rows.map(r=>{
+    return `
+      <div class="m-row">
+        <span>${r[0]}</span>
+        <span style="font-weight:800">${r[1]}</span>
+      </div>
+    `;
+  }).join('');
+}
+
+/* ================= PORTFÖY ================= */
+function loadPortfolio(rows){
+  const grid = document.getElementById("summaryGrid");
+  if(!grid) return;
+
+  let total = 0;
+  rows.forEach(r=>{
+    total += clean(r[8]);
+  });
+
+  grid.innerHTML = `
+    <div class="card up-card">
+      <span>Toplam Portföy</span>
+      <div class="value up">${total.toLocaleString('tr-TR')} ₺</div>
+    </div>
+  `;
+}
+
+/* ================= DATA SUMMARY ================= */
+function loadSummary(rows){
+  const valid = rows
+    .map(r=>{
+      return {
+        date: parseDate(r[0]),
+        val: clean(r[1])
+      };
+    })
+    .filter(x=>x.date && x.val > 0)
+    .sort((a,b)=>a.date-b.date);
+
+  if(valid.length === 0) return;
+
+  const last = valid[valid.length-1];
+  const prev = valid.length > 1 ? valid[valid.length-2] : null;
+
+  let diffTxt = "–";
+  if(prev){
+    const diff = last.val - prev.val;
+    const pct  = diff / prev.val * 100;
+    diffTxt = `
+      ${diff >= 0 ? "▲" : "▼"}
+      ${diff.toLocaleString('tr-TR')} ₺ (%${pct.toFixed(2)})
+    `;
+  }
+
+  document.getElementById("bestPerf").querySelector("div:last-child").innerHTML =
+    `${last.val.toLocaleString('tr-TR')} ₺`;
+
+  document.getElementById("worstPerf").querySelector("div:last-child").innerHTML =
+    diffTxt;
+}
 </script>
+
 
 </body>
 </html>
 ```
+
