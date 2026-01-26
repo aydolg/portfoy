@@ -1,73 +1,125 @@
+```html
 <!DOCTYPE html>
 <html lang="tr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Lite Portföy Terminali – Final</title>
+  <title>Lite Portföy Terminali</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    body{font-family:system-ui,Segoe UI,Roboto,Arial;background:#030508;color:#fff;margin:0;padding:16px}
-    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
-    .card{background:#0f1420;border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:14px}
-    .label{font-size:11px;color:#94a3b8;text-transform:uppercase;font-weight:700}
-    .value{font-size:20px;font-weight:800;margin-top:4px}
-    .up{color:#22c55e}.down{color:#ef4444}
-    .title{font-weight:900;font-size:18px;margin-bottom:12px}
-    .footer{margin-top:20px;font-size:11px;color:#94a3b8}
+    body { font-family: Arial, sans-serif; background:#0f172a; color:#e5e7eb; margin:0; padding:20px; }
+    h1 { margin-bottom:10px; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; }
+    .card { background:#020617; border-radius:10px; padding:12px; box-shadow:0 0 0 1px #1e293b; }
+    .title { font-size:12px; color:#94a3b8; }
+    .value { font-size:20px; font-weight:bold; margin-top:4px; }
+    table { width:100%; border-collapse:collapse; margin-top:20px; }
+    th, td { padding:8px; border-bottom:1px solid #1e293b; font-size:13px; }
+    th { text-align:left; color:#94a3b8; }
+    .up { color:#22c55e; }
+    .down { color:#ef4444; }
   </style>
 </head>
 <body>
 
-<div class="title">Lite Portföy Terminali</div>
+<h1>Lite Portföy Terminali</h1>
 
-<div class="grid" id="macro"></div>
+<div id="macro" class="grid"></div>
 
-<div class="footer" id="info"></div>
+<h2>Portföy Özeti</h2>
+<div id="summary" class="grid"></div>
+
+<h2>Varlıklar</h2>
+<table id="assets">
+  <thead>
+    <tr>
+      <th>Varlık</th><th>Tür</th><th>Tutar</th><th>Değer</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
 
 <script>
 /* ================= CONFIG ================= */
-const PORTFOY_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQeTFovlKfvEp9sPepJb9SGxf_2AgMU7eEPTDCc6WWc0o1Z1AizX6K2mJlaWtcvSderiBym7cyhEdsC/pub?gid=0&single=true&output=csv";   // portföy varlıkları
-const DATA_CSV    = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQeTFovlKfvEp9sPepJb9SGxf_2AgMU7eEPTDCc6WWc0o1Z1AizX6K2mJlaWtcvSderiBym7cyhEdsC/pub?gid=2136415211&single=true&output=csv";      // günlük portföy değerleri
-const MACRO_CSV   = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQeTFovlKfvEp9sPepJb9SGxf_2AgMU7eEPTDCc6WWc0o1Z1AizX6K2mJlaWtcvSderiBym7cyhEdsC/pub?gid=1018386005&single=true&output=csv";     // usd, eur, enflasyon vs
+const PORTFOY_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQeTFovlKfvEp9sPepJb9SGxf_2AgMU7eEPTDCc6WWc0o1Z1AizX6K2mJlaWtcvSderiBym7cyhEdsC/pub?gid=0&single=true&output=csv";
+const DATA_CSV    = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQeTFovlKfvEp9sPepJb9SGxf_2AgMU7eEPTDCc6WWc0o1Z1AizX6K2mJlaWtcvSderiBym7cyhEdsC/pub?gid=2136415211&single=true&output=csv";
+const MACRO_CSV   = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQeTFovlKfvEp9sPepJb9SGxf_2AgMU7eEPTDCc6WWc0o1Z1AizX6K2mJlaWtcvSderiBym7cyhEdsC/pub?gid=1018386005&single=true&output=csv";
 
-/* ================= HELPERS ================= */
-function clean(v){if(!v)return null;return parseFloat(String(v).replace(',','.'))}
-function parseDate(d){const p=d.split('.');return new Date(p[2],p[1]-1,p[0])}
-function fmt(n){return n.toLocaleString('tr-TR',{maximumFractionDigits:2})}
+/* =============== HELPERS =============== */
+function csvToRows(text) {
+  return text.trim().split("\n").map(r => r.split(","));
+}
 
-async function fetchCSV(url){
-  const res=await fetch(url,{cache:'no-store'});
-  const txt=await res.text();
-  const [h,...r]=txt.trim().split('\n');
-  const headers=h.split(',');
-  return r.map(l=>{
-    const o={};l.split(',').forEach((v,i)=>o[headers[i]]=v);return o;
+function parseDate(v) {
+  if (!v) return null;
+  const s = String(v).trim();
+  if (s.includes('.')) {
+    const [d,m,y] = s.split('.').map(Number);
+    return new Date(y, m-1, d);
+  }
+  if (s.includes('-')) {
+    const [y,m,d] = s.split('-').map(Number);
+    return new Date(y, m-1, d);
+  }
+  return null;
+}
+
+function card(title, value, cls="") {
+  return `<div class="card"><div class="title">${title}</div><div class="value ${cls}">${value}</div></div>`;
+}
+
+async function fetchCSV(url) {
+  const r = await fetch(url);
+  return csvToRows(await r.text());
+}
+
+/* =============== LOAD MACRO =============== */
+async function loadMacro() {
+  const rows = await fetchCSV(MACRO_CSV);
+  const data = Object.fromEntries(rows.slice(1));
+  const el = document.getElementById("macro");
+  el.innerHTML = "";
+  for (const [k,v] of Object.entries(data)) {
+    el.innerHTML += card(k, v);
+  }
+}
+
+/* =============== LOAD SUMMARY =============== */
+async function loadSummary() {
+  const rows = await fetchCSV(DATA_CSV);
+  const vals = rows.slice(1)
+    .map(r => ({ date: parseDate(r[0]), val: Number(r[1]) }))
+    .filter(r => r.date && r.val);
+  vals.sort((a,b)=>a.date-b.date);
+  const last = vals[vals.length-1];
+  const prev = vals[vals.length-2];
+  const diff = last.val - prev.val;
+  const pct = diff / prev.val * 100;
+  const el = document.getElementById("summary");
+  el.innerHTML = "";
+  el.innerHTML += card("Toplam Değer", last.val.toLocaleString("tr-TR"));
+  el.innerHTML += card("Günlük Değişim", diff.toLocaleString("tr-TR"), diff>=0?"up":"down");
+  el.innerHTML += card("Değişim %", pct.toFixed(2)+"%", pct>=0?"up":"down");
+}
+
+/* =============== LOAD ASSETS =============== */
+async function loadAssets() {
+  const rows = await fetchCSV(PORTFOY_CSV);
+  const body = document.querySelector("#assets tbody");
+  body.innerHTML = "";
+  rows.slice(1).forEach(r => {
+    if (!r[0]) return;
+    body.innerHTML += `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`;
   });
 }
 
-/* ================= MAIN ================= */
-(async()=>{
-  const macro=await fetchCSV(MACRO_CSV);
-  const data =await fetchCSV(DATA_CSV);
-
-  // ---- MACRO PANEL ----
-  const targets={USDTRY:'USD/TL',EURTRY:'EUR/TL',ALTIN_GRAM:'Gram Altın',ENFLASYON_Y:'Enflasyon',MEVDUAT_Y:'Mevduat',BIST100:'BIST 100'};
-  const html=Object.keys(targets).map(k=>{
-    const row=macro.find(r=>r.KOD===k);
-    if(!row)return '';
-    const v=clean(row.DEGER);
-    const isPct=k.includes('_Y');
-    return `<div class="card"><div class="label">${targets[k]}</div><div class="value">${isPct?'%':''}${fmt(v)}</div></div>`;
-  }).join('');
-  document.getElementById('macro').innerHTML=html;
-
-  // ---- PERFORMANCE ----
-  const rows=data.map(r=>({d:parseDate(r.TARIH),v:clean(r.PORTFOY)})).sort((a,b)=>a.d-b.d);
-  const first=rows[0],last=rows[rows.length-1];
-  const ret=((last.v-first.v)/first.v*100);
-
-  document.getElementById('info').textContent=
-    `Başlangıç: ${first.d.toLocaleDateString('tr-TR')} | Güncel: ${last.d.toLocaleDateString('tr-TR')} | Toplam Getiri: %${ret.toFixed(2)}`;
+/* =============== INIT =============== */
+(async ()=>{
+  await loadMacro();
+  await loadSummary();
+  await loadAssets();
 })();
 </script>
+
 </body>
 </html>
+```
