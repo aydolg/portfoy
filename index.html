@@ -1,96 +1,65 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Elite Portföy Terminali v3.3 – Reel & Makro</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Elite Portföy Terminali v4.0</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <style>
-:root{--bg:#030508;--card:#10141d;--accent:#00ff9d;--red:#ff3b5c;--muted:#94a3b8;--border:rgba(255,255,255,.1)}
-body{margin:0;background:var(--bg);color:#fff;font-family:Plus Jakarta Sans}
-.container{max-width:1200px;margin:auto;padding:12px}
-.summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px;border-left:4px solid #334155}
-.card.up{border-left-color:var(--accent)}
-.card.down{border-left-color:var(--red)}
-.card span{font-size:.6rem;color:var(--muted);font-weight:700}
-.value{font-size:1rem;font-weight:800}
-.market-block,.chart-block{margin-top:15px;background:var(--card);border:1px solid var(--border);border-radius:18px;padding:15px}
-.m-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.05)}
-.up{color:var(--accent)} .down{color:var(--red)}
-.badge{font-size:.55rem;padding:2px 6px;border-radius:6px;font-weight:800}
-.badge.good{background:var(--accent);color:#111}
-.badge.bad{background:var(--red);color:#fff}
-.asset{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:12px;margin-bottom:8px}
+:root{--bg:#030508;--card:#0f1420;--accent:#00ff9d;--red:#ff3b5c;--muted:#94a3b8;--border:rgba(255,255,255,.08)}
+body{margin:0;font-family:'Plus Jakarta Sans',system-ui;background:var(--bg);color:#fff}
+.container{max-width:1200px;margin:auto;padding:14px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px}
+.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+.m-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)}
+.up{color:var(--accent)}.down{color:var(--red)}
 </style>
 </head>
 <body>
 <div class="container">
-<div class="summary-grid" id="summary"></div>
-<div class="market-block"><div id="market"></div></div>
-<div class="chart-block"><canvas id="chart" height="180"></canvas></div>
-<div id="assets"></div>
+<h3 style="color:var(--accent)">Elite Portföy Terminali – Sheet Entegre</h3>
+<div class="summary">
+<div class="card"><div>USD/TL</div><div id="usd" class="up">-</div></div>
+<div class="card"><div>EUR/TL</div><div id="eur" class="up">-</div></div>
+<div class="card"><div>Gram Altın</div><div id="gold" class="up">-</div></div>
+<div class="card"><div>Enflasyon</div><div id="inf" class="down">-</div></div>
+<div class="card"><div>Mevduat</div><div id="mev" class="up">-</div></div>
+<div class="card"><div>BIST 100</div><div id="bist" class="up">-</div></div>
+</div>
+<div class="card">
+<h4>Makro Piyasa Paneli (Google Sheets)</h4>
+<div id="market"></div>
+</div>
 </div>
 <script>
-/* ===== MAKRO ===== */
-const MACRO={inflation:65.07,usd:0,eur:0,gold:0};
-const CSV_URL="https://docs.google.com/spreadsheets/d/e/2PACX-1vQeTFovlKfvEp9sPepJb9SGxf_2AgMU7eEPTDCc6WWc0o1Z1AizX6K2mJlaWtcvSderiBym7cyhEdsC/pub?output=csv";
-let DATA=[];let chart;
-
-function clean(v){if(!v)return 0;return parseFloat(v.toString().replace(/\./g,'').replace(',','.'))||0}
-
-async function fetchTCMB(){
- const r=await fetch('https://www.tcmb.gov.tr/kurlar/today.xml');
- const t=await r.text();
- const x=new DOMParser().parseFromString(t,'text/xml');
- const g=c=>parseFloat(x.querySelector(`Currency[CurrencyCode="${c}"] BanknoteSelling`).textContent.replace(',','.'));
- MACRO.usd=g('USD'); MACRO.eur=g('EUR');
- const ons=parseFloat(x.querySelector('Currency[CurrencyCode="XAU"] ForexSelling').textContent.replace(',','.'));
- MACRO.gold=(ons*MACRO.usd)/31.1035;
-}
-
-function fetchData(){
- Papa.parse(CSV_URL,{download:true,complete:r=>{
-  DATA=r.data.slice(1).filter(a=>a[0]).map(a=>({
-   ad:a[0],tur:a[1],yatirim:clean(a[6]),tutar:clean(a[8]),tKZ:clean(a[12])
-  }));
-  DATA.forEach(d=>{
-   d.nominal=d.yatirim?d.tKZ/d.yatirim*100:0;
-   d.reel=d.nominal-MACRO.inflation;
+const MACRO_CSV_URL = "PUT_YOUR_SHEET_CSV_URL_HERE";
+let MACRO = {};
+function fmt(n){return Number(n).toLocaleString('tr-TR',{maximumFractionDigits:2})}
+async function fetchMacro(){
+ const r = await fetch(MACRO_CSV_URL,{cache:'no-store'});
+ const t = await r.text();
+ Papa.parse(t,{header:true,skipEmptyLines:true,complete:(res)=>{
+  res.data.forEach(row=>{
+   MACRO[row.anahtar]=parseFloat(String(row.deger).replace(',','.'));
   });
-  render();
+  renderMacro();
  }});
 }
-
-function render(){
- const tot=DATA.reduce((s,a)=>{s.y+=a.yatirim;s.t+=a.tutar;s.k+=a.tKZ;return s},{y:0,t:0,k:0});
- const nom=tot.y?tot.k/tot.y*100:0; const reel=nom-MACRO.inflation;
- document.getElementById('summary').innerHTML=`
-  <div class="card"><span>Portföy</span><div class="value">${tot.t.toLocaleString('tr-TR')} ₺</div></div>
-  <div class="card ${reel>=0?'up':'down'}"><span>Reel Getiri</span><div class="value">%${reel.toFixed(2)}</div></div>
-  <div class="card"><span>Enflasyon</span><div class="value">%${MACRO.inflation}</div></div>`;
- document.getElementById('market').innerHTML=`
-  <div class="m-row"><span>USD</span><span>${MACRO.usd.toFixed(2)}</span></div>
-  <div class="m-row"><span>EUR</span><span>${MACRO.eur.toFixed(2)}</span></div>
-  <div class="m-row"><span>Gram Altın</span><span>${MACRO.gold.toFixed(0)} ₺</span></div>`;
- document.getElementById('assets').innerHTML=DATA.map(a=>`
-  <div class="asset">
-   <b>${a.ad}</b><br>
-   <span class="${a.reel>=0?'badge good':'badge bad'}">${a.reel>=0?'ENFLASYON ÜSTÜ':'ENFLASYON ALTI'}</span>
-   <div>%Nominal: ${a.nominal.toFixed(2)} | %Reel: ${a.reel.toFixed(2)}</div>
-  </div>`).join('');
- drawChart();
+function renderMacro(){
+ document.getElementById('usd').textContent=fmt(MACRO.USDTRY);
+ document.getElementById('eur').textContent=fmt(MACRO.EURTRY);
+ document.getElementById('gold').textContent=fmt(MACRO.ALTIN_GRAM);
+ document.getElementById('inf').textContent='%'+fmt(MACRO.ENFLASYON_Y);
+ document.getElementById('mev').textContent='%'+fmt(MACRO.MEVDUAT_Y);
+ document.getElementById('bist').textContent=fmt(MACRO.BIST100);
+ document.getElementById('market').innerHTML=Object.keys(MACRO).map(k=>
+  `<div class="m-row"><span>${k}</span><strong>${fmt(MACRO[k])}</strong></div>`
+ ).join('');
 }
-
-function drawChart(){
- const g={}; DATA.forEach(a=>g[a.tur]=(g[a.tur]||0)+a.tutar);
- if(chart)chart.destroy();
- chart=new Chart(document.getElementById('chart'),{type:'doughnut',data:{labels:Object.keys(g),datasets:[{data:Object.values(g),backgroundColor:['#00ff9d','#3b82f6','#f59e0b','#ef4444','#8b5cf6']} ]},options:{plugins:{legend:{labels:{color:'#94a3b8'}}}}});
-}
-
-(async()=>{await fetchTCMB();fetchData();})();
+fetchMacro();
+setInterval(fetchMacro,600000);
 </script>
 </body>
 </html>
