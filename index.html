@@ -93,65 +93,107 @@
   </div>
 
 <script>
+/* ================= CONFIG ================= */
 const PORTFOY_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQeTFovlKfvEp9sPepJb9SGxf_2AgMU7eEPTDCc6WWc0o1Z1AizX6K2mJlaWtcvSderiBym7cyhEdsC/pub?gid=0&single=true&output=csv";
 const DATA_CSV    = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQeTFovlKfvEp9sPepJb9SGxf_2AgMU7eEPTDCc6WWc0o1Z1AizX6K2mJlaWtcvSderiBym7cyhEdsC/pub?gid=2136415211&single=true&output=csv";
 const MACRO_CSV   = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQeTFovlKfvEp9sPepJb9SGxf_2AgMU7eEPTDCc6WWc0o1Z1AizX6K2mJlaWtcvSderiBym7cyhEdsC/pub?gid=1018386005&single=true&output=csv";
 
-function csvToArray(text){
-  const lines=text.trim().split("\n");
-  const headers=lines.shift().split(",");
-  return lines.map(l=>{
-    const obj={};
-    l.split(",").forEach((v,i)=>obj[headers[i]]=v);
+/* ================= HELPERS ================= */
+function csvToArray(text) {
+  const lines = text.trim().split(/
+?
+/);
+  const headers = lines.shift().split(',').map(h => h.trim());
+  return lines.map(line => {
+    const values = line.split(',');
+    const obj = {};
+    headers.forEach((h, i) => obj[h] = values[i]?.trim() || "");
     return obj;
   });
 }
 
-async function loadCSV(url){
-  const r=await fetch(url);
-  const t=await r.text();
-  return csvToArray(t);
+async function loadCSV(url, name) {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(name + " yüklenemedi");
+    const text = await res.text();
+    return csvToArray(text);
+  } catch (e) {
+    console.error("CSV HATASI:", name, e);
+    return [];
+  }
 }
 
-function fmt(n){return new Intl.NumberFormat('tr-TR',{maximumFractionDigits:2}).format(n)}
+function fmt(n) {
+  if (isNaN(n)) return "—";
+  return new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 2 }).format(n);
+}
 
-(async()=>{
-  const portfolio=await loadCSV(PORTFOY_CSV);
-  const data=await loadCSV(DATA_CSV);
-  const macro=await loadCSV(MACRO_CSV);
+/* ================= MAIN ================= */
+(async () => {
+  const portfolio = await loadCSV(PORTFOY_CSV, "PORTFOY");
+  const data      = await loadCSV(DATA_CSV, "DATA");
+  const macro     = await loadCSV(MACRO_CSV, "MACRO");
 
-  let total=0;
-  portfolio.forEach(p=> total+=Number(p.Deger||0));
-  document.getElementById('total').innerText=fmt(total)+" ₺";
+  /* ---- PORTFÖY ÖZET ---- */
+  let total = 0;
+  portfolio.forEach(p => total += Number(p.Deger || p.DEGER || 0));
+  document.getElementById('total').innerText = total ? fmt(total) + " ₺" : "Veri yok";
 
-  if(data.length>1){
-    const today=Number(data[data.length-1].Toplam);
-    const yesterday=Number(data[data.length-2].Toplam);
-    const diff=today-yesterday;
-    const pct=diff/yesterday*100;
-    const dEl=document.getElementById('daily');
-    dEl.innerText=(diff>0?"+":"")+fmt(diff)+" ₺";
-    dEl.classList.add(diff>=0?'positive':'negative');
-    document.getElementById('return').innerText=fmt(pct)+" %";
-    document.getElementById('risk').innerHTML=pct>1?'<span class="badge ok">Risk Açık</span>':pct<-1?'<span class="badge bad">Defansif</span>':'<span class="badge warn">Dengeli</span>';
+  /* ---- GÜNLÜK GETİRİ ---- */
+  if (data.length >= 2) {
+    const t = Number(data[data.length - 1].Toplam || data[data.length - 1].TOPLAM);
+    const y = Number(data[data.length - 2].Toplam || data[data.length - 2].TOPLAM);
+    const diff = t - y;
+    const pct = y ? diff / y * 100 : 0;
+
+    const dEl = document.getElementById('daily');
+    dEl.innerText = (diff >= 0 ? '+' : '') + fmt(diff) + " ₺";
+    dEl.className = 'value ' + (diff >= 0 ? 'positive' : 'negative');
+
+    document.getElementById('return').innerText = fmt(pct) + " %";
+    document.getElementById('risk').innerHTML = pct > 1
+      ? '<span class="badge ok">Risk Açık</span>'
+      : pct < -1
+      ? '<span class="badge bad">Defansif</span>'
+      : '<span class="badge warn">Dengeli</span>';
+  } else {
+    document.getElementById('daily').innerText = "Veri yok";
+    document.getElementById('return').innerText = "—";
+    document.getElementById('risk').innerText = "—";
   }
 
-  const pt=document.getElementById('portfolioTable');
-  pt.innerHTML='<tr><th>Varlık</th><th>Değer (₺)</th><th>Ağırlık</th></tr>'+
-    portfolio.map(p=>`<tr><td>${p.Varlik}</td><td>${fmt(p.Deger)}</td><td>${fmt(p.Deger/total*100)}%</td></tr>`).join('');
+  /* ---- PORTFÖY TABLO ---- */
+  const pt = document.getElementById('portfolioTable');
+  if (portfolio.length === 0) {
+    pt.innerHTML = '<tr><td>Portföy verisi bulunamadı</td></tr>';
+  } else {
+    pt.innerHTML = '<tr><th>Varlık</th><th>Değer (₺)</th><th>Ağırlık</th></tr>' +
+      portfolio.map(p => {
+        const v = Number(p.Deger || p.DEGER || 0);
+        return `<tr><td>${p.Varlik || p.VARLIK}</td><td>${fmt(v)}</td><td>${total ? fmt(v / total * 100) : '0'}%</td></tr>`;
+      }).join('');
+  }
 
-  const ctx=document.getElementById('portfolioChart');
-  new Chart(ctx,{
-    type:'line',
-    data:{
-      labels:data.map(d=>d.Tarih),
-      datasets:[{data:data.map(d=>Number(d.Toplam)), tension:.3}]
-    },
-    options:{plugins:{legend:{display:false}}, scales:{x:{display:false}}}
-  });
+  /* ---- ZAMAN SERİSİ ---- */
+  if (data.length > 0) {
+    new Chart(document.getElementById('portfolioChart'), {
+      type: 'line',
+      data: {
+        labels: data.map(d => d.Tarih || d.TARIH),
+        datasets: [{ data: data.map(d => Number(d.Toplam || d.TOPLAM)), tension: .3 }]
+      },
+      options: { plugins: { legend: { display: false } }, scales: { x: { display: false } } }
+    });
+  }
 
-  const mt=document.getElementById('macroTable');
-  mt.innerHTML=macro.map(m=>`<tr><td>${m.Gosterge}</td><td>${m.Deger}</td></tr>`).join('');
+  /* ---- MAKRO ---- */
+  const mt = document.getElementById('macroTable');
+  if (macro.length === 0) {
+    mt.innerHTML = '<tr><td>Makro veri yok</td></tr>';
+  } else {
+    mt.innerHTML = macro.map(m => `<tr><td>${m.Gosterge || m.GOSTERGE}</td><td>${m.Deger || m.DEGER}</td></tr>`).join('');
+  }
 })();
 </script>
 </body>
