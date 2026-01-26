@@ -1,200 +1,103 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Lite Portföy Terminali v2</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-    :root {
-      --bg: #0b1220;
-      --card: #111a2e;
-      --muted: #7f8db3;
-      --accent: #4fd1c5;
-      --danger: #f56565;
-      --warning: #ecc94b;
-      --ok: #48bb78;
-      --text: #e6eaf5;
-    }
-    * { box-sizing: border-box; font-family: Inter, system-ui, sans-serif; }
-    body { margin:0; background:var(--bg); color:var(--text); }
-    h1 { font-size: 1.4rem; margin: 0; }
-    h2 { font-size: 1rem; margin: 0 0 .5rem 0; color:var(--muted); }
-    .container { padding: 20px; max-width: 1400px; margin:auto; }
-
-    .grid { display:grid; grid-template-columns: 2fr 1fr; gap:20px; }
-    .stack { display:grid; gap:20px; }
-
-    .card {
-      background: linear-gradient(180deg, #121c33, #0f172a);
-      border-radius: 18px;
-      padding: 18px;
-      box-shadow: 0 10px 30px rgba(0,0,0,.35);
-    }
-
-    .summary { display:grid; grid-template-columns: repeat(4,1fr); gap:15px; }
-    .metric {
-      background: var(--card);
-      border-radius: 14px;
-      padding: 14px;
-    }
-    .metric .label { font-size:.8rem; color:var(--muted); }
-    .metric .value { font-size:1.2rem; font-weight:600; margin-top:6px; }
-
-    .value.positive { color: var(--ok); }
-    .value.negative { color: var(--danger); }
-
-    table { width:100%; border-collapse: collapse; }
-    th, td { padding:10px; text-align:right; font-size:.85rem; }
-    th { color:var(--muted); font-weight:500; }
-    td:first-child, th:first-child { text-align:left; }
-    tr:not(:last-child) td { border-bottom:1px solid rgba(255,255,255,.05); }
-
-    .badge { padding:4px 10px; border-radius:20px; font-size:.75rem; }
-    .ok { background:rgba(72,187,120,.15); color:var(--ok); }
-    .warn { background:rgba(236,201,75,.15); color:var(--warning); }
-    .bad { background:rgba(245,101,101,.15); color:var(--danger); }
-
-    footer { text-align:center; color:var(--muted); font-size:.75rem; margin-top:20px; }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ultimate Portföy Paneli v1.0</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+body{margin:0;font-family:Inter;background:#05070c;color:#fff}
+.container{max-width:1200px;margin:auto;padding:16px}
+.header{font-size:1.1rem;font-weight:800;color:#00ff9d;margin-bottom:12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.card{background:#0e1420;border-radius:14px;padding:14px;border:1px solid rgba(255,255,255,.08)}
+.label{font-size:.6rem;color:#94a3b8;font-weight:700;text-transform:uppercase}
+.value{font-size:1.1rem;font-weight:800;margin-top:6px}
+.up{color:#00ff9d}.down{color:#ff4d6d}
+.section{margin-top:22px}
+canvas{max-height:260px}
+</style>
 </head>
 <body>
-  <div class="container">
-    <h1>📊 Lite Portföy Terminali <span style="color:var(--muted)">v2</span></h1>
+<div class="container">
+  <div class="header">Ultimate Portföy Paneli v1.0</div>
 
-    <div class="summary" style="margin-top:20px">
-      <div class="metric"><div class="label">Toplam Portföy</div><div id="total" class="value">—</div></div>
-      <div class="metric"><div class="label">Günlük Değişim</div><div id="daily" class="value">—</div></div>
-      <div class="metric"><div class="label">Getiri (%)</div><div id="return" class="value">—</div></div>
-      <div class="metric"><div class="label">Risk Modu</div><div id="risk" class="value">—</div></div>
-    </div>
+  <div class="grid" id="summary"></div>
 
-    <div class="grid" style="margin-top:20px">
-      <div class="stack">
-        <div class="card">
-          <h2>Portföy Dağılımı</h2>
-          <table id="portfolioTable"></table>
-        </div>
-        <div class="card">
-          <h2>Portföy Zaman Serisi</h2>
-          <canvas id="portfolioChart" height="120"></canvas>
-        </div>
-      </div>
-
-      <div class="stack">
-        <div class="card">
-          <h2>Makro Gösterge Paneli</h2>
-          <table id="macroTable"></table>
-        </div>
-      </div>
-    </div>
-
-    <footer>Veri kaynağı: Google Sheets • Yatırımcı Odaklı Görünüm</footer>
+  <div class="section card">
+    <div class="label">Portföy Dağılımı</div>
+    <canvas id="distChart"></canvas>
   </div>
+
+  <div class="section card">
+    <div class="label">Makro Göstergeler</div>
+    <div class="grid" id="macro"></div>
+  </div>
+</div>
 
 <script>
 /* ================= CONFIG ================= */
 const PORTFOY_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQeTFovlKfvEp9sPepJb9SGxf_2AgMU7eEPTDCc6WWc0o1Z1AizX6K2mJlaWtcvSderiBym7cyhEdsC/pub?gid=0&single=true&output=csv";
-const DATA_CSV    = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQeTFovlKfvEp9sPepJb9SGxf_2AgMU7eEPTDCc6WWc0o1Z1AizX6K2mJlaWtcvSderiBym7cyhEdsC/pub?gid=2136415211&single=true&output=csv";
 const MACRO_CSV   = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQeTFovlKfvEp9sPepJb9SGxf_2AgMU7eEPTDCc6WWc0o1Z1AizX6K2mJlaWtcvSderiBym7cyhEdsC/pub?gid=1018386005&single=true&output=csv";
 
 /* ================= HELPERS ================= */
-function csvToArray(text) {
-  const lines = text.trim().split(/
-?
-/);
-  const headers = lines.shift().split(',').map(h => h.trim());
-  return lines.map(line => {
-    const values = line.split(',');
-    const obj = {};
-    headers.forEach((h, i) => obj[h] = values[i]?.trim() || "");
-    return obj;
+function parseCSV(text){
+  return text.replace(/\r/g,'').trim().split('\n').map(r=>r.split(','));
+}
+function num(v){
+  if(!v) return 0;
+  return parseFloat(v.replace(/\./g,'').replace(',','.'))||0;
+}
+
+/* ================= LOAD ================= */
+async function load(){
+  const [pRes,mRes]=await Promise.all([fetch(PORTFOY_CSV),fetch(MACRO_CSV)]);
+  const pCSV=parseCSV(await pRes.text());
+  const mCSV=parseCSV(await mRes.text());
+
+  const pHead=pCSV[0];
+  const pData=pCSV.slice(1).map(r=>({
+    ad:r[0],tur:r[1],tutar:num(r[8]),tkz:num(r[12])
+  }));
+
+  renderSummary(pData);
+  renderChart(pData);
+  renderMacro(mCSV);
+}
+
+/* ================= SUMMARY ================= */
+function renderSummary(data){
+  let toplam=data.reduce((a,b)=>a+b.tutar,0);
+  let tkz=data.reduce((a,b)=>a+b.tkz,0);
+  const reel=tkz>0? 'Enflasyon Üstü':'Enflasyon Altı';
+
+  document.getElementById('summary').innerHTML=`
+    <div class="card"><div class="label">Toplam Portföy</div><div class="value">${toplam.toLocaleString('tr-TR')} ₺</div></div>
+    <div class="card"><div class="label">Toplam K/Z</div><div class="value ${tkz>=0?'up':'down'}">${tkz.toLocaleString('tr-TR')} ₺</div></div>
+    <div class="card"><div class="label">Reel Getiri</div><div class="value">${reel}</div></div>`;
+}
+
+/* ================= CHART ================= */
+function renderChart(data){
+  const g={};
+  data.forEach(d=>{g[d.tur]=(g[d.tur]||0)+d.tutar});
+  new Chart(document.getElementById('distChart'),{
+    type:'doughnut',
+    data:{labels:Object.keys(g),datasets:[{data:Object.values(g)}]},
+    options:{plugins:{legend:{labels:{color:'#94a3b8'}}}}
   });
 }
 
-async function loadCSV(url, name) {
-  try {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(name + " yüklenemedi");
-    const text = await res.text();
-    return csvToArray(text);
-  } catch (e) {
-    console.error("CSV HATASI:", name, e);
-    return [];
-  }
+/* ================= MACRO ================= */
+function renderMacro(csv){
+  const rows=csv.slice(1);
+  document.getElementById('macro').innerHTML=rows.map(r=>`
+    <div class="card"><div class="label">${r[0]}</div><div class="value">${r[1]}</div></div>
+  `).join('');
 }
 
-function fmt(n) {
-  if (isNaN(n)) return "—";
-  return new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 2 }).format(n);
-}
-
-/* ================= MAIN ================= */
-(async () => {
-  const portfolio = await loadCSV(PORTFOY_CSV, "PORTFOY");
-  const data      = await loadCSV(DATA_CSV, "DATA");
-  const macro     = await loadCSV(MACRO_CSV, "MACRO");
-
-  /* ---- PORTFÖY ÖZET ---- */
-  let total = 0;
-  portfolio.forEach(p => total += Number(p.Deger || p.DEGER || 0));
-  document.getElementById('total').innerText = total ? fmt(total) + " ₺" : "Veri yok";
-
-  /* ---- GÜNLÜK GETİRİ ---- */
-  if (data.length >= 2) {
-    const t = Number(data[data.length - 1].Toplam || data[data.length - 1].TOPLAM);
-    const y = Number(data[data.length - 2].Toplam || data[data.length - 2].TOPLAM);
-    const diff = t - y;
-    const pct = y ? diff / y * 100 : 0;
-
-    const dEl = document.getElementById('daily');
-    dEl.innerText = (diff >= 0 ? '+' : '') + fmt(diff) + " ₺";
-    dEl.className = 'value ' + (diff >= 0 ? 'positive' : 'negative');
-
-    document.getElementById('return').innerText = fmt(pct) + " %";
-    document.getElementById('risk').innerHTML = pct > 1
-      ? '<span class="badge ok">Risk Açık</span>'
-      : pct < -1
-      ? '<span class="badge bad">Defansif</span>'
-      : '<span class="badge warn">Dengeli</span>';
-  } else {
-    document.getElementById('daily').innerText = "Veri yok";
-    document.getElementById('return').innerText = "—";
-    document.getElementById('risk').innerText = "—";
-  }
-
-  /* ---- PORTFÖY TABLO ---- */
-  const pt = document.getElementById('portfolioTable');
-  if (portfolio.length === 0) {
-    pt.innerHTML = '<tr><td>Portföy verisi bulunamadı</td></tr>';
-  } else {
-    pt.innerHTML = '<tr><th>Varlık</th><th>Değer (₺)</th><th>Ağırlık</th></tr>' +
-      portfolio.map(p => {
-        const v = Number(p.Deger || p.DEGER || 0);
-        return `<tr><td>${p.Varlik || p.VARLIK}</td><td>${fmt(v)}</td><td>${total ? fmt(v / total * 100) : '0'}%</td></tr>`;
-      }).join('');
-  }
-
-  /* ---- ZAMAN SERİSİ ---- */
-  if (data.length > 0) {
-    new Chart(document.getElementById('portfolioChart'), {
-      type: 'line',
-      data: {
-        labels: data.map(d => d.Tarih || d.TARIH),
-        datasets: [{ data: data.map(d => Number(d.Toplam || d.TOPLAM)), tension: .3 }]
-      },
-      options: { plugins: { legend: { display: false } }, scales: { x: { display: false } } }
-    });
-  }
-
-  /* ---- MAKRO ---- */
-  const mt = document.getElementById('macroTable');
-  if (macro.length === 0) {
-    mt.innerHTML = '<tr><td>Makro veri yok</td></tr>';
-  } else {
-    mt.innerHTML = macro.map(m => `<tr><td>${m.Gosterge || m.GOSTERGE}</td><td>${m.Deger || m.DEGER}</td></tr>`).join('');
-  }
-})();
+load();
 </script>
 </body>
 </html>
