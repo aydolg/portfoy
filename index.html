@@ -84,8 +84,9 @@ async function loadMacro() {
 }
 
 /* =============== LOAD SUMMARY =============== */
-async function loadSummary() {
-  const rows = await fetchCSV(DATA_CSV);
+async function loadSummary(dataRows);
+
+/* syntax fix: removed stray parenthesis */
   const vals = rows.slice(1)
     .map(r => ({ date: parseDate(r[0]), val: Number(r[1]) }))
     .filter(r => r.date && !isNaN(r.val));
