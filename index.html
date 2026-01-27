@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Ultimate Portföy Paneli v1.0</title>
+<title>Ultimate Portföy Paneli v1.1</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
@@ -11,23 +11,33 @@ body{margin:0;font-family:Inter;background:#05070c;color:#fff}
 .container{max-width:1200px;margin:auto;padding:16px}
 .header{font-size:1.1rem;font-weight:800;color:#00ff9d;margin-bottom:12px}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
-.card{background:#0e1420;border-radius:14px;padding:14px;border:1px solid rgba(255,255,255,.08)}
+.card{background:#0e1420;border-radius:16px;padding:16px;border:1px solid rgba(255,255,255,.08);transition:.3s}
+.card:hover{transform:translateY(-3px);box-shadow:0 10px 25px rgba(0,0,0,.4)}
 .label{font-size:.6rem;color:#94a3b8;font-weight:700;text-transform:uppercase}
-.value{font-size:1.1rem;font-weight:800;margin-top:6px}
+.value{font-size:1.15rem;font-weight:800;margin-top:6px}
 .up{color:#00ff9d}.down{color:#ff4d6d}
+.badge{display:inline-block;padding:4px 8px;border-radius:20px;font-size:.55rem;font-weight:800;margin-top:6px}
+.good{background:#003d28;color:#00ff9d}
+.bad{background:#3d0012;color:#ff4d6d}
 .section{margin-top:22px}
 canvas{max-height:260px}
+.small{font-size:.65rem;color:#cbd5f5}
 </style>
 </head>
 <body>
 <div class="container">
-  <div class="header">Ultimate Portföy Paneli v1.0</div>
+  <div class="header">Ultimate Portföy Paneli v1.1</div>
 
   <div class="grid" id="summary"></div>
 
   <div class="section card">
     <div class="label">Portföy Dağılımı</div>
     <canvas id="distChart"></canvas>
+  </div>
+
+  <div class="section card">
+    <div class="label">Günlük Etki Analizi</div>
+    <div id="impact" class="small">Hesaplanıyor…</div>
   </div>
 
   <div class="section card">
@@ -39,65 +49,79 @@ canvas{max-height:260px}
 <script>
 /* ================= CONFIG ================= */
 const PORTFOY_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQeTFovlKfvEp9sPepJb9SGxf_2AgMU7eEPTDCc6WWc0o1Z1AizX6K2mJlaWtcvSderiBym7cyhEdsC/pub?gid=0&single=true&output=csv";
+const DATA_CSV    = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQeTFovlKfvEp9sPepJb9SGxf_2AgMU7eEPTDCc6WWc0o1Z1AizX6K2mJlaWtcvSderiBym7cyhEdsC/pub?gid=2136415211&single=true&output=csv";
 const MACRO_CSV   = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQeTFovlKfvEp9sPepJb9SGxf_2AgMU7eEPTDCc6WWc0o1Z1AizX6K2mJlaWtcvSderiBym7cyhEdsC/pub?gid=1018386005&single=true&output=csv";
 
 /* ================= HELPERS ================= */
-function parseCSV(text){
-  return text.replace(/\r/g,'').trim().split('\n').map(r=>r.split(','));
-}
-function num(v){
-  if(!v) return 0;
-  return parseFloat(v.replace(/\./g,'').replace(',','.'))||0;
-}
+function parseCSV(text){return text.replace(/
+/g,'').trim().split('
+').map(r=>r.split(','))}
+function num(v){if(!v) return 0; return parseFloat(v.replace(/\./g,'').replace(',','.'))||0}
 
 /* ================= LOAD ================= */
 async function load(){
-  const [pRes,mRes]=await Promise.all([fetch(PORTFOY_CSV),fetch(MACRO_CSV)]);
-  const pCSV=parseCSV(await pRes.text());
-  const mCSV=parseCSV(await mRes.text());
+  const [pRes,dRes,mRes]=await Promise.all([
+    fetch(PORTFOY_CSV),fetch(DATA_CSV),fetch(MACRO_CSV)
+  ])
+  const pCSV=parseCSV(await pRes.text())
+  const dCSV=parseCSV(await dRes.text())
+  const mCSV=parseCSV(await mRes.text())
 
-  const pHead=pCSV[0];
   const pData=pCSV.slice(1).map(r=>({
     ad:r[0],tur:r[1],tutar:num(r[8]),tkz:num(r[12])
-  }));
+  }))
 
-  renderSummary(pData);
-  renderChart(pData);
-  renderMacro(mCSV);
+  const dData=dCSV.slice(1).map(r=>({
+    tarih:r[0],deger:num(r[1])
+  }))
+
+  const macro=Object.fromEntries(mCSV.slice(1).map(r=>[r[0],num(r[1])]))
+
+  renderSummary(pData,macro)
+  renderChart(pData)
+  renderImpact(pData)
+  renderMacro(mCSV)
 }
 
 /* ================= SUMMARY ================= */
-function renderSummary(data){
-  let toplam=data.reduce((a,b)=>a+b.tutar,0);
-  let tkz=data.reduce((a,b)=>a+b.tkz,0);
-  const reel=tkz>0? 'Enflasyon Üstü':'Enflasyon Altı';
+function renderSummary(data,macro){
+  const toplam=data.reduce((a,b)=>a+b.tutar,0)
+  const tkz=data.reduce((a,b)=>a+b.tkz,0)
+  const enfl=macro.ENFLASYON_Y||0
+  const reel=((tkz/toplam)*100)-enfl
 
   document.getElementById('summary').innerHTML=`
     <div class="card"><div class="label">Toplam Portföy</div><div class="value">${toplam.toLocaleString('tr-TR')} ₺</div></div>
     <div class="card"><div class="label">Toplam K/Z</div><div class="value ${tkz>=0?'up':'down'}">${tkz.toLocaleString('tr-TR')} ₺</div></div>
-    <div class="card"><div class="label">Reel Getiri</div><div class="value">${reel}</div></div>`;
+    <div class="card"><div class="label">Reel Getiri</div><div class="value ${reel>=0?'up':'down'}">%${reel.toFixed(2)}</div><span class="badge ${reel>=0?'good':'bad'}">${reel>=0?'Enflasyon Üstü':'Enflasyon Altı'}</span></div>`
 }
 
 /* ================= CHART ================= */
 function renderChart(data){
-  const g={};
-  data.forEach(d=>{g[d.tur]=(g[d.tur]||0)+d.tutar});
+  const g={}; data.forEach(d=>{g[d.tur]=(g[d.tur]||0)+d.tutar})
   new Chart(document.getElementById('distChart'),{
     type:'doughnut',
     data:{labels:Object.keys(g),datasets:[{data:Object.values(g)}]},
     options:{plugins:{legend:{labels:{color:'#94a3b8'}}}}
-  });
+  })
+}
+
+/* ================= IMPACT ================= */
+function renderImpact(data){
+  const sorted=[...data].sort((a,b)=>b.tkz-a.tkz)
+  const up=sorted.slice(0,3).map(d=>`+ ${d.ad}`).join(', ')
+  const down=sorted.slice(-3).map(d=>`- ${d.ad}`).join(', ')
+  document.getElementById('impact').innerHTML=`<b>Yukarı çekenler:</b> ${up}<br><b>Aşağı çekenler:</b> ${down}`
 }
 
 /* ================= MACRO ================= */
 function renderMacro(csv){
-  const rows=csv.slice(1);
-  document.getElementById('macro').innerHTML=rows.map(r=>`
+  document.getElementById('macro').innerHTML=csv.slice(1).map(r=>`
     <div class="card"><div class="label">${r[0]}</div><div class="value">${r[1]}</div></div>
-  `).join('');
+  `).join('')
 }
 
-load();
+load()
 </script>
 </body>
 </html>
