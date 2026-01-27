@@ -1,81 +1,82 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-<meta charset="UTF-8" />
-<title>Ultimate Portföy Terminali</title>
+<meta charset="UTF-8">
+<title>Yatırımcı Paneli</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
-body{font-family:Inter,Arial;background:#0f172a;color:#e5e7eb;margin:20px}
+body{margin:0;background:#0b1220;color:#e5e7eb;font-family:Inter,Arial}
+.container{max-width:1100px;margin:auto;padding:20px}
 h1{margin-bottom:10px}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
-.card{background:#020617;padding:16px;border-radius:12px;box-shadow:0 0 0 1px #1e293b}
-.good{color:#22c55e}.bad{color:#ef4444}.mid{color:#eab308}
-canvas{background:#020617;border-radius:12px;padding:10px}
-table{width:100%;border-collapse:collapse}
-th,td{padding:6px;border-bottom:1px solid #1e293b;font-size:13px}
-th{text-align:left;color:#94a3b8}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
+.card{background:#111827;border-radius:14px;padding:16px}
+.big{font-size:1.4rem;font-weight:700}
+.up{color:#22c55e}
+.down{color:#ef4444}
+.muted{opacity:.7;font-size:.8rem}
+hr{border:none;border-top:1px solid #1f2937;margin:14px 0}
 </style>
 </head>
+
 <body>
-<h1>📊 Ultimate Portföy Terminali</h1>
-
-<div class="grid" id="summary"></div>
-
-<div class="grid" style="margin-top:20px">
-  <div class="card"><canvas id="perfChart"></canvas></div>
-  <div class="card"><canvas id="distChart"></canvas></div>
+<div class="container">
+<h1>📊 Yatırımcı Paneli</h1>
+<div id="cards" class="cards"></div>
+<canvas id="pie"></canvas>
 </div>
-
-<div class="grid" style="margin-top:20px">
-  <div class="card"><h3>🔥 En İyi 5</h3><table id="best"></table></div>
-  <div class="card"><h3>💥 En Kötü 5</h3><table id="worst"></table></div>
-</div>
-
-<div class="card" style="margin-top:20px" id="health"></div>
 
 <script>
 const PORTFOY_CSV="https://docs.google.com/spreadsheets/d/e/2PACX-1vQeTFovlKfvEp9sPepJb9SGxf_2AgMU7eEPTDCc6WWc0o1Z1AizX6K2mJlaWtcvSderiBym7cyhEdsC/pub?gid=0&single=true&output=csv";
 const DATA_CSV="https://docs.google.com/spreadsheets/d/e/2PACX-1vQeTFovlKfvEp9sPepJb9SGxf_2AgMU7eEPTDCc6WWc0o1Z1AizX6K2mJlaWtcvSderiBym7cyhEdsC/pub?gid=2136415211&single=true&output=csv";
 const MACRO_CSV="https://docs.google.com/spreadsheets/d/e/2PACX-1vQeTFovlKfvEp9sPepJb9SGxf_2AgMU7eEPTDCc6WWc0o1Z1AizX6K2mJlaWtcvSderiBym7cyhEdsC/pub?gid=1018386005&single=true&output=csv";
 
-function num(v){return Number(String(v||0).replace(/\./g,"").replace(",","."))||0}
-async function loadCSV(u){const t=await (await fetch(u)).text();const l=t.replace(/\r/g,"").split("\n").filter(x=>x.trim());const d=l[0].includes(";")?";":",";const h=l[0].split(d);return l.slice(1).map(r=>{const c=r.split(d);let o={};h.forEach((x,i)=>o[x]=c[i]);return o})}
+async function loadCSV(url){
+  const txt=await fetch(url).then(r=>r.text());
+  const rows=txt.trim().split("\n").map(r=>r.split(","));
+  const h=rows.shift();
+  return rows.map(r=>{
+    const o={};
+    h.forEach((k,i)=>o[k.trim()]=isNaN(r[i])?r[i]:Number(r[i]));
+    return o;
+  });
+}
 
 (async()=>{
-const portfoy=await loadCSV(PORTFOY_CSV)
-const data=await loadCSV(DATA_CSV)
-const macro=await loadCSV(MACRO_CSV)
+  const portfoy=await loadCSV(PORTFOY_CSV);
+  const macro=await loadCSV(MACRO_CSV);
 
-let toplam=0,maliyet=0
-portfoy.forEach(r=>{toplam+=num(r['Güncel Tutar']||r['Deger']);maliyet+=num(r['Maliyet'])})
-const kar=toplam-maliyet
-const enf=num((macro.find(x=>String(x.KOD).includes('ENFL'))||{}).DEGER)
-const reel=((kar/maliyet)*100)-enf
+  console.log("📦 PORTFÖY:",portfoy);
+  console.log("🌍 MACRO:",macro);
 
-summary.innerHTML=`
-<div class=card><b>Toplam</b><h2>${toplam.toLocaleString()} ₺</h2></div>
-<div class=card><b>Kâr/Zarar</b><h2 class=${kar>=0?'good':'bad'}>${kar.toLocaleString()} ₺</h2></div>
-<div class=card><b>Reel Getiri</b><h2 class=${reel>=0?'good':'bad'}>%${reel.toFixed(2)}</h2></div>`
+  if(!portfoy.length){
+    document.getElementById("cards").innerHTML="❌ Veri yok";
+    return;
+  }
 
-// Grafik
-new Chart(perfChart,{type:'line',data:{labels:data.map(d=>d.Tarih),datasets:[{label:'Portföy',data:data.map(d=>num(d.Toplam)),borderColor:'#22c55e'}]},options:{plugins:{legend:{labels:{color:'#e5e7eb'}}},scales:{x:{ticks:{color:'#94a3b8'}},y:{ticks:{color:'#94a3b8'}}}}})
+  const yatirim=portfoy.reduce((s,x)=>s+x.yatirim,0);
+  const deger=portfoy.reduce((s,x)=>s+x.tutar,0);
+  const kar=deger-yatirim;
+  const karPct=kar/yatirim*100;
 
-// Dağılım
-let grp={}
-portfoy.forEach(r=>grp[r.Tür]=(grp[r.Tür]||0)+num(r['Güncel Tutar']))
-new Chart(distChart,{type:'doughnut',data:{labels:Object.keys(grp),datasets:[{data:Object.values(grp)}]},options:{plugins:{legend:{labels:{color:'#e5e7eb'}}}}})
+  const enflasyon=(macro.find(m=>m.ad==="ENFLASYON")||{}).fiyat||0;
+  const reel=karPct-enflasyon;
 
-// En iyi / kötü
-const sorted=[...portfoy].sort((a,b)=>num(b.Getiri)-num(a.Getiri))
-function fill(tbl,arr){tbl.innerHTML='<tr><th>Varlık</th><th>%</th></tr>'+arr.map(r=>`<tr><td>${r.Ad}</td><td>${num(r.Getiri).toFixed(2)}</td></tr>`).join('')}
-fill(best,sorted.slice(0,5))
-fill(worst,sorted.slice(-5))
+  const cards=document.getElementById("cards");
+  cards.innerHTML=`
+    <div class="card"><div class="muted">Toplam Yatırım</div><div class="big">${yatirim.toLocaleString()} ₺</div></div>
+    <div class="card"><div class="muted">Güncel Değer</div><div class="big">${deger.toLocaleString()} ₺</div></div>
+    <div class="card"><div class="muted">Nominal Getiri</div><div class="big ${kar>=0?'up':'down'}">${karPct.toFixed(2)}%</div></div>
+    <div class="card"><div class="muted">Reel Getiri</div><div class="big ${reel>=0?'up':'down'}">${reel.toFixed(2)}%</div>
+    <div class="muted">${reel>=0?'🟢 Enflasyon Üstü':'🔴 Enflasyon Altı'}</div></div>
+  `;
 
-// Sağlık skoru
-let risk=Object.values(grp).sort((a,b)=>b-a)[0]/toplam*100
-let durum=risk>50?'🔴 Agresif':risk>30?'🟡 Dengeli':'🟢 Defansif'
-health.innerHTML=`<h3>⚖️ Portföy Sağlığı</h3><p>En büyük ağırlık: %${risk.toFixed(1)}</p><h2>${durum}</h2>`
-
+  new Chart(document.getElementById("pie"),{
+    type:"pie",
+    data:{
+      labels:portfoy.map(x=>x.ad),
+      datasets:[{data:portfoy.map(x=>x.tutar)}]
+    }
+  });
 })();
 </script>
 </body>
