@@ -1,48 +1,7 @@
-<!DOCTYPE html>
-<html lang="tr">
-<head>
-<meta charset="UTF-8">
-<title>Elite Portföy Terminali</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-<style>
-body { margin:0; font-family:Inter,system-ui; background:#05070c; color:#fff }
-.container { max-width:1100px; margin:auto; padding:20px }
-h1 { font-size:20px; margin-bottom:10px }
-.grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px }
-.card {
-  background:#0e1320; border:1px solid #1f2937;
-  border-radius:14px; padding:14px
-}
-.label { font-size:11px; color:#94a3b8 }
-.value { font-size:20px; font-weight:800 }
-.up { color:#22c55e } .down { color:#ef4444 }
-hr { border:0; border-top:1px solid #1f2937; margin:16px 0 }
-canvas { max-height:260px }
-</style>
-</head>
-
-<body>
-<div class="container">
-<h1>📊 Elite Portföy Terminali</h1>
-
-<div class="grid" id="summary"></div>
-
-<hr>
-
-<canvas id="distChart"></canvas>
-
-<hr>
-
-<h3>🌍 Makro Göstergeler</h3>
-<div class="grid" id="macro"></div>
-
-</div>
-
 <script>
 /* ================= CONFIG ================= */
 const PORTFOY_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQeTFovlKfvEp9sPepJb9SGxf_2AgMU7eEPTDCc6WWc0o1Z1AizX6K2mJlaWtcvSderiBym7cyhEdsC/pub?gid=0&single=true&output=csv";
+const DATA_CSV    = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQeTFovlKfvEp9sPepJb9SGxf_2AgMU7eEPTDCc6WWc0o1Z1AizX6K2mJlaWtcvSderiBym7cyhEdsC/pub?gid=2136415211&single=true&output=csv";
 const MACRO_CSV   = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQeTFovlKfvEp9sPepJb9SGxf_2AgMU7eEPTDCc6WWc0o1Z1AizX6K2mJlaWtcvSderiBym7cyhEdsC/pub?gid=1018386005&single=true&output=csv";
 
 /* ================= HELPERS ================= */
@@ -50,60 +9,95 @@ function num(v){
   if(!v) return 0;
   return Number(
     String(v)
-      .replaceAll("₺","")
-      .replaceAll(".","")
-      .replaceAll(",",".")
-      .trim()
+      .replace(/\./g,"")
+      .replace(",",".")
   ) || 0;
 }
 
+/* ================= CSV LOADER (BULLETPROOF) ================= */
 async function loadCSV(url){
-  const r = await fetch(url);
-  const t = await r.text();
-  const [head,...rows] = t.split("\n").map(x=>x.split(","));
-  return rows.map(r=>{
-    let o={};
-    head.forEach((h,i)=>o[h.trim()]=r[i]);
-    return o;
-  });
+  try{
+    const r = await fetch(url);
+    const t = await r.text();
+
+    const lines = t.replace(/\r/g,"").split("\n").filter(l=>l.trim());
+    if(lines.length < 2){
+      console.warn("CSV boş:", url);
+      return [];
+    }
+
+    const delimiter = lines[0].includes(";") ? ";" : ",";
+    const headers = lines[0].split(delimiter).map(h=>h.trim());
+
+    const data = lines.slice(1).map(line=>{
+      const cols = line.split(delimiter);
+      let o = {};
+      headers.forEach((h,i)=>o[h]=cols[i]?.trim()||"");
+      return o;
+    });
+
+    return data;
+
+  }catch(e){
+    console.error("CSV okunamadı:", url, e);
+    return [];
+  }
 }
 
 /* ================= MAIN ================= */
-(async ()=>{
+(async function init(){
+
   const portfoy = await loadCSV(PORTFOY_CSV);
+  const data    = await loadCSV(DATA_CSV);
   const macro   = await loadCSV(MACRO_CSV);
 
-  let toplam = 0, kz = 0;
-  let dist = {};
+  console.log("📦 PORTFÖY:", portfoy);
+  console.log("📈 DATA:", data);
+  console.log("🌍 MACRO:", macro);
 
-  portfoy.forEach(p=>{
-    const t = num(p["Güncel Tutar"]);
-    const k = num(p["Toplam K/Z"]);
-    toplam += t; kz += k;
-    const tur = p["Tür"] || "Diğer";
-    dist[tur] = (dist[tur]||0) + t;
+  if(!portfoy.length){
+    document.body.innerHTML = "<h2>❌ Portföy verisi gelmedi</h2>";
+    return;
+  }
+
+  /* ===== TOPLAM ===== */
+  let toplam = 0;
+  let maliyet = 0;
+
+  portfoy.forEach(r=>{
+    toplam  += num(r["Güncel Tutar"] || r["Deger"]);
+    maliyet += num(r["Maliyet"]);
   });
 
-  document.getElementById("summary").innerHTML = `
-    <div class="card"><div class="label">Toplam Portföy</div><div class="value">${toplam.toLocaleString()} ₺</div></div>
-    <div class="card"><div class="label">Toplam K/Z</div><div class="value ${kz>=0?'up':'down'}">${kz.toLocaleString()} ₺</div></div>
+  const kar = toplam - maliyet;
+
+  /* ===== ENFLASYON ===== */
+  let enflasyon = 0;
+  const enfRow = macro.find(r=>String(r["KOD"]).includes("ENFLASYON"));
+  if(enfRow) enflasyon = num(enfRow["DEGER"]);
+
+  const nominalGetiri = maliyet ? (kar / maliyet) * 100 : 0;
+  const reelGetiri = nominalGetiri - enflasyon;
+
+  /* ===== EKRANA BAS ===== */
+  document.body.innerHTML = `
+    <h1>📊 Lite Portföy Terminali</h1>
+
+    <div style="display:flex;gap:20px;flex-wrap:wrap">
+      <div><b>Toplam Portföy</b><br>${toplam.toLocaleString()} ₺</div>
+      <div><b>Kâr / Zarar</b><br>${kar.toLocaleString()} ₺</div>
+      <div><b>Reel Getiri</b><br>
+        <span style="color:${reelGetiri>=0?'green':'red'}">
+          %${reelGetiri.toFixed(2)}
+        </span>
+      </div>
+    </div>
+
+    <h3 style="margin-top:30px">🌍 Makro Göstergeler</h3>
+    <ul>
+      ${macro.map(m=>`<li>${m.KOD} : ${m.DEGER}</li>`).join("")}
+    </ul>
   `;
 
-  new Chart(document.getElementById("distChart"),{
-    type:"doughnut",
-    data:{
-      labels:Object.keys(dist),
-      datasets:[{ data:Object.values(dist) }]
-    }
-  });
-
-  document.getElementById("macro").innerHTML =
-    macro.map(m=>`
-      <div class="card">
-        <div class="label">${m["Ad"]}</div>
-        <div class="value">${m["Değer"]}</div>
-      </div>`).join("");
 })();
 </script>
-</body>
-</html>
