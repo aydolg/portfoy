@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <title>Elite Portföy Terminali v3.5</title>
+  <title>Elite Portföy Terminali v4.0</title>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
@@ -12,44 +12,25 @@
       --accent: #00ff9d; --red: #ff3b5c; --text: #ffffff;
       --text-muted: #94a3b8; --border: rgba(255, 255, 255, 0.1);
     }
-    body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 12px; line-height: 1.4; }
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 12px; }
     .container { max-width: 1200px; margin: 0 auto; }
 
-    /* ÜST ÖZET KARTLARI */
-    .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 20px; position: relative; }
-    .card { background: var(--card-bg); backdrop-filter: blur(15px); padding: 12px; border-radius: 16px; border: 1px solid var(--border); cursor: pointer; border-left: 4px solid #334155; transition: 0.3s; z-index: 1; }
-    .card.active { border-color: var(--accent); z-index: 999 !important; box-shadow: 0 10px 40px rgba(0,0,0,0.8); }
-    .card span { color: var(--text-muted); font-size: 0.55rem; font-weight: 700; text-transform: uppercase; display: block; margin-bottom: 4px; }
-    .card .value { font-size: 0.85rem; font-weight: 800; }
-    .card.up-card { border-left-color: var(--accent); }
-    .card.down-card { border-left-color: var(--red); }
+    /* ÜST ÖZET */
+    .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 20px; }
+    .card { background: var(--card-bg); padding: 12px; border-radius: 16px; border: 1px solid var(--border); border-left: 4px solid #334155; }
+    .card span { color: var(--text-muted); font-size: 0.55rem; font-weight: 700; text-transform: uppercase; }
+    .card .value { font-size: 0.9rem; font-weight: 800; margin-top: 5px; }
+    .up-card { border-left-color: var(--accent); }
+    .down-card { border-left-color: var(--red); }
 
-    /* AÇILIR LİSTE (KART İÇİ) */
-    .dist-container { display: none; background: #11151c; border: 1px solid var(--border); border-radius: 12px; padding: 10px; margin-top: 10px; position: absolute; left: 0; right: 0; top: 100%; z-index: 1000; width: 100%; box-sizing: border-box; box-shadow: 0 15px 30px rgba(0,0,0,0.5); }
-    .card.active .dist-container { display: block; }
-    .dist-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.7rem; font-weight: 600; }
+    /* GRAFİK KONTROLÜ */
+    .chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .chart-select { background: #11151c; color: var(--accent); border: 1px solid var(--border); border-radius: 5px; font-size: 0.65rem; padding: 2px 5px; }
 
-    /* AKAN YAZI */
-    .ticker-wrap { width: 100%; overflow: hidden; background: rgba(16, 20, 29, 0.5); border-radius: 10px; border: 1px solid var(--border); padding: 10px 0; margin-bottom: 15px; white-space: nowrap; }
-    .ticker { display: inline-flex; animation: ticker-move 35s linear infinite; }
-    .ticker-item { padding: 0 30px; font-size: 0.7rem; font-weight: 700; display: flex; align-items: center; gap: 6px; }
-    @keyframes ticker-move { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
-
-    /* GRAFİK VE MARKET */
     .chart-block { background: var(--card-bg); border-radius: 20px; border: 1px solid var(--border); padding: 15px; margin-bottom: 15px; }
-    .market-block { background: var(--card-bg); border-radius: 20px; border: 1px solid var(--border); padding: 5px 15px; margin-bottom: 20px; }
-    .market-header { padding: 10px 0; font-size: 0.65rem; font-weight: 800; color: var(--accent); letter-spacing: 1px; border-bottom: 1px solid var(--border); margin-bottom: 10px; text-transform: uppercase; }
-    .m-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
-
-    /* VARLIK DETAYLARI */
-    .asset-item { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 8px; }
-    .asset-main { padding: 12px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
-    .asset-expand { display: none; padding: 12px; grid-template-columns: repeat(2, 1fr); gap: 8px; border-top: 1px solid var(--border); background: rgba(0,0,0,0.2); }
-    @media (min-width: 600px) { .asset-expand { grid-template-columns: repeat(4, 1fr); } }
-    .det-box { background: rgba(255,255,255,0.02); padding: 6px; border-radius: 6px; }
-    .det-lbl { font-size: 0.5rem; color: var(--text-muted); text-transform: uppercase; font-weight: 800; }
-    .det-val { font-size: 0.7rem; font-weight: 700; color: #f1f5f9; }
+    .market-block { background: var(--card-bg); border-radius: 20px; border: 1px solid var(--border); padding: 15px; margin-bottom: 20px; }
     
+    .m-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
     .up { color: var(--accent); } .down { color: var(--red); }
   </style>
 </head>
@@ -58,32 +39,33 @@
 <div class="container">
   <div class="summary-grid" id="summaryGrid"></div>
 
-  <div class="ticker-wrap"><div class="ticker" id="tickerContent">Senkronize ediliyor...</div></div>
-
   <div class="chart-block">
-    <div class="market-header">Varlık Dağılımı</div>
-    <div style="height: 180px;"><canvas id="allocationChart"></canvas></div>
+    <div class="chart-header">
+      <div style="font-size: 0.65rem; font-weight: 800; color: var(--accent);">VARLIK DAĞILIMI</div>
+      <select class="chart-select" id="chartType" onchange="changeChartType()">
+        <option value="doughnut">Halka (Doughnut)</option>
+        <option value="pie">Pasta (Pie)</option>
+        <option value="bar">Çubuk (Bar)</option>
+        <option value="polarArea">Radar (Polar)</option>
+      </select>
+    </div>
+    <div style="height: 220px;"><canvas id="allocationChart"></canvas></div>
   </div>
 
   <div class="market-block">
-    <div class="market-header">Piyasa Göstergeleri</div>
+    <div style="font-size: 0.65rem; font-weight: 800; color: var(--accent); margin-bottom:10px;">PİYASA GÖSTERGELERİ (MACRO)</div>
     <div id="marketRows"></div>
-  </div>
-
-  <div id="detailSection" style="display:none; padding-bottom:50px;">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-      <div id="detailTitle" style="font-weight:800; color:var(--accent); font-size:0.8rem;">VARLIK ANALİZİ</div>
-      <div onclick="closeAll()" style="color:var(--red); font-size:0.7rem; font-weight:bold; cursor:pointer;">[KAPAT]</div>
-    </div>
-    <div id="assetGrid"></div>
   </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script>
-  const baseCsvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQeTFovlKfvEp9sPepJb9SGxf_2AgMU7eEPTDCc6WWc0o1Z1AizX6K2mJlaWtcvSderiBym7cyhEdsC/pub?gid=0&single=true&output=csv";
+  // CSV URL'niz
+  const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQeTFovlKfvEp9sPepJb9SGxf_2AgMU7eEPTDCc6WWc0o1Z1AizX6K2mJlaWtcvSderiBym7cyhEdsC/pub?gid=0&single=true&output=csv";
+  
   let globalData = [];
-  let allocationChart = null;
+  let currentChartType = 'doughnut';
+  let myChart = null;
 
   function clean(v) {
     if (!v || v === "" || v.toString().includes('#N/A')) return 0;
@@ -92,18 +74,20 @@
   }
 
   function fetchData() {
-    const finalUrl = baseCsvUrl + "&cache_bust=" + new Date().getTime();
-    Papa.parse(finalUrl, {
+    Papa.parse(csvUrl + "&cb=" + new Date().getTime(), {
       download: true,
       complete: function(res) {
-        // r[9] J sütunundan başlar (Günlük KZ)
-        globalData = res.data.slice(1).filter(r => r[0] && r[0] !== "Varlık").map(r => ({
-          ad: r[0].trim(), tur: r[1], alisTarihi: r[2], adet: clean(r[4]),
-          aFiyat: clean(r[5]), yatirim: clean(r[6]), fiyat: clean(r[7]), 
-          tutar: clean(r[8]), 
-          gKZ: clean(r[9]),   hKZ: clean(r[10]), aKZ: clean(r[11]), 
-          kz3: clean(r[12]),  kz1y: clean(r[13]), tKZ: clean(r[14])
-        }));
+        globalData = res.data.slice(1).map(r => ({
+          ad: (r[0] || "").trim(),
+          tur: (r[1] || "").trim(),
+          tutar: clean(r[8]), // I Sütunu (9. sütun) -> Güncel Tutar
+          gKZ: clean(r[9]),   // J -> Günlük
+          hKZ: clean(r[10]),  // K -> Haftalık
+          aKZ: clean(r[11]),  // L -> Aylık
+          kz3: clean(r[12]),  // M -> 3 Aylık
+          kz1y: clean(r[13]), // N -> 1 Yıllık
+          tKZ: clean(r[14])   // O -> Toplam
+        })).filter(d => d.ad !== "");
         renderAll();
       }
     });
@@ -112,125 +96,89 @@
   function renderAll() {
     const totals = { tutar:0, gKZ:0, hKZ:0, aKZ:0, kz3:0, kz1y:0, tKZ:0 };
     const groups = {};
-    
-    globalData.forEach(item => {
-      if (!groups[item.tur]) groups[item.tur] = { tutar:0, gKZ:0, hKZ:0, aKZ:0, kz3:0, kz1y:0, tKZ:0 };
-      Object.keys(totals).forEach(key => { 
-        groups[item.tur][key] += item[key]; 
-        totals[key] += item[key]; 
-      });
+    const markets = [];
+
+    globalData.forEach(d => {
+      // Eğer Tür "Macro" veya "macro" ise piyasa göstergelerine ayır
+      if (d.tur.toLowerCase() === 'macro' || d.ad.includes('TRY') || d.ad.includes('ALTIN')) {
+        markets.push(d);
+      } else {
+        // Normal portföy varlığıysa toplamlara ekle
+        totals.tutar += d.tutar;
+        totals.gKZ += d.gKZ;
+        totals.hKZ += d.hKZ;
+        totals.aKZ += d.aKZ;
+        totals.kz3 += d.kz3;
+        totals.kz1y += d.kz1y;
+        totals.tKZ += d.tKZ;
+
+        if (!groups[d.tur]) groups[d.tur] = 0;
+        groups[d.tur] += d.tutar;
+      }
     });
 
-    renderSummaries(totals, groups);
-    renderTicker();
-    renderMarketRows();
+    renderCards(totals);
+    renderMarkets(markets);
     updateChart(groups);
   }
 
-  function renderSummaries(totals, groups) {
+  function renderCards(t) {
     const keys = [
-      {id:'tutar', l:'Portföy Değeri'},
-      {id:'gKZ', l:'Günlük K/Z'},
-      {id:'hKZ', l:'Haftalık'},
-      {id:'aKZ', l:'Aylık'},
-      {id:'kz3', l:'3 Aylık'},
-      {id:'kz1y', l:'1 Yıllık'},
-      {id:'tKZ', l:'Toplam'}
+      {id:'tutar', l:'Portföy Değeri'}, {id:'gKZ', l:'Günlük K/Z'},
+      {id:'hKZ', l:'Haftalık'}, {id:'aKZ', l:'Aylık'},
+      {id:'kz3', l:'3 Aylık'}, {id:'kz1y', l:'1 Yıllık'}, {id:'tKZ', l:'Toplam K/Z'}
     ];
-
     document.getElementById("summaryGrid").innerHTML = keys.map(k => {
-      const val = totals[k.id], isKZ = k.id !== 'tutar';
-      const cardStatus = isKZ ? (val >= 0 ? 'up-card' : 'down-card') : '';
-      const color = isKZ ? (val >= 0 ? 'up' : 'down') : '';
-      
-      const sortedTur = Object.keys(groups).sort((a,b) => groups[b][k.id] - groups[a][k.id]);
-      let distHtml = sortedTur.map(t => `
-        <div class="dist-row" onclick="event.stopPropagation(); showDetails('${t}')">
-          <span>${t}</span>
-          <span class="${groups[t][k.id]>=0?'up':'down'}">${groups[t][k.id].toLocaleString('tr-TR')} ₺</span>
-        </div>`).join('');
-
-      return `<div class="card ${cardStatus}" onclick="toggleCard(this)">
+      const isKZ = k.id !== 'tutar';
+      const color = isKZ ? (t[k.id] >= 0 ? 'up' : 'down') : '';
+      return `<div class="card ${isKZ ? (t[k.id] >= 0 ? 'up-card' : 'down-card') : ''}">
                 <span>${k.l}</span>
-                <div class="value ${color}">${val.toLocaleString('tr-TR')} ₺</div>
-                <div class="dist-container">${distHtml}</div>
+                <div class="value ${color}">${t[k.id].toLocaleString('tr-TR')} ₺</div>
               </div>`;
     }).join('');
   }
 
-  function renderMarketRows() {
-    const targets = ["USDTRY", "EURTRY", "ALTIN_GRAM", "ENFLASYON_Y", "MEVDUAT_Y", "BIST100"];
-    document.getElementById("marketRows").innerHTML = targets.map(name => {
-      let v = globalData.find(d => d.ad.toUpperCase() === name.toUpperCase());
-      if(!v) return ""; 
-      return `<div class="m-row">
-                <span style="font-size:0.75rem; font-weight:700;">${name.replace('_Y','').replace('_GRAM','')}</span>
-                <span class="up" style="font-weight:800; font-family:monospace;">${v.fiyat.toLocaleString('tr-TR')}</span>
-              </div>`;
-    }).join('');
-  }
-
-  function renderTicker() {
-    const ticker = document.getElementById("tickerContent");
-    let moves = globalData.filter(a => a.tutar > 500 && !a.ad.includes('_')).map(a => {
-      let y = (a.gKZ / (a.tutar - a.gKZ)) * 100;
-      return `<div class="ticker-item"><span>${a.ad}</span><span class="${y>=0?'up':'down'}">${y>=0?'▲':'▼'} %${Math.abs(y).toFixed(2)}</span></div>`;
-    });
-    ticker.innerHTML = moves.join('') + moves.join('');
+  function renderMarkets(m) {
+    document.getElementById("marketRows").innerHTML = m.map(d => `
+      <div class="m-row">
+        <span style="font-weight:700; font-size:0.75rem;">${d.ad}</span>
+        <span class="up" style="font-family:monospace; font-weight:800;">${d.tutar.toLocaleString('tr-TR')}</span>
+      </div>
+    `).join('');
   }
 
   function updateChart(groups) {
     const ctx = document.getElementById('allocationChart').getContext('2d');
-    const labels = Object.keys(groups).filter(l => groups[l].tutar > 0);
-    if (allocationChart) allocationChart.destroy();
-    allocationChart = new Chart(ctx, {
-      type: 'doughnut',
+    if (myChart) myChart.destroy();
+    
+    myChart = new Chart(ctx, {
+      type: currentChartType,
       data: {
-        labels: labels,
+        labels: Object.keys(groups),
         datasets: [{
-          data: labels.map(l => groups[l].tutar),
+          data: Object.values(groups),
           backgroundColor: ['#00ff9d', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4'],
-          borderWidth: 0
+          borderWidth: 1,
+          borderColor: '#030508'
         }]
       },
-      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: '#94a3b8', font: { size: 9 } } } } }
+      options: { 
+        responsive: true, 
+        maintainAspectRatio: false,
+        plugins: { 
+          legend: { 
+            position: currentChartType === 'bar' ? 'top' : 'right',
+            labels: { color: '#94a3b8', font: { size: 10 } } 
+          } 
+        } 
+      }
     });
   }
 
-  function showDetails(tur) {
-    const sect = document.getElementById("detailSection"), grid = document.getElementById("assetGrid");
-    sect.style.display = "block";
-    grid.innerHTML = globalData.filter(d => d.tur === tur).map(a => `
-      <div class="asset-item">
-        <div class="asset-main" onclick="toggleAsset(this)">
-          <div style="font-weight:700; font-size:0.75rem;">${a.ad}</div>
-          <div style="text-align:right">
-            <div class="up" style="font-weight:800;">${a.tutar.toLocaleString('tr-TR')} ₺</div>
-            <div class="${a.tKZ>=0?'up':'down'}" style="font-size:0.6rem;">Toplam K/Z: ${a.tKZ.toLocaleString('tr-TR')} ₺</div>
-          </div>
-        </div>
-        <div class="asset-expand">
-          <div class="det-box"><span class="det-lbl">Günlük</span><span class="det-val ${a.gKZ>=0?'up':'down'}">${a.gKZ.toLocaleString('tr-TR')}</span></div>
-          <div class="det-box"><span class="det-lbl">Haftalık</span><span class="det-val ${a.hKZ>=0?'up':'down'}">${a.hKZ.toLocaleString('tr-TR')}</span></div>
-          <div class="det-box"><span class="det-lbl">Aylık</span><span class="det-val ${a.aKZ>=0?'up':'down'}">${a.aKZ.toLocaleString('tr-TR')}</span></div>
-          <div class="det-box"><span class="det-lbl">1 Yıllık</span><span class="det-val ${a.kz1y>=0?'up':'down'}">${a.kz1y.toLocaleString('tr-TR')}</span></div>
-        </div>
-      </div>`).join('');
-    sect.scrollIntoView({ behavior: 'smooth' });
+  function changeChartType() {
+    currentChartType = document.getElementById("chartType").value;
+    renderAll();
   }
-
-  function toggleCard(el) {
-    const active = el.classList.contains('active');
-    document.querySelectorAll('.card').forEach(c => c.classList.remove('active'));
-    if (!active) el.classList.add('active');
-  }
-
-  function toggleAsset(el) {
-    const exp = el.parentElement.querySelector('.asset-expand');
-    exp.style.display = exp.style.display === 'grid' ? 'none' : 'grid';
-  }
-
-  function closeAll() { document.getElementById('detailSection').style.display = 'none'; }
 
   fetchData();
   setInterval(fetchData, 300000);
