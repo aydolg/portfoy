@@ -3,36 +3,38 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Elite Terminal v5.2</title>
+  <title>Elite Terminal v6.0</title>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
   <style>
     :root { --bg: #030508; --card-bg: rgba(16, 20, 29, 0.95); --accent: #00ff9d; --red: #ff3b5c; --text: #ffffff; --border: rgba(255, 255, 255, 0.1); }
     body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 12px; }
     .container { max-width: 1200px; margin: 0 auto; }
     .section-title { font-size: 0.65rem; font-weight: 800; color: #94a3b8; margin: 15px 0 8px 5px; text-transform: uppercase; letter-spacing: 1px; }
     .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px; }
-    .card { background: var(--card-bg); padding: 12px; border-radius: 14px; border: 1px solid var(--border); cursor: pointer; transition: 0.2s; }
+    .card { background: var(--card-bg); padding: 12px; border-radius: 14px; border: 1px solid var(--border); cursor: pointer; transition: 0.2s; position: relative; }
     .card:active { transform: scale(0.97); }
     .card span { color: #94a3b8; font-size: 0.55rem; font-weight: 700; display: block; margin-bottom: 4px; }
-    .card .value { font-size: 0.85rem; font-weight: 800; }
+    .card .value { font-size: 0.85rem; font-weight: 800; display: block; }
+    .card .perc { font-size: 0.65rem; font-weight: 700; margin-top: 4px; }
     .up { color: var(--accent); } .down { color: var(--red); }
     
-    /* Detay Paneli */
     #detailPanel { display: none; background: #111827; border-radius: 18px; padding: 15px; margin-bottom: 20px; border: 1px solid var(--accent); }
     .detail-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.75rem; }
-    .detail-close { color: var(--red); font-weight: 800; float: right; cursor: pointer; font-size: 0.7rem; }
-
+    
     .content-block { background: var(--card-bg); border-radius: 18px; border: 1px solid var(--border); padding: 15px; margin-top: 15px; }
+    .chart-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .chart-select { background: #111827; color: var(--accent); border: 1px solid var(--border); border-radius: 6px; padding: 4px; font-size: 0.7rem; }
     .m-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
-    .m-item { background: rgba(255,255,255,0.03); padding: 8px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
+    .m-item { background: rgba(255,255,255,0.03); padding: 8px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; }
   </style>
 </head>
 <body>
 
 <div class="container">
   <div id="detailPanel">
-    <div class="detail-close" onclick="closeDetails()">KAPAT ✕</div>
+    <div style="color:var(--red); float:right; cursor:pointer; font-weight:800;" onclick="closeDetails()">✕</div>
     <div id="detailTitle" style="font-size: 0.7rem; font-weight: 800; color: var(--accent); margin-bottom: 10px;">DETAYLAR</div>
     <div id="detailList"></div>
   </div>
@@ -40,11 +42,22 @@
   <div class="section-title">Portföy Özeti</div>
   <div class="grid" id="topCards"></div>
 
-  <div class="section-title">Performans Kırılımları (Tıklayın)</div>
-  <div class="grid" id="kzCards"></div>
+  <div class="section-title">Kısa Vade Performans</div>
+  <div class="grid" id="shortKZ"></div>
+
+  <div class="section-title">Uzun Vade Performans</div>
+  <div class="grid" id="longKZ"></div>
 
   <div class="content-block">
-    <div style="height: 200px;"><canvas id="allocationChart"></canvas></div>
+    <div class="chart-controls">
+      <span style="font-size: 0.7rem; font-weight: 800;">VARLIK DAĞILIMI</span>
+      <select class="chart-select" id="chartType" onchange="render()">
+        <option value="doughnut">Halka</option>
+        <option value="pie">Pasta</option>
+        <option value="bar">Çubuk</option>
+      </select>
+    </div>
+    <div style="height: 250px;"><canvas id="allocationChart"></canvas></div>
   </div>
 
   <div class="section-title">Piyasa Göstergeleri</div>
@@ -53,6 +66,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script>
+  Chart.register(ChartDataLabels);
   const portfoyCsv = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQeTFovlKfvEp9sPepJb9SGxf_2AgMU7eEPTDCc6WWc0o1Z1AizX6K2mJlaWtcvSderiBym7cyhEdsC/pub?gid=0&single=true&output=csv";
   const macroCsv = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQeTFovlKfvEp9sPepJb9SGxf_2AgMU7eEPTDCc6WWc0o1Z1AizX6K2mJlaWtcvSderiBym7cyhEdsC/pub?gid=1018386005&single=true&output=csv";
   
@@ -71,55 +85,93 @@
         new Promise(res => Papa.parse(portfoyCsv + cb, { download: true, complete: res })),
         new Promise(res => Papa.parse(macroCsv + cb, { download: true, complete: res }))
       ]);
-      
       pData = resP.data.slice(1).map(r => ({
         tur: r[1], yatirim: clean(r[6]), tutar: clean(r[8]), 
-        g: clean(r[9]), h: clean(r[10]), a: clean(r[11]), t: clean(r[15])
+        g: clean(r[9]), h: clean(r[10]), a: clean(r[11]),
+        k3: clean(r[12]), k6: clean(r[13]), k1y: clean(r[14]), t: clean(r[15])
       })).filter(d => d.tutar > 0 || d.yatirim > 0);
-
       mData = resM.data.slice(1).filter(r => r[0]);
       render();
     } catch (e) { console.error(e); }
   }
 
+  function getPerc(val, base) {
+    if(!base || base === 0) return "0.00";
+    return ((val / base) * 100).toFixed(2);
+  }
+
   function render() {
-    const t = { y:0, p:0, tkz:0, g:0, h:0, a:0 };
+    const t = { y:0, p:0, t:0, g:0, h:0, a:0, k3:0, k6:0, k1y:0 };
     const groups = {};
     pData.forEach(d => {
-      t.y += d.yatirim; t.p += d.tutar; t.tkz += d.t;
+      t.y += d.yatirim; t.p += d.tutar; t.t += d.t;
       t.g += d.g; t.h += d.h; t.a += d.a;
+      t.k3 += d.k3; t.k6 += d.k6; t.k1y += d.k1y;
       groups[d.tur] = (groups[d.tur] || 0) + d.tutar;
     });
 
-    document.getElementById("topCards").innerHTML = `
-      <div class="card"><span>Toplam Yatırım</span><div class="value">${t.y.toLocaleString('tr-TR')} ₺</div></div>
-      <div class="card"><span>Güncel Portföy</span><div class="value">${t.p.toLocaleString('tr-TR')} ₺</div></div>
-      <div class="card" onclick="showDetails('Toplam', 't')"><span>Toplam K/Z</span><div class="value ${t.tkz>=0?'up':'down'}">${t.tkz.toLocaleString('tr-TR')} ₺</div></div>
-    `;
+    const base = t.p; // Yüzde hesaplama baz alınan tutar (Güncel Portföy)
 
-    const kzHtml = (l, v, k) => `<div class="card" onclick="showDetails('${l}', '${k}')"><span>${l}</span><div class="value ${v>=0?'up':'down'}">${v.toLocaleString('tr-TR')} ₺</div></div>`;
-    document.getElementById("kzCards").innerHTML = kzHtml('Günlük K/Z', t.g, 'g') + kzHtml('Haftalık K/Z', t.h, 'h') + kzHtml('Aylık K/Z', t.a, 'a');
+    const cardHtml = (l, val, key) => {
+      const p = getPerc(val, (key === 'y' || key === 'p') ? t.y : (t.p - val)); 
+      const color = val >= 0 ? 'up' : 'down';
+      return `<div class="card" onclick="showDetails('${l}', '${key}')">
+                <span>${l}</span>
+                <div class="value">${val.toLocaleString('tr-TR')} ₺</div>
+                <div class="perc ${color}">${val >= 0 ? '▲' : '▼'} %${Math.abs(getPerc(val, t.p))}</div>
+              </div>`;
+    };
+
+    document.getElementById("topCards").innerHTML = 
+      `<div class="card"><span>Toplam Yatırım</span><div class="value">${t.y.toLocaleString('tr-TR')} ₺</div></div>` +
+      `<div class="card"><span>Güncel Portföy</span><div class="value">${t.p.toLocaleString('tr-TR')} ₺</div></div>` +
+      cardHtml('Toplam K/Z', t.t, 't');
+
+    document.getElementById("shortKZ").innerHTML = cardHtml('Günlük K/Z', t.g, 'g') + cardHtml('Haftalık K/Z', t.h, 'h') + cardHtml('Aylık K/Z', t.a, 'a');
+    document.getElementById("longKZ").innerHTML = cardHtml('3 Aylık K/Z', t.k3, 'k3') + cardHtml('6 Aylık K/Z', t.k6, 'k6') + cardHtml('1 Yıllık K/Z', t.k1y, 'k1y');
 
     document.getElementById("marketGrid").innerHTML = mData.map(d => `
       <div class="m-item"><span>${d[0]}</span><span class="up">${clean(d[1]).toLocaleString('tr-TR')}</span></div>`).join('');
 
+    // Grafiği Güncelle
+    const ctx = document.getElementById('allocationChart').getContext('2d');
+    const cType = document.getElementById("chartType").value;
     if(myChart) myChart.destroy();
-    myChart = new Chart(document.getElementById('allocationChart'), {
-      type: 'doughnut',
-      data: { labels: Object.keys(groups), datasets: [{ data: Object.values(groups), backgroundColor: ['#00ff9d', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6'], borderWidth:0 }] },
-      options: { plugins: { legend: { position:'right', labels:{color:'#94a3b8', font:{size:10}} } } }
+    myChart = new Chart(ctx, {
+      type: cType,
+      data: {
+        labels: Object.keys(groups),
+        datasets: [{
+          data: Object.values(groups),
+          backgroundColor: ['#00ff9d', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'right', labels: { color: '#94a3b8', font: { size: 9 } } },
+          datalabels: {
+            color: '#fff',
+            font: { weight: 'bold', size: 10 },
+            formatter: (value, ctx) => {
+              let sum = ctx.dataset.data.reduce((a, b) => a + b, 0);
+              let percentage = (value * 100 / sum).toFixed(1) + "%";
+              return cType === 'bar' ? value.toLocaleString('tr-TR') + " ₺" : percentage;
+            }
+          }
+        }
+      }
     });
   }
 
   function showDetails(label, key) {
     const summary = {};
-    pData.forEach(d => { summary[d.tur] = (summary[d.tur] || 0) + d[key]; });
-    
+    pData.forEach(d => { if(d[key] !== undefined) summary[d.tur] = (summary[d.tur] || 0) + d[key]; });
     let html = "";
     for (let tur in summary) {
       html += `<div class="detail-row"><span>${tur}</span><span class="${summary[tur]>=0?'up':'down'}">${summary[tur].toLocaleString('tr-TR')} ₺</span></div>`;
     }
-    
     document.getElementById("detailTitle").innerText = label + " DAĞILIMI";
     document.getElementById("detailList").innerHTML = html;
     document.getElementById("detailPanel").style.display = "block";
@@ -129,6 +181,7 @@
   function closeDetails() { document.getElementById("detailPanel").style.display = "none"; }
 
   init();
+  setInterval(init, 300000);
 </script>
 </body>
 </html>
