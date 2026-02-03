@@ -10,19 +10,18 @@ body {
   font-family: Inter, Arial;
   background:#0f172a;
   color:#fff;
-  margin:0;
   padding:20px;
 }
 
-h2 { margin:25px 0 10px }
+h2 { margin:30px 0 15px }
 
-.grid-top {
+.grid-4 {
   display:grid;
-  grid-template-columns:repeat(3,1fr);
+  grid-template-columns:repeat(4,1fr);
   gap:16px;
 }
 
-.grid-period {
+.grid-3 {
   display:grid;
   grid-template-columns:repeat(3,1fr);
   gap:16px;
@@ -30,97 +29,108 @@ h2 { margin:25px 0 10px }
 
 .card {
   background:#111827;
-  border-radius:14px;
-  padding:18px;
-  box-shadow:0 10px 20px rgba(0,0,0,.3);
+  border-radius:16px;
+  padding:20px;
+  cursor:pointer;
+  box-shadow:0 8px 18px rgba(0,0,0,.35);
+  transition:.2s;
 }
 
-.card small {
-  opacity:.7;
+.card:hover {
+  transform:translateY(-3px);
+  box-shadow:0 12px 24px rgba(0,0,0,.5);
 }
 
+.card.active {
+  outline:3px solid #22c55e;
+}
+
+small { opacity:.7 }
 .pos { color:#22c55e }
 .neg { color:#ef4444 }
-
-select {
-  padding:10px 14px;
-  border-radius:10px;
-  font-size:15px;
-}
 </style>
 </head>
 
 <body>
 
-<h2>📊 Genel Durum</h2>
-<div class="grid-top" id="topCards"></div>
-
-<h2>🔎 Tür</h2>
-<select id="turFilter">
-  <option value="ALL">Tümü</option>
-  <option value="Hisse">Hisse</option>
-  <option value="Fon">Fon</option>
-  <option value="Mevduat">Mevduat</option>
-  <option value="Bono">Bono</option>
-</select>
+<h2>💼 Tür Bazlı Güncel Değer</h2>
+<div class="grid-4" id="typeCards"></div>
 
 <h2>📈 Dönemsel K/Z</h2>
-<div class="grid-period" id="periodCards"></div>
+<div class="grid-3" id="kzCards"></div>
 
 <script>
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQLPFVZn0j8Ygu914QDGRCGKsVy88gWjdk7DFi-jWiydmqYsdGUE4hEAb-R_IBzQmtFZwoMJFcN6rlD/pub?gid=1050165900&single=true&output=csv";
 
 let DATA = [];
+let ACTIVE_TUR = "ALL";
 
 fetch(CSV_URL)
-  .then(r => r.text())
-  .then(text => {
-    const rows = text.trim().split("\n").map(r => r.split(","));
+  .then(r=>r.text())
+  .then(t=>{
+    const rows = t.trim().split("\n").map(r=>r.split(","));
     const h = rows.shift();
 
-    DATA = rows.map(r => {
-      let o = {};
-      h.forEach((k,i)=>{
-        const v = r[i];
-        o[k] = isNaN(v) ? v : Number(v);
-      });
+    DATA = rows.map(r=>{
+      let o={};
+      h.forEach((k,i)=>o[k]=isNaN(r[i])?r[i]:Number(r[i]));
       return o;
     });
 
-    render("ALL");
+    renderTypes();
+    renderKZ();
   });
 
-document.getElementById("turFilter").onchange = e => render(e.target.value);
-
-function sum(arr, key){
-  return arr.reduce((a,b)=>a + (b[key] || 0), 0);
+function sum(arr,key){
+  return arr.reduce((a,b)=>a+(b[key]||0),0);
 }
 
-function render(tur){
-  const d = tur==="ALL" ? DATA : DATA.filter(x=>x.tur===tur);
-
-  const toplamY = sum(d,"toplamYatirim");
-  const guncel = sum(d,"guncelDeger");
-  const toplamKZ = guncel - toplamY;
-
-  document.getElementById("topCards").innerHTML = `
-    <div class="card"><small>Toplam Yatırım</small><br><b>${toplamY.toLocaleString()}</b></div>
-    <div class="card"><small>Güncel Değer</small><br><b>${guncel.toLocaleString()}</b></div>
-    <div class="card ${toplamKZ>=0?"pos":"neg"}"><small>Toplam K/Z</small><br><b>${toplamKZ.toLocaleString()}</b></div>
-  `;
-
-  document.getElementById("periodCards").innerHTML = `
-    ${p("Günlük", sum(d,"gunluk"))}
-    ${p("Haftalık", sum(d,"haftalik"))}
-    ${p("Aylık", sum(d,"aylik"))}
-    ${p("3 Aylık", sum(d,"ucAylik"))}
-    ${p("6 Aylık", sum(d,"altiAylik"))}
-    ${p("1 Yıllık", sum(d,"birYillik"))}
-  `;
+function getDataByTur(tur){
+  return tur==="ALL" ? DATA : DATA.filter(x=>x.tur===tur);
 }
 
-function p(t,v){
-  return `<div class="card ${v>=0?"pos":"neg"}"><small>${t} K/Z</small><br><b>${v.toLocaleString()}</b></div>`;
+function renderTypes(){
+  const types = ["Hisse","Fon","Mevduat","Bono"];
+
+  document.getElementById("typeCards").innerHTML =
+    types.map(t=>{
+      const total = sum(DATA.filter(x=>x.tur===t),"guncelDeger");
+      return `
+        <div class="card ${ACTIVE_TUR===t?"active":""}"
+             onclick="selectTur('${t}')">
+          <small>${t}</small><br>
+          <b>${total.toLocaleString()}</b>
+        </div>`;
+    }).join("");
+}
+
+function renderKZ(){
+  const d = getDataByTur(ACTIVE_TUR);
+
+  const cards = [
+    ["Günlük","gunluk"],
+    ["Haftalık","haftalik"],
+    ["Aylık","aylik"],
+    ["3 Aylık","ucAylik"],
+    ["6 Aylık","altiAylik"],
+    ["1 Yıllık","birYillik"]
+  ];
+
+  document.getElementById("kzCards").innerHTML =
+    cards.map(c=>{
+      const v = sum(d,c[1]);
+      return `
+        <div class="card ${v>=0?"pos":"neg"}">
+          <small>${c[0]} K/Z</small><br>
+          <b>${v.toLocaleString()}</b>
+        </div>`;
+    }).join("");
+}
+
+function selectTur(t){
+  ACTIVE_TUR = t;
+  renderTypes();
+  renderKZ();
 }
 </script>
 
