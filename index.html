@@ -13,44 +13,45 @@
 
 body{ margin:0; background:var(--bg); color:#e5e7eb; font-family:system-ui, -apple-system, sans-serif; }
 
-h2{ margin:12px 16px 8px; font-size:11px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.6; }
+h2{ margin:8px 16px 4px; font-size:10px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.6; }
 
 .header-section {
   position: sticky; top: 0; z-index: 100;
   background: rgba(11, 18, 32, 0.95); backdrop-filter: blur(15px);
-  border-bottom: 1px solid var(--line); padding: 12px;
+  border-bottom: 1px solid var(--line); padding: 10px;
 }
 
-.content-section { padding: 12px; }
+.content-section { padding: 10px; }
 
-.grid-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
-.grid-types { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; }
+.grid-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 8px; }
+.grid-types { display: grid; grid-template-columns: repeat(auto-fill, minmax(105px, 1fr)); gap: 8px; }
 .grid-periods { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
 
 .card {
   background: linear-gradient(145deg, var(--card), #161e2e);
-  border-radius: 12px; padding: 12px; border: 1px solid var(--line);
+  border-radius: 12px; padding: 10px; border: 1px solid var(--line);
   display: flex; flex-direction: column; transition: 0.3s;
 }
 
-.big { font-size: 15px; font-weight: 700; margin-top: 2px; }
-.small { font-size: 9px; font-weight: 600; opacity: .5; text-transform: uppercase; }
-.trend-val { font-size: 11px; font-weight: bold; margin-top: 4px; }
-.trend-amt { font-size: 10px; opacity: 0.8; margin-top: 2px; }
+.big { font-size: 14px; font-weight: 700; margin-top: 2px; }
+.small { font-size: 8px; font-weight: 600; opacity: .5; text-transform: uppercase; }
+.trend-val { font-size: 10px; font-weight: bold; margin-top: 2px; }
+.trend-amt { font-size: 9px; opacity: 0.8; margin-top: 1px; }
 
 .pos { color: var(--pos) }
 .neg { color: var(--neg) }
 
-/* Kritik Düşüş Uyarısı */
-.panic { box-shadow: inset 0 0 10px rgba(239, 68, 68, 0.4); border-color: var(--neg); }
+.panic { box-shadow: inset 0 0 10px rgba(239, 68, 68, 0.3); border-color: var(--neg); }
 
-.type-card { cursor: pointer; opacity: 0.8; }
+.type-card { cursor: pointer; opacity: 0.8; text-align: center; }
 .type-card.active { border-color: var(--accent); opacity: 1; background: rgba(59, 130, 246, 0.15); }
 
-#chart-container { height: 160px; margin-bottom: 16px; display: flex; justify-content: center; }
+/* Grafik alanı küçültüldü */
+#chart-container { height: 110px; margin-bottom: 8px; display: flex; justify-content: center; }
 
 @media (min-width: 768px) {
   .grid-periods { grid-template-columns: repeat(3, 1fr); }
+  .big { font-size: 16px; }
 }
 </style>
 </head>
@@ -65,7 +66,7 @@ h2{ margin:12px 16px 8px; font-size:11px; text-transform: uppercase; letter-spac
       <canvas id="distChart"></canvas>
     </div>
 
-    <h2>💼 Günlük Varlık Değişimi</h2>
+    <h2>💼 Günlük Değişim</h2>
     <div class="grid-types" id="types"></div>
   </div>
 
@@ -135,7 +136,11 @@ function renderSummary(){
   document.getElementById("summary").innerHTML=`
     <div class="card"><div class="small">Maliyet</div><div class="big">${formatTRY(t)}</div></div>
     <div class="card"><div class="small">Güncel</div><div class="big">${formatTRY(g)}</div></div>
-    <div class="card ${kz>=0?"pos":"neg"}"><div class="small">Toplam K/Z</div><div class="big">${kz>=0?'+':''}${p}%</div></div>`;
+    <div class="card ${kz>=0?"pos":"neg"}">
+      <div class="small">Toplam K/Z</div>
+      <div class="big">${kz>=0?'+':''}${p}%</div>
+      <div class="trend-amt" style="font-weight:bold">${formatTRY(kz)}</div>
+    </div>`;
 }
 
 function renderTypes(){
@@ -156,10 +161,9 @@ function renderTypes(){
     const guncel = sum(d, "guncelDeger"), gunluk = sum(d, "gunluk");
     const p = (guncel - gunluk) !== 0 ? ((gunluk / (guncel - gunluk)) * 100).toFixed(2) : 0;
     const isPos = gunluk >= 0;
-    const isPanic = p <= -3; // %3 ve altı düşüş uyarısı
 
     html += `
-      <div class="card type-card ${ACTIVE===t?"active":""} ${isPanic?'panic':''}" onclick="selectTur('${t}')">
+      <div class="card type-card ${ACTIVE===t?"active":""} ${p <= -3 ? 'panic' : ''}" onclick="selectTur('${t}')">
         <div class="small">${t}</div>
         <div class="trend-val ${isPos?'pos':'neg'}">${isPos?'▲':'▼'} %${Math.abs(p)}</div>
         <div class="trend-amt ${isPos?'pos':'neg'}">${formatTRY(gunluk)}</div>
@@ -179,27 +183,25 @@ function renderPeriods(){
     return `<div class="card ${v>=0?"pos":"neg"}">
               <div class="small">${x[0]}</div>
               <div class="big">${formatTRY(v)}</div>
-              <div style="font-size:10px; font-weight:bold; margin-top:2px;">${v>=0?'+':''}${perc}%</div>
+              <div style="font-size:9px; font-weight:bold; margin-top:1px;">${v>=0?'+':''}${perc}%</div>
             </div>`;
   }).join("");
 }
 
 function updateChart(){
   const turlar = [...new Set(DATA.map(item => item.tur))].filter(Boolean);
-  const labels = turlar;
   const values = turlar.map(t => sum(DATA.filter(x=>x.tur===t), "guncelDeger"));
 
   if(myChart) myChart.destroy();
-
   const ctx = document.getElementById('distChart').getContext('2d');
   myChart = new Chart(ctx, {
     type: 'doughnut',
     data: {
-      labels: labels,
+      labels: turlar,
       datasets: [{
         data: values,
         backgroundColor: ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6'],
-        borderWidth: 0, cutout: '70%'
+        borderWidth: 0, cutout: '75%'
       }]
     },
     options: {
