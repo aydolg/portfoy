@@ -7,18 +7,20 @@
 
 <style>
 body { font-family: Arial; background:#0f172a; color:#fff; margin:0; padding:20px }
-.grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:15px }
-.card { background:#111827; padding:15px; border-radius:10px }
-.green{color:#22c55e} .red{color:#ef4444}
-.yellow{color:#eab308} .black{color:#000}
-select { padding:8px; border-radius:6px }
+h2 { margin-top:30px }
+.grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:15px; margin-bottom:25px }
+.card { background:#111827; padding:15px; border-radius:12px }
+.pos { color:#22c55e } .neg { color:#ef4444 }
+select { padding:8px 12px; border-radius:8px; margin-bottom:20px }
 </style>
 </head>
 
 <body>
 
-<h2>📊 Portföy Dashboard</h2>
+<h2>📊 Genel Durum</h2>
+<div class="grid" id="topCards"></div>
 
+<h2>🔎 Tür Seçimi</h2>
 <select id="turFilter">
   <option value="ALL">Tümü</option>
   <option value="Hisse">Hisse</option>
@@ -27,44 +29,56 @@ select { padding:8px; border-radius:6px }
   <option value="Bono">Bono</option>
 </select>
 
-<div class="grid" id="cards"></div>
+<h2>📈 Dönemsel K/Z</h2>
+<div class="grid" id="periodCards"></div>
 
 <script>
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQLPFVZn0j8Ygu914QDGRCGKsVy88gWjdk7DFi-jWiydmqYsdGUE4hEAb-R_IBzQmtFZwoMJFcN6rlD/pub?gid=1050165900&single=true&output=csv";
 
-fetch(CSV_URL)
-.then(r => r.text())
-.then(text => {
-  const lines = text.trim().split("\n");
-  const headers = lines.shift().split(",");
+let ALL_DATA = [];
 
-  const data = lines.map(l => {
-    const v = l.split(",");
-    let o = {};
-    headers.forEach((h,i)=> o[h]=isNaN(v[i])?v[i]:Number(v[i]));
+fetch(CSV_URL)
+.then(r=>r.text())
+.then(t=>{
+  const [h,...rows]=t.trim().split("\n");
+  const headers=h.split(",");
+  ALL_DATA=rows.map(r=>{
+    const v=r.split(",");
+    let o={};
+    headers.forEach((k,i)=>o[k]=isNaN(v[i])?v[i]:Number(v[i]));
     return o;
   });
-
-  render(data);
-
-  document.getElementById("turFilter").onchange = e =>
-    render(e.target.value==="ALL"?data:data.filter(d=>d.tur===e.target.value));
+  render("ALL");
 });
 
-function sum(arr,key){return arr.reduce((a,b)=>a+(b[key]||0),0)}
+document.getElementById("turFilter").onchange=e=>render(e.target.value);
 
-function render(d){
-  const cards = document.getElementById("cards");
-  cards.innerHTML = `
+function sum(d,k){return d.reduce((a,b)=>a+(b[k]||0),0)}
+
+function render(tur){
+  const d = tur==="ALL"?ALL_DATA:ALL_DATA.filter(x=>x.tur===tur);
+
+  document.getElementById("topCards").innerHTML = `
     <div class="card">Toplam Yatırım<br><b>${sum(d,"toplamYatirim").toLocaleString()}</b></div>
     <div class="card">Güncel Değer<br><b>${sum(d,"guncelDeger").toLocaleString()}</b></div>
-    <div class="card ${sum(d,"gunluk")>=0?"green":"red"}">Günlük K/Z<br><b>${sum(d,"gunluk").toLocaleString()}</b></div>
-    <div class="card ${sum(d,"haftalik")>=0?"green":"red"}">Haftalık K/Z<br><b>${sum(d,"haftalik").toLocaleString()}</b></div>
-    <div class="card ${sum(d,"aylik")>=0?"green":"red"}">Aylık K/Z<br><b>${sum(d,"aylik").toLocaleString()}</b></div>
-    <div class="card ${sum(d,"ucAylik")>=0?"green":"red"}">3 Aylık K/Z<br><b>${sum(d,"ucAylik").toLocaleString()}</b></div>
-    <div class="card ${sum(d,"altiAylik")>=0?"green":"red"}">6 Aylık K/Z<br><b>${sum(d,"altiAylik").toLocaleString()}</b></div>
-    <div class="card ${sum(d,"birYillik")>=0?"green":"red"}">1 Yıllık K/Z<br><b>${sum(d,"birYillik").toLocaleString()}</b></div>
+    <div class="card ${(sum(d,"guncelDeger")-sum(d,"toplamYatirim"))>=0?"pos":"neg"}">
+      Toplam K/Z<br>
+      <b>${(sum(d,"guncelDeger")-sum(d,"toplamYatirim")).toLocaleString()}</b>
+    </div>
   `;
+
+  document.getElementById("periodCards").innerHTML = `
+    ${card("Günlük",sum(d,"gunluk"))}
+    ${card("Haftalık",sum(d,"haftalik"))}
+    ${card("Aylık",sum(d,"aylik"))}
+    ${card("3 Aylık",sum(d,"ucAylik"))}
+    ${card("6 Aylık",sum(d,"altiAylik"))}
+    ${card("1 Yıllık",sum(d,"birYillik"))}
+  `;
+}
+
+function card(t,v){
+  return `<div class="card ${v>=0?"pos":"neg"}">${t} K/Z<br><b>${v.toLocaleString()}</b></div>`;
 }
 </script>
 
