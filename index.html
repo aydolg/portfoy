@@ -19,30 +19,27 @@ body{
   background:var(--bg);
   color:#e5e7eb;
   font-family:system-ui, -apple-system, sans-serif;
-  line-height: 1.5;
 }
 
 h2{
   margin:24px 0 12px;
-  font-size:14px;
+  font-size:13px;
   text-transform: uppercase;
   letter-spacing: 1px;
-  opacity: 0.8;
+  opacity: 0.7;
 }
 
 .sticky{
   position:sticky;
   top:0;
   z-index:10;
-  background:rgba(11, 18, 32, 0.95);
-  backdrop-filter: blur(10px);
+  background:rgba(11, 18, 32, 0.98);
+  backdrop-filter: blur(12px);
   padding:16px;
-  border-bottom:1px solid var(--line);
+  border-bottom: 1px solid var(--line);
 }
 
-.wrapper{
-  padding:20px;
-}
+.wrapper{ padding:20px; }
 
 .grid-3{
   display:grid;
@@ -51,21 +48,21 @@ h2{
 }
 .grid-4{
   display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
   gap:12px;
 }
 
 .card{
-  background:linear-gradient(145deg, var(--card), #1a2236);
+  background:linear-gradient(145deg, var(--card), #161e2e);
   border-radius:16px;
   padding:20px;
   border: 1px solid var(--line);
-  transition: all 0.3s ease;
+  transition: transform 0.2s;
 }
 
 .big{font-size:24px;font-weight:700;margin-top:4px; letter-spacing: -0.5px;}
-.small{font-size:12px;font-weight:600;opacity:.5;text-transform: uppercase;}
-.percent{font-size:13px; font-weight:bold; margin-left: 8px;}
+.small{font-size:11px;font-weight:600;opacity:.5;text-transform: uppercase;}
+.percent{font-size:13px; font-weight:bold; margin-left: 6px;}
 
 .pos{color:var(--pos)}
 .neg{color:var(--neg)}
@@ -73,26 +70,24 @@ h2{
 .type-card{
   cursor:pointer;
   border:1px solid var(--line);
-  opacity: 0.7;
+  opacity: 0.6;
 }
-.type-card:hover{transform:translateY(-2px); opacity: 1;}
 .type-card.active{
   border-color:var(--pos);
   opacity: 1;
-  background: rgba(34, 197, 94, 0.05);
-  box-shadow: 0 0 20px rgba(34, 197, 94, 0.1);
+  background: rgba(34, 197, 94, 0.08);
 }
 
 #loading {
   position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-  font-weight: bold; font-size: 18px;
+  font-weight: bold; opacity: 0.5;
 }
 </style>
 </head>
 
 <body>
 
-<div id="loading">Veriler Yükleniyor...</div>
+<div id="loading">Veriler Güncelleniyor...</div>
 
 <div id="app" style="display:none">
   <div class="sticky">
@@ -113,40 +108,51 @@ const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQLPFVZn0j8Ygu9
 
 let DATA=[], ACTIVE="ALL";
 
+// CSV içindeki gizli karakterleri ve tırnakları temizleyen gelişmiş parser
 function parseCSV(text){
   const rows=[];
   let row=[], cur="", inQuotes=false;
-  for(let i=0;i<text.length;i++){
+  for(let i=0; i<text.length; i++){
     const c=text[i];
     if(c === '"') inQuotes = !inQuotes;
-    else if(c === "," && !inQuotes){ row.push(cur); cur=""; }
-    else if(c === "\n" && !inQuotes){ row.push(cur); rows.push(row); row=[]; cur=""; }
+    else if(c === "," && !inQuotes){ row.push(cur.trim()); cur=""; }
+    else if((c === "\n" || c === "\r") && !inQuotes){
+      if(cur || row.length > 0){
+        row.push(cur.trim()); rows.push(row);
+        row=[]; cur="";
+      }
+    }
     else cur+=c;
   }
-  row.push(cur); rows.push(row);
+  if(cur || row.length > 0) { row.push(cur.trim()); rows.push(row); }
   return rows;
 }
 
 function toNumber(v){
   if(!v) return 0;
-  return Number(v.replace(/\./g,"").replace(",", ".")) || 0;
+  // Hem nokta hem virgül karmaşasını çözer
+  let clean = v.replace(/\s/g, "").replace(/\./g, "").replace(",", ".");
+  return parseFloat(clean) || 0;
 }
 
 function formatTRY(val) {
-  return val.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " ₺";
+  return val.toLocaleString('tr-TR', { minimumFractionDigits: 2 }) + " ₺";
 }
 
 fetch(CSV_URL)
 .then(r=>r.text())
 .then(t=>{
-  const rows=parseCSV(t.trim());
-  const headers=rows.shift();
+  const rows = parseCSV(t.trim());
+  const rawHeaders = rows.shift();
+  // Header'lardaki görünmez karakterleri (CR/LF) tamamen temizle
+  const headers = rawHeaders.map(h => h.replace(/[\r\n]+/g, "").trim());
 
-  DATA=rows.map(r=>{
-    let o={};
-    headers.forEach((h,i)=>{
-      if(h==="urun" || h==="tur") o[h]=r[i];
-      else o[h]=toNumber(r[i]);
+  DATA = rows.map(r => {
+    let o = {};
+    headers.forEach((h, i) => {
+      if(!h) return;
+      if(h === "urun" || h === "tur") o[h] = r[i] || "";
+      else o[h] = toNumber(r[i]);
     });
     return o;
   });
@@ -154,10 +160,6 @@ fetch(CSV_URL)
   document.getElementById("loading").style.display="none";
   document.getElementById("app").style.display="block";
   renderAll();
-})
-.catch(err => {
-  document.getElementById("loading").innerText = "Veri yüklenemedi!";
-  console.error(err);
 });
 
 const sum=(arr,key)=>arr.reduce((a,b)=>a+(b[key]||0),0);
@@ -174,7 +176,7 @@ function renderSummary(){
   const t = sum(d, "toplamYatirim");
   const g = sum(d, "guncelDeger");
   const kz = g - t;
-  const perc = t > 0 ? ((kz / t) * 100).toFixed(2) : 0;
+  const perc = t !== 0 ? ((kz / t) * 100).toFixed(2) : 0;
   
   const title = ACTIVE === "ALL" ? "Toplam Portföy" : ACTIVE;
 
@@ -191,40 +193,41 @@ function renderSummary(){
       <div class="small">Toplam K/Z</div>
       <div class="big">
         ${formatTRY(kz)} 
-        <span class="percent">(${perc > 0 ? '+':''}${perc}%)</span>
+        <span class="percent">(${kz >= 0 ? '+':''}${perc}%)</span>
       </div>
     </div>`;
 }
 
 function renderTypes(){
   const c=document.getElementById("types");
-  const turlar = [...new Set(DATA.map(item => item.tur))]; // Dinamik tür listesi
+  const turlar = [...new Set(DATA.map(item => item.tur))].filter(Boolean);
   
-  c.innerHTML = `<div class="card type-card ${ACTIVE==="ALL"?"active":""}" onclick="selectTur('ALL')">
-                    <div class="small">Hepsi</div>
-                    <div class="big">🏠</div>
-                 </div>`;
+  let html = `<div class="card type-card ${ACTIVE==="ALL"?"active":""}" onclick="selectTur('ALL')">
+                <div class="small">Hepsi</div>
+                <div class="big">🏠</div>
+              </div>`;
                  
   turlar.forEach(t=>{
     const v=sum(DATA.filter(x=>x.tur===t),"guncelDeger");
-    c.innerHTML+=`
+    html += `
       <div class="card type-card ${ACTIVE===t?"active":""}" onclick="selectTur('${t}')">
         <div class="small">${t}</div>
         <div class="big">${formatTRY(v)}</div>
       </div>`;
   });
+  c.innerHTML = html;
 }
 
 function renderPeriods(){
-  const d=filterTur(ACTIVE);
-  const p=[
+  const d = filterTur(ACTIVE);
+  const p = [
     ["Günlük","gunluk"], ["Haftalık","haftalik"], ["Aylık","aylik"],
     ["3 Aylık","ucAylik"], ["6 Aylık","altiAylik"], ["1 Yıllık","birYillik"]
   ];
 
-  document.getElementById("periods").innerHTML=
+  document.getElementById("periods").innerHTML =
     p.map(x=>{
-      const v=sum(d,x[1]);
+      const v = sum(d, x[1]);
       return `
       <div class="card ${v>=0?"pos":"neg"}">
         <div class="small">${x[0]} K/Z</div>
