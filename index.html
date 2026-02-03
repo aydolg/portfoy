@@ -19,12 +19,10 @@ body{
   background:var(--bg);
   color:#e5e7eb;
   font-family:system-ui, -apple-system, sans-serif;
-  display: flex;
-  flex-direction: column;
 }
 
 h2{
-  margin:12px 0 8px;
+  margin:12px 16px 8px;
   font-size:11px;
   text-transform: uppercase;
   letter-spacing: 1px;
@@ -43,7 +41,6 @@ h2{
 
 .content-section { padding: 12px; }
 
-/* Üst Özet: 3'lü */
 .grid-summary {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -51,14 +48,12 @@ h2{
   margin-bottom: 12px;
 }
 
-/* Varlıklar: Esnek */
 .grid-types {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
   gap: 8px;
 }
 
-/* Dönemsel K/Z: Mobilde 2'li yan yana */
 .grid-periods {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -72,12 +67,11 @@ h2{
   border: 1px solid var(--line);
   display: flex;
   flex-direction: column;
-  justify-content: center;
 }
 
 .big { font-size: 16px; font-weight: 700; margin-top: 2px; }
 .small { font-size: 9px; font-weight: 600; opacity: .5; text-transform: uppercase; }
-.trend { font-size: 10px; font-weight: bold; margin-top: 2px; }
+.trend { font-size: 11px; font-weight: bold; margin-top: 4px; display: flex; align-items: center; gap: 4px; }
 
 .pos { color: var(--pos) }
 .neg { color: var(--neg) }
@@ -90,9 +84,9 @@ h2{
 }
 
 .type-card.active {
-  border-color: var(--pos);
+  border-color: #3b82f6;
   opacity: 1;
-  background: rgba(34, 197, 94, 0.1);
+  background: rgba(59, 130, 246, 0.1);
 }
 
 @media (min-width: 768px) {
@@ -107,7 +101,7 @@ h2{
 <div id="app">
   <div class="header-section">
     <div class="grid-summary" id="summary"></div>
-    <h2>💼 Varlıklar</h2>
+    <h2>💼 Varlıkların Günlük Yönü</h2>
     <div class="grid-types" id="types"></div>
   </div>
 
@@ -174,26 +168,36 @@ function renderSummary(){
   const p = t !== 0 ? ((kz / t) * 100).toFixed(1) : 0;
   
   document.getElementById("summary").innerHTML=`
-    <div class="card"><div class="small">Yatırım</div><div class="big">${formatTRY(t)}</div></div>
+    <div class="card"><div class="small">Maliyet</div><div class="big">${formatTRY(t)}</div></div>
     <div class="card"><div class="small">Güncel</div><div class="big">${formatTRY(g)}</div></div>
-    <div class="card ${kz>=0?"pos":"neg"}"><div class="small">K/Z %</div><div class="big">${kz>=0?'+':''}${p}%</div></div>`;
+    <div class="card ${kz>=0?"pos":"neg"}"><div class="small">Ana K/Z</div><div class="big">${kz>=0?'+':''}${p}%</div></div>`;
 }
 
 function renderTypes(){
   const c = document.getElementById("types");
   const turlar = [...new Set(DATA.map(item => item.tur))].filter(Boolean);
   
+  // HEPSİ kartı için genel günlük değişim
+  const totalGuncel = sum(DATA, "guncelDeger");
+  const totalGunluk = sum(DATA, "gunluk");
+  const totalGunlukP = totalGuncel !== 0 ? ((totalGunluk / (totalGuncel - totalGunluk)) * 100).toFixed(2) : 0;
+
   let html = `<div class="card type-card ${ACTIVE==="ALL"?"active":""}" onclick="selectTur('ALL')">
-                <div class="small">HEPSİ</div>
-                <div class="trend">📊 Gözat</div>
+                <div class="small">GENEL</div>
+                <div class="trend ${totalGunluk>=0?'pos':'neg'}">
+                  ${totalGunluk>=0?'▲':'▼'} %${Math.abs(totalGunlukP)}
+                </div>
               </div>`;
                  
   turlar.forEach(t=>{
     const d = DATA.filter(x=>x.tur===t);
-    const g = sum(d, "guncelDeger"), yat = sum(d, "toplamYatirim");
-    const kz = g - yat;
-    const p = yat !== 0 ? ((kz / yat) * 100).toFixed(1) : 0;
-    const isPos = kz >= 0;
+    const guncel = sum(d, "guncelDeger");
+    const gunluk = sum(d, "gunluk");
+    
+    // Günlük değişim yüzdesi: Günlük K/Z / (Güncel Değer - Günlük K/Z)
+    const oncekiDeger = guncel - gunluk;
+    const p = oncekiDeger !== 0 ? ((gunluk / oncekiDeger) * 100).toFixed(2) : 0;
+    const isPos = gunluk >= 0;
 
     html += `
       <div class="card type-card ${ACTIVE===t?"active":""}" onclick="selectTur('${t}')">
