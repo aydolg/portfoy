@@ -3,95 +3,54 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<title>Portföy Dashboard Pro</title>
+<title>Portföy Dashboard Pro+</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 :root{
-  --bg:#0b1220;
-  --card:#111827;
-  --line:#1f2937;
-  --pos:#22c55e;
-  --neg:#ef4444;
+  --bg:#0b1220; --card:#111827; --line:#1f2937; --pos:#22c55e; --neg:#ef4444; --accent:#3b82f6;
 }
 
-body{
-  margin:0;
-  background:var(--bg);
-  color:#e5e7eb;
-  font-family:system-ui, -apple-system, sans-serif;
-}
+body{ margin:0; background:var(--bg); color:#e5e7eb; font-family:system-ui, -apple-system, sans-serif; }
 
-h2{
-  margin:12px 16px 8px;
-  font-size:11px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  opacity: 0.6;
-}
+h2{ margin:12px 16px 8px; font-size:11px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.6; }
 
 .header-section {
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  background: rgba(11, 18, 32, 0.98);
-  backdrop-filter: blur(15px);
-  border-bottom: 1px solid var(--line);
-  padding: 12px;
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(11, 18, 32, 0.95); backdrop-filter: blur(15px);
+  border-bottom: 1px solid var(--line); padding: 12px;
 }
 
 .content-section { padding: 12px; }
 
-.grid-summary {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  margin-bottom: 12px;
-}
-
-.grid-types {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-  gap: 8px;
-}
-
-.grid-periods {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-}
+.grid-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+.grid-types { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; }
+.grid-periods { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
 
 .card {
   background: linear-gradient(145deg, var(--card), #161e2e);
-  border-radius: 12px;
-  padding: 12px;
-  border: 1px solid var(--line);
-  display: flex;
-  flex-direction: column;
+  border-radius: 12px; padding: 12px; border: 1px solid var(--line);
+  display: flex; flex-direction: column; transition: 0.3s;
 }
 
-.big { font-size: 16px; font-weight: 700; margin-top: 2px; }
+.big { font-size: 15px; font-weight: 700; margin-top: 2px; }
 .small { font-size: 9px; font-weight: 600; opacity: .5; text-transform: uppercase; }
-.trend { font-size: 11px; font-weight: bold; margin-top: 4px; display: flex; align-items: center; gap: 4px; }
+.trend-val { font-size: 11px; font-weight: bold; margin-top: 4px; }
+.trend-amt { font-size: 10px; opacity: 0.8; margin-top: 2px; }
 
 .pos { color: var(--pos) }
 .neg { color: var(--neg) }
 
-.type-card {
-  cursor: pointer;
-  border: 1px solid var(--line);
-  opacity: 0.7;
-  transition: 0.2s;
-}
+/* Kritik Düşüş Uyarısı */
+.panic { box-shadow: inset 0 0 10px rgba(239, 68, 68, 0.4); border-color: var(--neg); }
 
-.type-card.active {
-  border-color: #3b82f6;
-  opacity: 1;
-  background: rgba(59, 130, 246, 0.1);
-}
+.type-card { cursor: pointer; opacity: 0.8; }
+.type-card.active { border-color: var(--accent); opacity: 1; background: rgba(59, 130, 246, 0.15); }
+
+#chart-container { height: 160px; margin-bottom: 16px; display: flex; justify-content: center; }
 
 @media (min-width: 768px) {
   .grid-periods { grid-template-columns: repeat(3, 1fr); }
-  .big { font-size: 20px; }
 }
 </style>
 </head>
@@ -101,7 +60,12 @@ h2{
 <div id="app">
   <div class="header-section">
     <div class="grid-summary" id="summary"></div>
-    <h2>💼 Varlıkların Günlük Yönü</h2>
+    
+    <div id="chart-container">
+      <canvas id="distChart"></canvas>
+    </div>
+
+    <h2>💼 Günlük Varlık Değişimi</h2>
     <div class="grid-types" id="types"></div>
   </div>
 
@@ -114,7 +78,7 @@ h2{
 <script>
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQLPFVZn0j8Ygu914QDGRCGKsVy88gWjdk7DFi-jWiydmqYsdGUE4hEAb-R_IBzQmtFZwoMJFcN6rlD/pub?gid=1050165900&single=true&output=csv";
 
-let DATA=[], ACTIVE="ALL";
+let DATA=[], ACTIVE="ALL", myChart = null;
 
 function parseCSV(text){
   const rows=[];
@@ -160,6 +124,7 @@ function renderAll(){
   renderSummary();
   renderTypes();
   renderPeriods();
+  updateChart();
 }
 
 function renderSummary(){
@@ -170,41 +135,34 @@ function renderSummary(){
   document.getElementById("summary").innerHTML=`
     <div class="card"><div class="small">Maliyet</div><div class="big">${formatTRY(t)}</div></div>
     <div class="card"><div class="small">Güncel</div><div class="big">${formatTRY(g)}</div></div>
-    <div class="card ${kz>=0?"pos":"neg"}"><div class="small">Ana K/Z</div><div class="big">${kz>=0?'+':''}${p}%</div></div>`;
+    <div class="card ${kz>=0?"pos":"neg"}"><div class="small">Toplam K/Z</div><div class="big">${kz>=0?'+':''}${p}%</div></div>`;
 }
 
 function renderTypes(){
   const c = document.getElementById("types");
   const turlar = [...new Set(DATA.map(item => item.tur))].filter(Boolean);
   
-  // HEPSİ kartı için genel günlük değişim
-  const totalGuncel = sum(DATA, "guncelDeger");
-  const totalGunluk = sum(DATA, "gunluk");
-  const totalGunlukP = totalGuncel !== 0 ? ((totalGunluk / (totalGuncel - totalGunluk)) * 100).toFixed(2) : 0;
+  const totalG = sum(DATA, "guncelDeger"), totalK = sum(DATA, "gunluk");
+  const totalP = (totalG - totalK) !== 0 ? ((totalK / (totalG - totalK)) * 100).toFixed(2) : 0;
 
   let html = `<div class="card type-card ${ACTIVE==="ALL"?"active":""}" onclick="selectTur('ALL')">
                 <div class="small">GENEL</div>
-                <div class="trend ${totalGunluk>=0?'pos':'neg'}">
-                  ${totalGunluk>=0?'▲':'▼'} %${Math.abs(totalGunlukP)}
-                </div>
+                <div class="trend-val ${totalK>=0?'pos':'neg'}">${totalK>=0?'▲':'▼'} %${Math.abs(totalP)}</div>
+                <div class="trend-amt ${totalK>=0?'pos':'neg'}">${formatTRY(totalK)}</div>
               </div>`;
                  
   turlar.forEach(t=>{
     const d = DATA.filter(x=>x.tur===t);
-    const guncel = sum(d, "guncelDeger");
-    const gunluk = sum(d, "gunluk");
-    
-    // Günlük değişim yüzdesi: Günlük K/Z / (Güncel Değer - Günlük K/Z)
-    const oncekiDeger = guncel - gunluk;
-    const p = oncekiDeger !== 0 ? ((gunluk / oncekiDeger) * 100).toFixed(2) : 0;
+    const guncel = sum(d, "guncelDeger"), gunluk = sum(d, "gunluk");
+    const p = (guncel - gunluk) !== 0 ? ((gunluk / (guncel - gunluk)) * 100).toFixed(2) : 0;
     const isPos = gunluk >= 0;
+    const isPanic = p <= -3; // %3 ve altı düşüş uyarısı
 
     html += `
-      <div class="card type-card ${ACTIVE===t?"active":""}" onclick="selectTur('${t}')">
+      <div class="card type-card ${ACTIVE===t?"active":""} ${isPanic?'panic':''}" onclick="selectTur('${t}')">
         <div class="small">${t}</div>
-        <div class="trend ${isPos?'pos':'neg'}">
-          ${isPos?'▲':'▼'} %${Math.abs(p)}
-        </div>
+        <div class="trend-val ${isPos?'pos':'neg'}">${isPos?'▲':'▼'} %${Math.abs(p)}</div>
+        <div class="trend-amt ${isPos?'pos':'neg'}">${formatTRY(gunluk)}</div>
       </div>`;
   });
   c.innerHTML = html;
@@ -212,15 +170,43 @@ function renderTypes(){
 
 function renderPeriods(){
   const d = filterTur(ACTIVE);
+  const t = sum(d, "toplamYatirim");
   const p = [["Günlük","gunluk"], ["Haftalık","haftalik"], ["Aylık","aylik"], ["3 Ay","ucAylik"], ["6 Ay","altiAylik"], ["1 Yıl","birYillik"]];
 
   document.getElementById("periods").innerHTML = p.map(x=>{
     const v = sum(d,x[1]);
+    const perc = t !== 0 ? ((v / t) * 100).toFixed(1) : 0;
     return `<div class="card ${v>=0?"pos":"neg"}">
               <div class="small">${x[0]}</div>
               <div class="big">${formatTRY(v)}</div>
+              <div style="font-size:10px; font-weight:bold; margin-top:2px;">${v>=0?'+':''}${perc}%</div>
             </div>`;
   }).join("");
+}
+
+function updateChart(){
+  const turlar = [...new Set(DATA.map(item => item.tur))].filter(Boolean);
+  const labels = turlar;
+  const values = turlar.map(t => sum(DATA.filter(x=>x.tur===t), "guncelDeger"));
+
+  if(myChart) myChart.destroy();
+
+  const ctx = document.getElementById('distChart').getContext('2d');
+  myChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: labels,
+      datasets: [{
+        data: values,
+        backgroundColor: ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6'],
+        borderWidth: 0, cutout: '70%'
+      }]
+    },
+    options: {
+      plugins: { legend: { display: false } },
+      responsive: true, maintainAspectRatio: false
+    }
+  });
 }
 
 function selectTur(t){
