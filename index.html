@@ -6,85 +6,75 @@
 <title>Portföy Dashboard</title>
 
 <style>
-:root {
+:root{
   --bg:#0b1220;
   --card:#111827;
+  --line:#1f2937;
   --pos:#22c55e;
   --neg:#ef4444;
-  --line:#1f2937;
 }
 
-body {
+body{
   margin:0;
   background:var(--bg);
   color:#e5e7eb;
-  font-family:Inter, system-ui, Arial;
+  font-family:system-ui, Inter, Arial;
 }
 
-.wrapper {
-  padding:20px;
-}
-
-h2 {
-  margin:28px 0 14px;
-  font-size:17px;
+h2{
+  margin:20px 0 12px;
+  font-size:16px;
   font-weight:600;
 }
 
-.grid-3 {
+.grid-3{
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
   gap:16px;
 }
-
-.grid-4 {
+.grid-4{
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
   gap:16px;
 }
 
-.card {
+.card{
   background:linear-gradient(180deg,var(--card),#0e1627);
   border-radius:18px;
-  padding:20px;
+  padding:18px;
   box-shadow:0 10px 28px rgba(0,0,0,.45);
 }
 
-.big {
-  font-size:24px;
-  font-weight:700;
-  margin-top:6px;
-}
+.big{font-size:22px;font-weight:700;margin-top:6px}
+.small{font-size:13px;opacity:.65}
 
-.small {
-  opacity:.65;
-  font-size:13px;
-}
+.pos{color:var(--pos)}
+.neg{color:var(--neg)}
 
-.pos { color:var(--pos); }
-.neg { color:var(--neg); }
-
-.type-card {
+.type-card{
   cursor:pointer;
-  transition:.25s;
   border:2px solid transparent;
+  transition:.25s;
 }
-
-.type-card:hover { transform:translateY(-3px); }
-
-.type-card.active {
+.type-card:hover{transform:translateY(-3px)}
+.type-card.active{
   border-color:var(--pos);
   box-shadow:0 0 0 2px rgba(34,197,94,.25);
 }
 
 /* STICKY */
-.sticky {
+.sticky{
   position:sticky;
   top:0;
   z-index:10;
   background:var(--bg);
-  padding:20px;
+  padding:16px;
   border-bottom:1px solid var(--line);
+}
+
+.wrapper{
+  padding:20px;
+  margin-top:360px; /* mobil için kritik */
 }
 </style>
 </head>
@@ -93,6 +83,7 @@ h2 {
 
 <div class="sticky">
   <div class="grid-3" id="summary"></div>
+
   <h2>💼 Tür Bazlı Güncel Değer</h2>
   <div class="grid-4" id="types"></div>
 </div>
@@ -103,28 +94,52 @@ h2 {
 </div>
 
 <script>
-const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQLPFVZn0j8Ygu914QDGRCGKsVy88gWjdk7DFi-jWiydmqYsdGUE4hEAb-R_IBzQmtFZwoMJFcN6rlD/pub?gid=1050165900&single=true&output=csv";
+const CSV_URL =
+"https://docs.google.com/spreadsheets/d/e/2PACX-1vQLPFVZn0j8Ygu914QDGRCGKsVy88gWjdk7DFi-jWiydmqYsdGUE4hEAb-R_IBzQmtFZwoMJFcN6rlD/pub?gid=1050165900&single=true&output=csv";
 
 let DATA=[], ACTIVE="ALL";
+
+/* GERÇEK CSV PARSER */
+function parseCSV(text){
+  const rows=[];
+  let row=[], cur="", inQuotes=false;
+
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(c === '"') inQuotes = !inQuotes;
+    else if(c === "," && !inQuotes){
+      row.push(cur); cur="";
+    }
+    else if(c === "\n" && !inQuotes){
+      row.push(cur); rows.push(row);
+      row=[]; cur="";
+    }
+    else cur+=c;
+  }
+  row.push(cur);
+  rows.push(row);
+  return rows;
+}
+
+/* SAYI NORMALİZASYONU */
+function toNumber(v){
+  if(v===undefined || v==="") return 0;
+  return Number(
+    v.replace(/\./g,"").replace(",",".")
+  ) || 0;
+}
 
 fetch(CSV_URL)
 .then(r=>r.text())
 .then(t=>{
-  const rows=t.trim().split("\n").map(r=>r.split(","));
-  const h=rows.shift();
+  const rows=parseCSV(t.trim());
+  const headers=rows.shift();
 
-  DATA = rows.map(r=>{
+  DATA=rows.map(r=>{
     let o={};
-    h.forEach((k,i)=>{
-      if (r[i]===undefined) o[k]=0;
-      else if (isNaN(r[i])) o[k]=r[i];
-      else {
-        o[k]=Number(
-          r[i]
-            .replace(/\./g,"")
-            .replace(",",".")
-        );
-      }
+    headers.forEach((h,i)=>{
+      if(h==="urun" || h==="tur") o[h]=r[i];
+      else o[h]=toNumber(r[i]);
     });
     return o;
   });
@@ -132,8 +147,8 @@ fetch(CSV_URL)
   renderAll();
 });
 
-const sum=(a,k)=>a.reduce((x,y)=>x+(y[k]||0),0);
-const byTur=t=>t==="ALL"?DATA:DATA.filter(x=>x.tur===t);
+const sum=(arr,key)=>arr.reduce((a,b)=>a+(b[key]||0),0);
+const filterTur=t=>t==="ALL"?DATA:DATA.filter(x=>x.tur===t);
 
 function renderAll(){
   renderSummary();
@@ -176,7 +191,7 @@ function renderTypes(){
 }
 
 function renderPeriods(){
-  const d=byTur(ACTIVE);
+  const d=filterTur(ACTIVE);
   const p=[
     ["Günlük","gunluk"],
     ["Haftalık","haftalik"],
@@ -186,18 +201,19 @@ function renderPeriods(){
     ["1 Yıllık","birYillik"]
   ];
 
-  document.getElementById("periods").innerHTML=p.map(x=>{
-    const v=sum(d,x[1]);
-    return `
+  document.getElementById("periods").innerHTML=
+    p.map(x=>{
+      const v=sum(d,x[1]);
+      return `
       <div class="card ${v>=0?"pos":"neg"}">
         <div class="small">${x[0]} K/Z</div>
         <div class="big">${v.toLocaleString()}</div>
       </div>`;
-  }).join("");
+    }).join("");
 }
 
 function selectTur(t){
-  ACTIVE = ACTIVE===t ? "ALL" : t;
+  ACTIVE = (ACTIVE===t) ? "ALL" : t;
   renderTypes();
   renderPeriods();
 }
