@@ -6,21 +6,56 @@
 <title>Portföy Dashboard</title>
 
 <style>
-body { font-family: Arial; background:#0f172a; color:#fff; margin:0; padding:20px }
-h2 { margin-top:30px }
-.grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:15px; margin-bottom:25px }
-.card { background:#111827; padding:15px; border-radius:12px }
-.pos { color:#22c55e } .neg { color:#ef4444 }
-select { padding:8px 12px; border-radius:8px; margin-bottom:20px }
+body {
+  font-family: Inter, Arial;
+  background:#0f172a;
+  color:#fff;
+  margin:0;
+  padding:20px;
+}
+
+h2 { margin:25px 0 10px }
+
+.grid-top {
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:16px;
+}
+
+.grid-period {
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:16px;
+}
+
+.card {
+  background:#111827;
+  border-radius:14px;
+  padding:18px;
+  box-shadow:0 10px 20px rgba(0,0,0,.3);
+}
+
+.card small {
+  opacity:.7;
+}
+
+.pos { color:#22c55e }
+.neg { color:#ef4444 }
+
+select {
+  padding:10px 14px;
+  border-radius:10px;
+  font-size:15px;
+}
 </style>
 </head>
 
 <body>
 
 <h2>📊 Genel Durum</h2>
-<div class="grid" id="topCards"></div>
+<div class="grid-top" id="topCards"></div>
 
-<h2>🔎 Tür Seçimi</h2>
+<h2>🔎 Tür</h2>
 <select id="turFilter">
   <option value="ALL">Tümü</option>
   <option value="Hisse">Hisse</option>
@@ -30,55 +65,62 @@ select { padding:8px 12px; border-radius:8px; margin-bottom:20px }
 </select>
 
 <h2>📈 Dönemsel K/Z</h2>
-<div class="grid" id="periodCards"></div>
+<div class="grid-period" id="periodCards"></div>
 
 <script>
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQLPFVZn0j8Ygu914QDGRCGKsVy88gWjdk7DFi-jWiydmqYsdGUE4hEAb-R_IBzQmtFZwoMJFcN6rlD/pub?gid=1050165900&single=true&output=csv";
 
-let ALL_DATA = [];
+let DATA = [];
 
 fetch(CSV_URL)
-.then(r=>r.text())
-.then(t=>{
-  const [h,...rows]=t.trim().split("\n");
-  const headers=h.split(",");
-  ALL_DATA=rows.map(r=>{
-    const v=r.split(",");
-    let o={};
-    headers.forEach((k,i)=>o[k]=isNaN(v[i])?v[i]:Number(v[i]));
-    return o;
+  .then(r => r.text())
+  .then(text => {
+    const rows = text.trim().split("\n").map(r => r.split(","));
+    const h = rows.shift();
+
+    DATA = rows.map(r => {
+      let o = {};
+      h.forEach((k,i)=>{
+        const v = r[i];
+        o[k] = isNaN(v) ? v : Number(v);
+      });
+      return o;
+    });
+
+    render("ALL");
   });
-  render("ALL");
-});
 
-document.getElementById("turFilter").onchange=e=>render(e.target.value);
+document.getElementById("turFilter").onchange = e => render(e.target.value);
 
-function sum(d,k){return d.reduce((a,b)=>a+(b[k]||0),0)}
+function sum(arr, key){
+  return arr.reduce((a,b)=>a + (b[key] || 0), 0);
+}
 
 function render(tur){
-  const d = tur==="ALL"?ALL_DATA:ALL_DATA.filter(x=>x.tur===tur);
+  const d = tur==="ALL" ? DATA : DATA.filter(x=>x.tur===tur);
+
+  const toplamY = sum(d,"toplamYatirim");
+  const guncel = sum(d,"guncelDeger");
+  const toplamKZ = guncel - toplamY;
 
   document.getElementById("topCards").innerHTML = `
-    <div class="card">Toplam Yatırım<br><b>${sum(d,"toplamYatirim").toLocaleString()}</b></div>
-    <div class="card">Güncel Değer<br><b>${sum(d,"guncelDeger").toLocaleString()}</b></div>
-    <div class="card ${(sum(d,"guncelDeger")-sum(d,"toplamYatirim"))>=0?"pos":"neg"}">
-      Toplam K/Z<br>
-      <b>${(sum(d,"guncelDeger")-sum(d,"toplamYatirim")).toLocaleString()}</b>
-    </div>
+    <div class="card"><small>Toplam Yatırım</small><br><b>${toplamY.toLocaleString()}</b></div>
+    <div class="card"><small>Güncel Değer</small><br><b>${guncel.toLocaleString()}</b></div>
+    <div class="card ${toplamKZ>=0?"pos":"neg"}"><small>Toplam K/Z</small><br><b>${toplamKZ.toLocaleString()}</b></div>
   `;
 
   document.getElementById("periodCards").innerHTML = `
-    ${card("Günlük",sum(d,"gunluk"))}
-    ${card("Haftalık",sum(d,"haftalik"))}
-    ${card("Aylık",sum(d,"aylik"))}
-    ${card("3 Aylık",sum(d,"ucAylik"))}
-    ${card("6 Aylık",sum(d,"altiAylik"))}
-    ${card("1 Yıllık",sum(d,"birYillik"))}
+    ${p("Günlük", sum(d,"gunluk"))}
+    ${p("Haftalık", sum(d,"haftalik"))}
+    ${p("Aylık", sum(d,"aylik"))}
+    ${p("3 Aylık", sum(d,"ucAylik"))}
+    ${p("6 Aylık", sum(d,"altiAylik"))}
+    ${p("1 Yıllık", sum(d,"birYillik"))}
   `;
 }
 
-function card(t,v){
-  return `<div class="card ${v>=0?"pos":"neg"}">${t} K/Z<br><b>${v.toLocaleString()}</b></div>`;
+function p(t,v){
+  return `<div class="card ${v>=0?"pos":"neg"}"><small>${t} K/Z</small><br><b>${v.toLocaleString()}</b></div>`;
 }
 </script>
 
