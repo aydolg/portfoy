@@ -21,18 +21,16 @@ body{
   font-family:system-ui, -apple-system, sans-serif;
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
 }
 
 h2{
-  margin:16px 0 8px;
-  font-size:12px;
+  margin:12px 0 8px;
+  font-size:11px;
   text-transform: uppercase;
   letter-spacing: 1px;
-  opacity: 0.7;
+  opacity: 0.6;
 }
 
-/* STICKY ÜST PANEL DÜZENLEMESİ */
 .header-section {
   position: sticky;
   top: 0;
@@ -40,48 +38,55 @@ h2{
   background: rgba(11, 18, 32, 0.98);
   backdrop-filter: blur(15px);
   border-bottom: 1px solid var(--line);
-  padding: 12px 16px;
+  padding: 12px;
 }
 
-/* İÇERİK ALANI */
-.content-section {
-  padding: 16px;
-  flex: 1;
-}
+.content-section { padding: 12px; }
 
-.grid-main {
+/* Üst Özet: 3'lü */
+.grid-summary {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
 }
 
+/* Varlıklar: Esnek */
 .grid-types {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
   gap: 8px;
-  margin-bottom: 8px;
+}
+
+/* Dönemsel K/Z: Mobilde 2'li yan yana */
+.grid-periods {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
 }
 
 .card {
   background: linear-gradient(145deg, var(--card), #161e2e);
   border-radius: 12px;
-  padding: 16px;
+  padding: 12px;
   border: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
-.big { font-size: 20px; font-weight: 700; margin-top: 4px; letter-spacing: -0.5px; }
-.small { font-size: 10px; font-weight: 600; opacity: .5; text-transform: uppercase; }
-.percent { font-size: 12px; font-weight: bold; margin-left: 4px; }
+.big { font-size: 16px; font-weight: 700; margin-top: 2px; }
+.small { font-size: 9px; font-weight: 600; opacity: .5; text-transform: uppercase; }
+.trend { font-size: 10px; font-weight: bold; margin-top: 2px; }
 
 .pos { color: var(--pos) }
 .neg { color: var(--neg) }
 
 .type-card {
   cursor: pointer;
-  padding: 10px;
-  text-align: center;
   border: 1px solid var(--line);
-  opacity: 0.6;
+  opacity: 0.7;
+  transition: 0.2s;
 }
 
 .type-card.active {
@@ -90,34 +95,25 @@ h2{
   background: rgba(34, 197, 94, 0.1);
 }
 
-#loading {
-  position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-  font-weight: bold; opacity: 0.5;
-}
-
-/* MOBİL ÖZEL AYARLAR */
-@media (max-width: 600px) {
-  .big { font-size: 18px; }
-  .grid-main { grid-template-columns: 1fr; }
-  .header-section { padding: 8px; }
+@media (min-width: 768px) {
+  .grid-periods { grid-template-columns: repeat(3, 1fr); }
+  .big { font-size: 20px; }
 }
 </style>
 </head>
 
 <body>
 
-<div id="loading">Veriler Güncelleniyor...</div>
-
-<div id="app" style="display:none">
+<div id="app">
   <div class="header-section">
-    <div class="grid-main" id="summary" style="margin-bottom: 12px;"></div>
+    <div class="grid-summary" id="summary"></div>
     <h2>💼 Varlıklar</h2>
     <div class="grid-types" id="types"></div>
   </div>
 
   <div class="content-section">
     <h2>📈 Dönemsel Performans</h2>
-    <div class="grid-main" id="periods"></div>
+    <div class="grid-periods" id="periods"></div>
   </div>
 </div>
 
@@ -134,10 +130,7 @@ function parseCSV(text){
     if(c === '"') inQuotes = !inQuotes;
     else if(c === "," && !inQuotes){ row.push(cur.trim()); cur=""; }
     else if((c === "\n" || c === "\r") && !inQuotes){
-      if(cur || row.length > 0){
-        row.push(cur.trim()); rows.push(row);
-        row=[]; cur="";
-      }
+      if(cur || row.length > 0){ row.push(cur.trim()); rows.push(row); row=[]; cur=""; }
     }
     else cur+=c;
   }
@@ -152,28 +145,17 @@ function toNumber(v){
 }
 
 function formatTRY(val) {
-  return val.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " ₺";
+  return val.toLocaleString('tr-TR', { maximumFractionDigits: 0 }) + " ₺";
 }
 
-fetch(CSV_URL)
-.then(r=>r.text())
-.then(t=>{
+fetch(CSV_URL).then(r=>r.text()).then(t=>{
   const rows = parseCSV(t.trim());
-  const rawHeaders = rows.shift();
-  const headers = rawHeaders.map(h => h.replace(/[\r\n]+/g, "").trim());
-
+  const headers = rows.shift().map(h => h.replace(/[\r\n]+/g, "").trim());
   DATA = rows.map(r => {
     let o = {};
-    headers.forEach((h, i) => {
-      if(!h) return;
-      if(h === "urun" || h === "tur") o[h] = r[i] || "";
-      else o[h] = toNumber(r[i]);
-    });
+    headers.forEach((h, i) => { if(h) o[h] = (h==="urun"||h==="tur") ? r[i] : toNumber(r[i]); });
     return o;
   });
-
-  document.getElementById("loading").style.display="none";
-  document.getElementById("app").style.display="block";
   renderAll();
 });
 
@@ -188,29 +170,13 @@ function renderAll(){
 
 function renderSummary(){
   const d = filterTur(ACTIVE);
-  const t = sum(d, "toplamYatirim");
-  const g = sum(d, "guncelDeger");
-  const kz = g - t;
-  const perc = t !== 0 ? ((kz / t) * 100).toFixed(2) : 0;
+  const t = sum(d, "toplamYatirim"), g = sum(d, "guncelDeger"), kz = g - t;
+  const p = t !== 0 ? ((kz / t) * 100).toFixed(1) : 0;
   
-  const title = ACTIVE === "ALL" ? "Toplam" : ACTIVE;
-
   document.getElementById("summary").innerHTML=`
-    <div class="card">
-      <div class="small">${title} Yatırımı</div>
-      <div class="big">${formatTRY(t)}</div>
-    </div>
-    <div class="card">
-      <div class="small">Güncel Değer</div>
-      <div class="big">${formatTRY(g)}</div>
-    </div>
-    <div class="card ${kz>=0?"pos":"neg"}">
-      <div class="small">Toplam K/Z</div>
-      <div class="big">
-        ${formatTRY(kz)} 
-        <span class="percent">(${kz >= 0 ? '+':''}${perc}%)</span>
-      </div>
-    </div>`;
+    <div class="card"><div class="small">Yatırım</div><div class="big">${formatTRY(t)}</div></div>
+    <div class="card"><div class="small">Güncel</div><div class="big">${formatTRY(g)}</div></div>
+    <div class="card ${kz>=0?"pos":"neg"}"><div class="small">K/Z %</div><div class="big">${kz>=0?'+':''}${p}%</div></div>`;
 }
 
 function renderTypes(){
@@ -218,16 +184,23 @@ function renderTypes(){
   const turlar = [...new Set(DATA.map(item => item.tur))].filter(Boolean);
   
   let html = `<div class="card type-card ${ACTIVE==="ALL"?"active":""}" onclick="selectTur('ALL')">
-                <div class="small">Hepsi</div>
-                <div class="big" style="font-size:14px">🏠</div>
+                <div class="small">HEPSİ</div>
+                <div class="trend">📊 Gözat</div>
               </div>`;
                  
   turlar.forEach(t=>{
-    const v=sum(DATA.filter(x=>x.tur===t),"guncelDeger");
+    const d = DATA.filter(x=>x.tur===t);
+    const g = sum(d, "guncelDeger"), yat = sum(d, "toplamYatirim");
+    const kz = g - yat;
+    const p = yat !== 0 ? ((kz / yat) * 100).toFixed(1) : 0;
+    const isPos = kz >= 0;
+
     html += `
       <div class="card type-card ${ACTIVE===t?"active":""}" onclick="selectTur('${t}')">
         <div class="small">${t}</div>
-        <div class="big" style="font-size:14px">${v.toLocaleString('tr-TR', {compactDisplay:'short', notation:'compact'})}</div>
+        <div class="trend ${isPos?'pos':'neg'}">
+          ${isPos?'▲':'▼'} %${Math.abs(p)}
+        </div>
       </div>`;
   });
   c.innerHTML = html;
@@ -235,20 +208,15 @@ function renderTypes(){
 
 function renderPeriods(){
   const d = filterTur(ACTIVE);
-  const p = [
-    ["Günlük","gunluk"], ["Haftalık","haftalik"], ["Aylık","aylik"],
-    ["3 Aylık","ucAylik"], ["6 Aylık","altiAylik"], ["1 Yıllık","birYillik"]
-  ];
+  const p = [["Günlük","gunluk"], ["Haftalık","haftalik"], ["Aylık","aylik"], ["3 Ay","ucAylik"], ["6 Ay","altiAylik"], ["1 Yıl","birYillik"]];
 
-  document.getElementById("periods").innerHTML =
-    p.map(x=>{
-      const v = sum(d, x[1]);
-      return `
-      <div class="card ${v>=0?"pos":"neg"}">
-        <div class="small">${x[0]} K/Z</div>
-        <div class="big">${formatTRY(v)}</div>
-      </div>`;
-    }).join("");
+  document.getElementById("periods").innerHTML = p.map(x=>{
+    const v = sum(d,x[1]);
+    return `<div class="card ${v>=0?"pos":"neg"}">
+              <div class="small">${x[0]}</div>
+              <div class="big">${formatTRY(v)}</div>
+            </div>`;
+  }).join("");
 }
 
 function selectTur(t){
@@ -256,6 +224,5 @@ function selectTur(t){
   renderAll();
 }
 </script>
-
 </body>
 </html>
