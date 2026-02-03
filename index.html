@@ -2,168 +2,71 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Portföy Dashboard</title>
 
 <style>
-body{
-  font-family: Inter, Arial, sans-serif;
-  background:#0f1115;
-  color:#eaeaea;
-  margin:0;
-}
-.container{
-  max-width:1200px;
-  margin:auto;
-  padding:16px;
-}
-h1{
-  margin:0 0 16px;
-}
-.grid{
-  display:grid;
-  grid-template-columns: repeat(auto-fit,minmax(220px,1fr));
-  gap:12px;
-}
-.card{
-  background:#1a1d24;
-  border-radius:12px;
-  padding:16px;
-}
-.card h3{
-  margin:0 0 8px;
-  font-size:14px;
-  color:#9aa0a6;
-}
-.card .value{
-  font-size:22px;
-  font-weight:600;
-}
-.positive{ color:#3ddc84 }
-.negative{ color:#ff6b6b }
-
-.filters{
-  margin:16px 0;
-  display:flex;
-  gap:8px;
-  flex-wrap:wrap;
-}
-button{
-  background:#242833;
-  color:#fff;
-  border:none;
-  padding:8px 14px;
-  border-radius:8px;
-  cursor:pointer;
-}
-button.active{
-  background:#3b82f6;
-}
+body { font-family: Arial; background:#0f172a; color:#fff; margin:0; padding:20px }
+.grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:15px }
+.card { background:#111827; padding:15px; border-radius:10px }
+.green{color:#22c55e} .red{color:#ef4444}
+.yellow{color:#eab308} .black{color:#000}
+select { padding:8px; border-radius:6px }
 </style>
 </head>
 
 <body>
-<div class="container">
-  <h1>📊 Portföy Dashboard</h1>
 
-  <!-- ÜST KARTLAR -->
-  <div class="grid">
-    <div class="card">
-      <h3>Toplam Yatırım</h3>
-      <div class="value" id="toplamYatirim">-</div>
-    </div>
-    <div class="card">
-      <h3>Güncel Değer</h3>
-      <div class="value" id="guncelDeger">-</div>
-    </div>
-    <div class="card">
-      <h3>Toplam K/Z</h3>
-      <div class="value" id="toplamKZ">-</div>
-    </div>
-  </div>
+<h2>📊 Portföy Dashboard</h2>
 
-  <!-- FİLTRE -->
-  <div class="filters">
-    <button class="active" onclick="applyFilter(null,this)">Tümü</button>
-    <button onclick="applyFilter('Hisse',this)">Hisse</button>
-    <button onclick="applyFilter('Mevduat',this)">Mevduat</button>
-    <button onclick="applyFilter('Bono',this)">Bono</button>
-  </div>
+<select id="turFilter">
+  <option value="ALL">Tümü</option>
+  <option value="Hisse">Hisse</option>
+  <option value="Fon">Fon</option>
+  <option value="Mevduat">Mevduat</option>
+  <option value="Bono">Bono</option>
+</select>
 
-  <!-- ALT KARTLAR -->
-  <div class="grid">
-    <div class="card"><h3>Günlük K/Z</h3><div class="value" id="gunluk">-</div></div>
-    <div class="card"><h3>Haftalık K/Z</h3><div class="value" id="haftalik">-</div></div>
-    <div class="card"><h3>Aylık K/Z</h3><div class="value" id="aylik">-</div></div>
-    <div class="card"><h3>3 Aylık K/Z</h3><div class="value" id="ucAylik">-</div></div>
-    <div class="card"><h3>6 Aylık K/Z</h3><div class="value" id="altiAylik">-</div></div>
-    <div class="card"><h3>1 Yıllık K/Z</h3><div class="value" id="birYillik">-</div></div>
-  </div>
-</div>
+<div class="grid" id="cards"></div>
 
 <script>
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQLPFVZn0j8Ygu914QDGRCGKsVy88gWjdk7DFi-jWiydmqYsdGUE4hEAb-R_IBzQmtFZwoMJFcN6rlD/pub?gid=1050165900&single=true&output=csv";
 
-let RAW_DATA = [];
-let CURRENT_DATA = [];
-
 fetch(CSV_URL)
-.then(r=>r.text())
-.then(csv=>{
-  const rows = csv.split("\n").map(r=>r.split(","));
-  rows.shift();
+.then(r => r.text())
+.then(text => {
+  const lines = text.trim().split("\n");
+  const headers = lines.shift().split(",");
 
-  RAW_DATA = rows.map(r=>({
-    urun:r[0],
-    tur:r[1],
-    toplamYatirim:+r[2]||0,
-    guncelDeger:+r[3]||0,
-    gunluk:+r[4]||0,
-    haftalik:+r[5]||0,
-    aylik:+r[6]||0,
-    ucAylik:+r[7]||0,
-    altiAylik:+r[8]||0,
-    birYillik:+r[9]||0
-  }));
+  const data = lines.map(l => {
+    const v = l.split(",");
+    let o = {};
+    headers.forEach((h,i)=> o[h]=isNaN(v[i])?v[i]:Number(v[i]));
+    return o;
+  });
 
-  CURRENT_DATA = RAW_DATA;
-  renderAll();
+  render(data);
+
+  document.getElementById("turFilter").onchange = e =>
+    render(e.target.value==="ALL"?data:data.filter(d=>d.tur===e.target.value));
 });
 
-function applyFilter(type,btn){
-  document.querySelectorAll("button").forEach(b=>b.classList.remove("active"));
-  btn.classList.add("active");
+function sum(arr,key){return arr.reduce((a,b)=>a+(b[key]||0),0)}
 
-  CURRENT_DATA = type ? RAW_DATA.filter(d=>d.tur===type) : RAW_DATA;
-  renderAll();
-}
-
-function sum(key){
-  return CURRENT_DATA.reduce((a,b)=>a+(b[key]||0),0);
-}
-
-function setVal(id,val){
-  const el=document.getElementById(id);
-  el.innerText = val.toLocaleString("tr-TR",{maximumFractionDigits:2});
-  el.className="value "+(val>=0?"positive":"negative");
-}
-
-function renderAll(){
-  const toplamYatirim = sum("toplamYatirim");
-  const guncelDeger = sum("guncelDeger");
-  const toplamKZ = guncelDeger - toplamYatirim;
-
-  setVal("toplamYatirim",toplamYatirim);
-  setVal("guncelDeger",guncelDeger);
-  setVal("toplamKZ",toplamKZ);
-
-  setVal("gunluk",sum("gunluk"));
-  setVal("haftalik",sum("haftalik"));
-  setVal("aylik",sum("aylik"));
-  setVal("ucAylik",sum("ucAylik"));
-  setVal("altiAylik",sum("altiAylik"));
-  setVal("birYillik",sum("birYillik"));
+function render(d){
+  const cards = document.getElementById("cards");
+  cards.innerHTML = `
+    <div class="card">Toplam Yatırım<br><b>${sum(d,"toplamYatirim").toLocaleString()}</b></div>
+    <div class="card">Güncel Değer<br><b>${sum(d,"guncelDeger").toLocaleString()}</b></div>
+    <div class="card ${sum(d,"gunluk")>=0?"green":"red"}">Günlük K/Z<br><b>${sum(d,"gunluk").toLocaleString()}</b></div>
+    <div class="card ${sum(d,"haftalik")>=0?"green":"red"}">Haftalık K/Z<br><b>${sum(d,"haftalik").toLocaleString()}</b></div>
+    <div class="card ${sum(d,"aylik")>=0?"green":"red"}">Aylık K/Z<br><b>${sum(d,"aylik").toLocaleString()}</b></div>
+    <div class="card ${sum(d,"ucAylik")>=0?"green":"red"}">3 Aylık K/Z<br><b>${sum(d,"ucAylik").toLocaleString()}</b></div>
+    <div class="card ${sum(d,"altiAylik")>=0?"green":"red"}">6 Aylık K/Z<br><b>${sum(d,"altiAylik").toLocaleString()}</b></div>
+    <div class="card ${sum(d,"birYillik")>=0?"green":"red"}">1 Yıllık K/Z<br><b>${sum(d,"birYillik").toLocaleString()}</b></div>
+  `;
 }
 </script>
+
 </body>
 </html>
