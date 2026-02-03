@@ -7,12 +7,8 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-:root{
-  --bg:#0b1220; --card:#111827; --line:#1f2937; --pos:#22c55e; --neg:#ef4444; --accent:#3b82f6;
-}
-
+:root{ --bg:#0b1220; --card:#111827; --line:#1f2937; --pos:#22c55e; --neg:#ef4444; --accent:#3b82f6; }
 body{ margin:0; background:var(--bg); color:#e5e7eb; font-family:system-ui, -apple-system, sans-serif; }
-
 h2{ margin:8px 16px 4px; font-size:10px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.6; }
 
 .header-section {
@@ -22,7 +18,6 @@ h2{ margin:8px 16px 4px; font-size:10px; text-transform: uppercase; letter-spaci
 }
 
 .content-section { padding: 10px; }
-
 .grid-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 8px; }
 .grid-types { display: grid; grid-template-columns: repeat(auto-fill, minmax(105px, 1fr)); gap: 8px; }
 .grid-periods { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
@@ -35,24 +30,14 @@ h2{ margin:8px 16px 4px; font-size:10px; text-transform: uppercase; letter-spaci
 
 .big { font-size: 14px; font-weight: 700; margin-top: 2px; }
 .small { font-size: 8px; font-weight: 600; opacity: .5; text-transform: uppercase; }
-.trend-val { font-size: 10px; font-weight: bold; margin-top: 2px; }
-.trend-amt { font-size: 9px; opacity: 0.8; margin-top: 1px; }
-
-.pos { color: var(--pos) }
-.neg { color: var(--neg) }
-
-.panic { box-shadow: inset 0 0 10px rgba(239, 68, 68, 0.3); border-color: var(--neg); }
+.pos { color: var(--pos) } .neg { color: var(--neg) }
 
 .type-card { cursor: pointer; opacity: 0.8; text-align: center; }
 .type-card.active { border-color: var(--accent); opacity: 1; background: rgba(59, 130, 246, 0.15); }
 
-/* Grafik alanı küçültüldü */
 #chart-container { height: 110px; margin-bottom: 8px; display: flex; justify-content: center; }
 
-@media (min-width: 768px) {
-  .grid-periods { grid-template-columns: repeat(3, 1fr); }
-  .big { font-size: 16px; }
-}
+@media (min-width: 768px) { .grid-periods { grid-template-columns: repeat(3, 1fr); } }
 </style>
 </head>
 
@@ -61,11 +46,7 @@ h2{ margin:8px 16px 4px; font-size:10px; text-transform: uppercase; letter-spaci
 <div id="app">
   <div class="header-section">
     <div class="grid-summary" id="summary"></div>
-    
-    <div id="chart-container">
-      <canvas id="distChart"></canvas>
-    </div>
-
+    <div id="chart-container"><canvas id="distChart"></canvas></div>
     <h2>💼 Günlük Değişim</h2>
     <div class="grid-types" id="types"></div>
   </div>
@@ -81,6 +62,7 @@ const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQLPFVZn0j8Ygu9
 
 let DATA=[], ACTIVE="ALL", myChart = null;
 
+// Stabil çalışan ilk parser mantığına dönüş
 function parseCSV(text){
   const rows=[];
   let row=[], cur="", inQuotes=false;
@@ -97,29 +79,40 @@ function parseCSV(text){
   return rows;
 }
 
+// Güvenli sayı dönüştürücü
 function toNumber(v){
   if(!v) return 0;
-  let clean = v.replace(/\s/g, "").replace(/\./g, "").replace(",", ".");
+  // Sadece boşlukları temizleyip nokta-virgül standardını ayarlar
+  let clean = v.toString().replace(/\s/g, "").replace(/\./g, "").replace(",", ".");
   return parseFloat(clean) || 0;
 }
 
-function formatTRY(val) {
-  return val.toLocaleString('tr-TR', { maximumFractionDigits: 0 }) + " ₺";
-}
+const formatTRY = v => v.toLocaleString('tr-TR', { maximumFractionDigits: 0 }) + " ₺";
 
 fetch(CSV_URL).then(r=>r.text()).then(t=>{
   const rows = parseCSV(t.trim());
   const headers = rows.shift().map(h => h.replace(/[\r\n]+/g, "").trim());
   DATA = rows.map(r => {
     let o = {};
-    headers.forEach((h, i) => { if(h) o[h] = (h==="urun"||h==="tur") ? r[i] : toNumber(r[i]); });
+    headers.forEach((h, i) => { 
+      if(h) {
+        // "tur" ve "urun" sütunlarını temizle
+        if(h === "urun" || h === "tur") o[h] = r[i] ? r[i].toString().trim() : "";
+        else o[h] = toNumber(r[i]);
+      }
+    });
     return o;
   });
   renderAll();
 });
 
 const sum=(arr,key)=>arr.reduce((a,b)=>a+(b[key]||0),0);
-const filterTur=t=>t==="ALL"?DATA:DATA.filter(x=>x.tur===t);
+
+// Filtreleme mantığını güvenli hale getiriyoruz
+function filterTur(t){
+  if(t === "ALL") return DATA;
+  return DATA.filter(x => x.tur && x.tur.toUpperCase() === t.toUpperCase());
+}
 
 function renderAll(){
   renderSummary();
@@ -139,34 +132,34 @@ function renderSummary(){
     <div class="card ${kz>=0?"pos":"neg"}">
       <div class="small">Toplam K/Z</div>
       <div class="big">${kz>=0?'+':''}${p}%</div>
-      <div class="trend-amt" style="font-weight:bold">${formatTRY(kz)}</div>
+      <div style="font-size:9px; font-weight:bold">${formatTRY(kz)}</div>
     </div>`;
 }
 
 function renderTypes(){
   const c = document.getElementById("types");
-  const turlar = [...new Set(DATA.map(item => item.tur))].filter(Boolean);
+  const turlar = [...new Set(DATA.map(item => item.tur ? item.tur.trim() : ""))].filter(Boolean);
   
   const totalG = sum(DATA, "guncelDeger"), totalK = sum(DATA, "gunluk");
   const totalP = (totalG - totalK) !== 0 ? ((totalK / (totalG - totalK)) * 100).toFixed(2) : 0;
 
   let html = `<div class="card type-card ${ACTIVE==="ALL"?"active":""}" onclick="selectTur('ALL')">
                 <div class="small">GENEL</div>
-                <div class="trend-val ${totalK>=0?'pos':'neg'}">${totalK>=0?'▲':'▼'} %${Math.abs(totalP)}</div>
-                <div class="trend-amt ${totalK>=0?'pos':'neg'}">${formatTRY(totalK)}</div>
+                <div class="${totalK>=0?'pos':'neg'}" style="font-size:10px; font-weight:bold">${totalK>=0?'▲':'▼'} %${Math.abs(totalP)}</div>
+                <div style="font-size:9px">${formatTRY(totalK)}</div>
               </div>`;
                  
   turlar.forEach(t=>{
-    const d = DATA.filter(x=>x.tur===t);
+    const d = DATA.filter(x => x.tur && x.tur.toUpperCase() === t.toUpperCase());
     const guncel = sum(d, "guncelDeger"), gunluk = sum(d, "gunluk");
     const p = (guncel - gunluk) !== 0 ? ((gunluk / (guncel - gunluk)) * 100).toFixed(2) : 0;
     const isPos = gunluk >= 0;
 
     html += `
-      <div class="card type-card ${ACTIVE===t?"active":""} ${p <= -3 ? 'panic' : ''}" onclick="selectTur('${t}')">
-        <div class="small">${t}</div>
-        <div class="trend-val ${isPos?'pos':'neg'}">${isPos?'▲':'▼'} %${Math.abs(p)}</div>
-        <div class="trend-amt ${isPos?'pos':'neg'}">${formatTRY(gunluk)}</div>
+      <div class="card type-card ${ACTIVE.toUpperCase()===t.toUpperCase()?"active":""}" onclick="selectTur('${t}')">
+        <div class="small">${t.toUpperCase()}</div>
+        <div class="${isPos?'pos':'neg'}" style="font-size:10px; font-weight:bold">${isPos?'▲':'▼'} %${Math.abs(p)}</div>
+        <div style="font-size:9px">${formatTRY(gunluk)}</div>
       </div>`;
   });
   c.innerHTML = html;
@@ -189,8 +182,8 @@ function renderPeriods(){
 }
 
 function updateChart(){
-  const turlar = [...new Set(DATA.map(item => item.tur))].filter(Boolean);
-  const values = turlar.map(t => sum(DATA.filter(x=>x.tur===t), "guncelDeger"));
+  const turlar = [...new Set(DATA.map(item => item.tur ? item.tur.trim() : ""))].filter(Boolean);
+  const values = turlar.map(t => sum(DATA.filter(x=>x.tur && x.tur.toUpperCase() === t.toUpperCase()), "guncelDeger"));
 
   if(myChart) myChart.destroy();
   const ctx = document.getElementById('distChart').getContext('2d');
@@ -212,7 +205,7 @@ function updateChart(){
 }
 
 function selectTur(t){
-  ACTIVE = (ACTIVE===t) ? "ALL" : t;
+  ACTIVE = t;
   renderAll();
 }
 </script>
