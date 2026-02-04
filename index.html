@@ -3,64 +3,46 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<title>Portföy Terminali</title>
+<title>Portföy Terminali Pro</title>
 <style>
 :root{ --bg:#0b1220; --card:#111827; --line:#1f2937; --pos:#22c55e; --neg:#ef4444; --accent:#3b82f6; }
 body{ margin:0; background:var(--bg); color:#e5e7eb; font-family:system-ui, -apple-system, sans-serif; overflow-x: hidden; }
-h2{ margin:8px 16px 4px; font-size:10px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.6; }
+h2{ margin:15px 16px 8px; font-size:11px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.6; }
 
-/* Yenilenmiş Kayan Yazı Tasarımı */
-.ticker-wrap {
-  width: 100%; overflow: hidden; background: #1a2234; 
-  border-bottom: 2px solid var(--line); padding: 12px 0;
-  display: flex;
-}
-.ticker {
-  display: flex; white-space: nowrap; 
-  animation: ticker-move 25s linear infinite; /* Hızı buradan ayarlayabilirsin */
-}
-.ticker-item {
-  display: flex; align-items: center; padding: 0 25px; 
-  font-size: 15px; /* Font büyütüldü */
-  font-weight: 800; border-right: 1px solid rgba(255,255,255,0.1);
-}
-@keyframes ticker-move {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(-50%); } /* Döngü için -50% */
-}
+/* Kayan Yazı - Daha Yavaş */
+.ticker-wrap { width: 100%; overflow: hidden; background: #1a2234; border-bottom: 2px solid var(--line); padding: 12px 0; display: flex; }
+.ticker { display: flex; white-space: nowrap; animation: ticker-move 40s linear infinite; }
+.ticker-item { display: flex; align-items: center; padding: 0 25px; font-size: 16px; font-weight: 800; border-right: 1px solid rgba(255,255,255,0.1); }
+@keyframes ticker-move { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
 
-.header-section {
-  position: sticky; top: 0; z-index: 100;
-  background: rgba(11, 18, 32, 0.95); backdrop-filter: blur(15px);
-  border-bottom: 1px solid var(--line); padding: 10px;
-}
-
+.header-section { position: sticky; top: 0; z-index: 100; background: rgba(11, 18, 32, 0.95); backdrop-filter: blur(15px); border-bottom: 1px solid var(--line); padding: 10px; }
 .grid-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 12px; }
 .grid-types { display: grid; grid-template-columns: repeat(auto-fill, minmax(105px, 1fr)); gap: 8px; }
-.grid-periods { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; padding: 10px; }
+.grid-periods { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; padding: 0 10px; }
 
-.card {
-  background: linear-gradient(145deg, var(--card), #161e2e);
-  border-radius: 12px; padding: 10px; border: 1px solid var(--line);
-  display: flex; flex-direction: column; transition: 0.3s;
-}
-
+.card { background: linear-gradient(145deg, var(--card), #161e2e); border-radius: 12px; padding: 10px; border: 1px solid var(--line); display: flex; flex-direction: column; transition: 0.3s; }
 .big { font-size: 14px; font-weight: 700; margin-top: 2px; }
 .small { font-size: 8px; font-weight: 600; opacity: .5; text-transform: uppercase; }
 .pos { color: var(--pos) } .neg { color: var(--neg) }
 
-.type-card { cursor: pointer; opacity: 0.8; text-align: center; }
-.type-card.active { border-color: var(--accent); opacity: 1; background: rgba(59, 130, 246, 0.15); }
+.type-card { cursor: pointer; opacity: 0.7; text-align: center; }
+.type-card.active { border-color: var(--accent); opacity: 1; background: rgba(59, 130, 246, 0.15); box-shadow: 0 0 15px rgba(59,130,246,0.2); }
+
+/* Ürün Detay Listesi */
+.detail-section { padding: 10px 10px 30px; }
+.detail-item { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+.detail-info div:first-child { font-weight: 800; font-size: 13px; color: #fff; }
+.detail-info div:last-child { font-size: 10px; opacity: 0.6; }
+.detail-values { text-align: right; }
+.detail-val { font-weight: 700; font-size: 13px; }
+.detail-perc { font-size: 11px; font-weight: 600; }
 
 @media (min-width: 768px) { .grid-periods { grid-template-columns: repeat(3, 1fr); } }
 </style>
 </head>
-
 <body>
 
-<div class="ticker-wrap">
-  <div class="ticker" id="ticker-content">Veriler Çekiliyor...</div>
-</div>
+<div class="ticker-wrap"><div class="ticker" id="ticker-content">...</div></div>
 
 <div id="app">
   <div class="header-section">
@@ -72,13 +54,17 @@ h2{ margin:8px 16px 4px; font-size:10px; text-transform: uppercase; letter-spaci
   <div class="content-section">
     <h2>📈 Dönemsel Performans</h2>
     <div id="periods" class="grid-periods"></div>
+    
+    <div id="detail-container" class="detail-section">
+      <h2 id="detail-title">📦 Ürün Detayları</h2>
+      <div id="detail-list"></div>
+    </div>
   </div>
 </div>
 
 <script>
 const BASE_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQLPFVZn0j8Ygu914QDGRCGKsVy88gWjdk7DFi-jWiydmqYsdGUE4hEAb-R_IBzQmtFZwoMJFcN6rlD/pub?gid=1050165900&single=true&output=csv";
 const CSV_URL = BASE_URL + "&t=" + new Date().getTime();
-
 let DATA=[], ACTIVE="ALL";
 
 function parseCSV(text){
@@ -127,20 +113,16 @@ function filterTur(t){
 }
 
 function renderAll(){
-  renderSummary(); renderTypes(); renderPeriods(); renderTicker();
+  renderSummary(); renderTypes(); renderPeriods(); renderTicker(); renderDetails();
 }
 
 function renderTicker() {
   const container = document.getElementById("ticker-content");
   const items = DATA.map(d => {
     const p = (d.guncelDeger - d.gunluk) !== 0 ? ((d.gunluk / (d.guncelDeger - d.gunluk)) * 100).toFixed(2) : 0;
-    const color = d.gunluk >= 0 ? 'var(--pos)' : 'var(--neg)';
-    const icon = d.gunluk >= 0 ? '▲' : '▼';
-    return `<div class="ticker-item" style="color:${color}">${d.urun} ${icon} %${Math.abs(p)}</div>`;
+    return `<div class="ticker-item" style="color:${d.gunluk>=0?'var(--pos)':'var(--neg)'}">${d.urun} ${d.gunluk>=0?'▲':'▼'} %${Math.abs(p)}</div>`;
   }).join("");
-  
-  // Kesintisiz akış için içeriği klonluyoruz
-  container.innerHTML = items + items + items;
+  container.innerHTML = items + items;
 }
 
 function renderSummary(){
@@ -185,6 +167,30 @@ function renderPeriods(){
     const v = sum(d,x[1]);
     const perc = t !== 0 ? ((v / t) * 100).toFixed(1) : 0;
     return `<div class="card ${v>=0?"pos":"neg"}"><div class="small">${x[0]}</div><div class="big">${formatTRY(v)}</div><div style="font-size:9px; font-weight:bold; margin-top:1px;">${v>=0?'+':''}${perc}%</div></div>`;
+  }).join("");
+}
+
+function renderDetails() {
+  const list = document.getElementById("detail-list");
+  const title = document.getElementById("detail-title");
+  const filteredData = filterTur(ACTIVE);
+  
+  title.innerText = ACTIVE === "ALL" ? "📦 TÜM ÜRÜNLERİN DETAYI" : `📦 ${ACTIVE.toUpperCase()} DETAYLARI`;
+  
+  list.innerHTML = filteredData.map(item => {
+    const kz = item.guncelDeger - item.toplamYatirim;
+    const perc = item.toplamYatirim !== 0 ? ((kz / item.toplamYatirim) * 100).toFixed(1) : 0;
+    return `
+      <div class="detail-item">
+        <div class="detail-info">
+          <div>${item.urun}</div>
+          <div>Maliyet: ${formatTRY(item.toplamYatirim)}</div>
+        </div>
+        <div class="detail-values">
+          <div class="detail-val">${formatTRY(item.guncelDeger)}</div>
+          <div class="detail-perc ${kz>=0?'pos':'neg'}">${kz>=0?'+':''}${perc}% (${formatTRY(kz)})</div>
+        </div>
+      </div>`;
   }).join("");
 }
 
