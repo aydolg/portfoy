@@ -9,21 +9,24 @@
 body{ margin:0; background:var(--bg); color:#e5e7eb; font-family:system-ui, -apple-system, sans-serif; overflow-x: hidden; }
 h2{ margin:8px 16px 4px; font-size:10px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.6; }
 
-/* Kayan Yazı Tasarımı */
+/* Yenilenmiş Kayan Yazı Tasarımı */
 .ticker-wrap {
   width: 100%; overflow: hidden; background: #1a2234; 
-  border-bottom: 1px solid var(--line); padding: 6px 0;
+  border-bottom: 2px solid var(--line); padding: 12px 0;
+  display: flex;
 }
 .ticker {
-  display: inline-block; white-space: nowrap; padding-right: 100%;
-  animation: ticker 30s linear infinite;
+  display: flex; white-space: nowrap; 
+  animation: ticker-move 25s linear infinite; /* Hızı buradan ayarlayabilirsin */
 }
 .ticker-item {
-  display: inline-block; padding: 0 15px; font-size: 11px; font-weight: bold;
+  display: flex; align-items: center; padding: 0 25px; 
+  font-size: 15px; /* Font büyütüldü */
+  font-weight: 800; border-right: 1px solid rgba(255,255,255,0.1);
 }
-@keyframes ticker {
-  0% { transform: translate3d(0, 0, 0); }
-  100% { transform: translate3d(-100%, 0, 0); }
+@keyframes ticker-move {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); } /* Döngü için -50% */
 }
 
 .header-section {
@@ -56,7 +59,7 @@ h2{ margin:8px 16px 4px; font-size:10px; text-transform: uppercase; letter-spaci
 <body>
 
 <div class="ticker-wrap">
-  <div class="ticker" id="ticker-content">Yükleniyor...</div>
+  <div class="ticker" id="ticker-content">Veriler Çekiliyor...</div>
 </div>
 
 <div id="app">
@@ -128,16 +131,16 @@ function renderAll(){
 }
 
 function renderTicker() {
-  const content = document.getElementById("ticker-content");
-  // Ürünlerin günlük yüzdelerini hesapla ve şeridi oluştur
+  const container = document.getElementById("ticker-content");
   const items = DATA.map(d => {
     const p = (d.guncelDeger - d.gunluk) !== 0 ? ((d.gunluk / (d.guncelDeger - d.gunluk)) * 100).toFixed(2) : 0;
     const color = d.gunluk >= 0 ? 'var(--pos)' : 'var(--neg)';
     const icon = d.gunluk >= 0 ? '▲' : '▼';
-    return `<span class="ticker-item" style="color:${color}">${d.urun} ${icon} %${Math.abs(p)}</span>`;
+    return `<div class="ticker-item" style="color:${color}">${d.urun} ${icon} %${Math.abs(p)}</div>`;
   }).join("");
-  // Yazının kesintisiz dönmesi için içeriği iki kez basıyoruz
-  content.innerHTML = items + items;
+  
+  // Kesintisiz akış için içeriği klonluyoruz
+  container.innerHTML = items + items + items;
 }
 
 function renderSummary(){
