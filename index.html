@@ -3,13 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<title>Portföy Terminali Pro</title>
+<title>Portföy Terminali Pro+</title>
 <style>
 :root{ --bg:#0b1220; --card:#111827; --line:#1f2937; --pos:#22c55e; --neg:#ef4444; --accent:#3b82f6; }
 body{ margin:0; background:var(--bg); color:#e5e7eb; font-family:system-ui, -apple-system, sans-serif; overflow-x: hidden; }
 h2{ margin:15px 16px 8px; font-size:11px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.6; }
 
-/* Kayan Yazı - Daha Yavaş */
 .ticker-wrap { width: 100%; overflow: hidden; background: #1a2234; border-bottom: 2px solid var(--line); padding: 12px 0; display: flex; }
 .ticker { display: flex; white-space: nowrap; animation: ticker-move 40s linear infinite; }
 .ticker-item { display: flex; align-items: center; padding: 0 25px; font-size: 16px; font-weight: 800; border-right: 1px solid rgba(255,255,255,0.1); }
@@ -28,7 +27,6 @@ h2{ margin:15px 16px 8px; font-size:11px; text-transform: uppercase; letter-spac
 .type-card { cursor: pointer; opacity: 0.7; text-align: center; }
 .type-card.active { border-color: var(--accent); opacity: 1; background: rgba(59, 130, 246, 0.15); box-shadow: 0 0 15px rgba(59,130,246,0.2); }
 
-/* Ürün Detay Listesi */
 .detail-section { padding: 10px 10px 30px; }
 .detail-item { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
 .detail-info div:first-child { font-weight: 800; font-size: 13px; color: #fff; }
@@ -37,14 +35,17 @@ h2{ margin:15px 16px 8px; font-size:11px; text-transform: uppercase; letter-spac
 .detail-val { font-weight: 700; font-size: 13px; }
 .detail-perc { font-size: 11px; font-weight: 600; }
 
+#status-msg { text-align: center; font-size: 10px; color: var(--accent); padding: 5px; }
+
 @media (min-width: 768px) { .grid-periods { grid-template-columns: repeat(3, 1fr); } }
 </style>
 </head>
 <body>
 
-<div class="ticker-wrap"><div class="ticker" id="ticker-content">...</div></div>
+<div class="ticker-wrap"><div class="ticker" id="ticker-content">Veriler hazırlanıyor...</div></div>
 
 <div id="app">
+  <div id="status-msg">Bağlanıyor...</div>
   <div class="header-section">
     <div class="grid-summary" id="summary"></div>
     <h2>💼 Varlık Grupları</h2>
@@ -64,8 +65,8 @@ h2{ margin:15px 16px 8px; font-size:11px; text-transform: uppercase; letter-spac
 
 <script>
 const BASE_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQLPFVZn0j8Ygu914QDGRCGKsVy88gWjdk7DFi-jWiydmqYsdGUE4hEAb-R_IBzQmtFZwoMJFcN6rlD/pub?gid=1050165900&single=true&output=csv";
-const CSV_URL = BASE_URL + "&t=" + new Date().getTime();
-let DATA=[], ACTIVE="ALL";
+
+let DATA=[], ACTIVE="ALL", retryCount = 0;
 
 function parseCSV(text){
   const rows=[]; let row=[], cur="", inQuotes=false;
@@ -89,21 +90,45 @@ function toNumber(v){
 
 const formatTRY = v => v.toLocaleString('tr-TR', { maximumFractionDigits: 0 }) + " ₺";
 
-fetch(CSV_URL, { cache: "no-store" }).then(r=>r.text()).then(t=>{
-  const rows = parseCSV(t.trim());
-  const headers = rows.shift().map(h => h.replace(/[\r\n]+/g, "").trim());
-  DATA = rows.map(r => {
-    let o = {};
-    headers.forEach((h, i) => { 
-      if(h) {
+async function loadData() {
+  const status = document.getElementById("status-msg");
+  // Her istekte URL'yi tamamen benzersiz yapıyoruz
+  const finalURL = `${BASE_URL}&v=${Math.random()}&t=${new Date().getTime()}`;
+  
+  try {
+    const response = await fetch(finalURL, { cache: "no-cache", mode: 'cors' });
+    const text = await response.text();
+    const rows = parseCSV(text.trim());
+    
+    if (rows.length < 2) throw new Error("Eksik veri");
+
+    const headers = rows.shift().map(h => h.replace(/[\r\n]+/g, "").trim());
+    
+    // Veri bütünlüğü kontrolü
+    if (!headers.includes("tur") || !headers.includes("toplamYatirim")) throw new Error("Sütun hatası");
+
+    DATA = rows.map(r => {
+      let o = {};
+      headers.forEach((h, i) => { 
         if(h === "urun" || h === "tur") o[h] = r[i] ? r[i].toString().trim() : "";
         else o[h] = toNumber(r[i]);
-      }
+      });
+      return o;
     });
-    return o;
-  });
-  renderAll();
-});
+
+    status.style.display = "none";
+    renderAll();
+  } catch (err) {
+    console.error("Yükleme denemesi başarısız:", err);
+    if (retryCount < 5) {
+      retryCount++;
+      status.innerText = `Veri bekleniyor... (Deneme ${retryCount}/5)`;
+      setTimeout(loadData, 2000); // 2 saniye sonra tekrar dene
+    } else {
+      status.innerText = "Bağlantı zayıf. Lütfen sayfayı yenileyin.";
+    }
+  }
+}
 
 const sum=(arr,key)=>arr.reduce((a,b)=>a+(b[key]||0),0);
 
@@ -118,11 +143,12 @@ function renderAll(){
 
 function renderTicker() {
   const container = document.getElementById("ticker-content");
+  if(DATA.length === 0) return;
   const items = DATA.map(d => {
     const p = (d.guncelDeger - d.gunluk) !== 0 ? ((d.gunluk / (d.guncelDeger - d.gunluk)) * 100).toFixed(2) : 0;
     return `<div class="ticker-item" style="color:${d.gunluk>=0?'var(--pos)':'var(--neg)'}">${d.urun} ${d.gunluk>=0?'▲':'▼'} %${Math.abs(p)}</div>`;
   }).join("");
-  container.innerHTML = items + items;
+  container.innerHTML = items + items + items;
 }
 
 function renderSummary(){
@@ -174,18 +200,12 @@ function renderDetails() {
   const list = document.getElementById("detail-list");
   const title = document.getElementById("detail-title");
   const filteredData = filterTur(ACTIVE);
-  
   title.innerText = ACTIVE === "ALL" ? "📦 TÜM ÜRÜNLERİN DETAYI" : `📦 ${ACTIVE.toUpperCase()} DETAYLARI`;
-  
   list.innerHTML = filteredData.map(item => {
     const kz = item.guncelDeger - item.toplamYatirim;
     const perc = item.toplamYatirim !== 0 ? ((kz / item.toplamYatirim) * 100).toFixed(1) : 0;
-    return `
-      <div class="detail-item">
-        <div class="detail-info">
-          <div>${item.urun}</div>
-          <div>Maliyet: ${formatTRY(item.toplamYatirim)}</div>
-        </div>
+    return `<div class="detail-item">
+        <div class="detail-info"><div>${item.urun}</div><div>Maliyet: ${formatTRY(item.toplamYatirim)}</div></div>
         <div class="detail-values">
           <div class="detail-val">${formatTRY(item.guncelDeger)}</div>
           <div class="detail-perc ${kz>=0?'pos':'neg'}">${kz>=0?'+':''}${perc}% (${formatTRY(kz)})</div>
@@ -195,6 +215,9 @@ function renderDetails() {
 }
 
 function selectTur(t){ ACTIVE = t; renderAll(); }
+
+// Başlat
+loadData();
 </script>
 </body>
 </html>
