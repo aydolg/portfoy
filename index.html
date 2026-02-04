@@ -3,17 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<title>Portföy Terminali Pro+</title>
+<title>Portföy Terminali Pro Max</title>
 <style>
 :root{ --bg:#0b1220; --card:#111827; --line:#1f2937; --pos:#22c55e; --neg:#ef4444; --accent:#3b82f6; }
 body{ margin:0; background:var(--bg); color:#e5e7eb; font-family:system-ui, -apple-system, sans-serif; overflow-x: hidden; }
 h2{ margin:15px 16px 8px; font-size:11px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.6; }
 
+/* Ticker */
 .ticker-wrap { width: 100%; overflow: hidden; background: #1a2234; border-bottom: 2px solid var(--line); padding: 12px 0; display: flex; }
 .ticker { display: flex; white-space: nowrap; animation: ticker-move 40s linear infinite; }
 .ticker-item { display: flex; align-items: center; padding: 0 25px; font-size: 16px; font-weight: 800; border-right: 1px solid rgba(255,255,255,0.1); }
 @keyframes ticker-move { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
 
+/* Arayüz */
 .header-section { position: sticky; top: 0; z-index: 100; background: rgba(11, 18, 32, 0.95); backdrop-filter: blur(15px); border-bottom: 1px solid var(--line); padding: 10px; }
 .grid-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 12px; }
 .grid-types { display: grid; grid-template-columns: repeat(auto-fill, minmax(105px, 1fr)); gap: 8px; }
@@ -24,10 +26,9 @@ h2{ margin:15px 16px 8px; font-size:11px; text-transform: uppercase; letter-spac
 .small { font-size: 8px; font-weight: 600; opacity: .5; text-transform: uppercase; }
 .pos { color: var(--pos) } .neg { color: var(--neg) }
 
-.type-card { cursor: pointer; opacity: 0.7; text-align: center; }
-.type-card.active { border-color: var(--accent); opacity: 1; background: rgba(59, 130, 246, 0.15); box-shadow: 0 0 15px rgba(59,130,246,0.2); }
+.type-card { cursor: pointer; opacity: 0.7; text-align: center; border: 1px solid var(--line); }
+.type-card.active { border-color: var(--accent); opacity: 1; background: rgba(59, 130, 246, 0.15); box-shadow: 0 0 12px rgba(59,130,246,0.3); }
 
-.detail-section { padding: 10px 10px 30px; }
 .detail-item { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
 .detail-info div:first-child { font-weight: 800; font-size: 13px; color: #fff; }
 .detail-info div:last-child { font-size: 10px; opacity: 0.6; }
@@ -35,17 +36,15 @@ h2{ margin:15px 16px 8px; font-size:11px; text-transform: uppercase; letter-spac
 .detail-val { font-weight: 700; font-size: 13px; }
 .detail-perc { font-size: 11px; font-weight: 600; }
 
-#status-msg { text-align: center; font-size: 10px; color: var(--accent); padding: 5px; }
-
-@media (min-width: 768px) { .grid-periods { grid-template-columns: repeat(3, 1fr); } }
+#loader { position: fixed; top:0; left:0; width:100%; height:100%; background:var(--bg); z-index:999; display:flex; justify-content:center; align-items:center; font-weight:bold; color:var(--accent); }
 </style>
 </head>
 <body>
 
-<div class="ticker-wrap"><div class="ticker" id="ticker-content">Veriler hazırlanıyor...</div></div>
+<div id="loader">Veriler Analiz Ediliyor...</div>
+<div class="ticker-wrap"><div class="ticker" id="ticker-content"></div></div>
 
 <div id="app">
-  <div id="status-msg">Bağlanıyor...</div>
   <div class="header-section">
     <div class="grid-summary" id="summary"></div>
     <h2>💼 Varlık Grupları</h2>
@@ -55,169 +54,121 @@ h2{ margin:15px 16px 8px; font-size:11px; text-transform: uppercase; letter-spac
   <div class="content-section">
     <h2>📈 Dönemsel Performans</h2>
     <div id="periods" class="grid-periods"></div>
-    
-    <div id="detail-container" class="detail-section">
-      <h2 id="detail-title">📦 Ürün Detayları</h2>
-      <div id="detail-list"></div>
-    </div>
+    <h2 id="detail-title">📦 Ürün Detayları</h2>
+    <div id="detail-list" style="padding:10px;"></div>
   </div>
 </div>
 
 <script>
-const BASE_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQLPFVZn0j8Ygu914QDGRCGKsVy88gWjdk7DFi-jWiydmqYsdGUE4hEAb-R_IBzQmtFZwoMJFcN6rlD/pub?gid=1050165900&single=true&output=csv";
+const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQLPFVZn0j8Ygu914QDGRCGKsVy88gWjdk7DFi-jWiydmqYsdGUE4hEAb-R_IBzQmtFZwoMJFcN6rlD/pub?gid=1050165900&single=true&output=csv";
 
-let DATA=[], ACTIVE="ALL", retryCount = 0;
+let DATA=[], ACTIVE="ALL";
 
-function parseCSV(text){
-  const rows=[]; let row=[], cur="", inQuotes=false;
-  for(let i=0; i<text.length; i++){
-    const c=text[i];
-    if(c === '"') inQuotes = !inQuotes;
-    else if(c === "," && !inQuotes){ row.push(cur.trim()); cur=""; }
-    else if((c === "\n" || c === "\r") && !inQuotes){
-      if(cur || row.length > 0){ row.push(cur.trim()); rows.push(row); row=[]; cur=""; }
-    } else cur+=c;
-  }
-  if(cur || row.length > 0) { row.push(cur.trim()); rows.push(row); }
-  return rows;
+// Çok daha güçlü bir temizleyici
+const cleanStr = (s) => s ? s.toString().trim().replace(/\s+/g, ' ') : "";
+
+function parseCSV(str) {
+    const arr = []; let quote = false;
+    for (let row = col = c = 0; c < str.length; c++) {
+        let cc = str[c], nc = str[c+1];
+        arr[row] = arr[row] || []; arr[row][col] = arr[row][col] || '';
+        if (cc == '"' && quote && nc == '"') { arr[row][col] += cc; ++c; continue; }
+        if (cc == '"') { quote = !quote; continue; }
+        if (cc == ',' && !quote) { ++col; continue; }
+        if (cc == '\r' && nc == '\n' && !quote) { ++row; col = 0; ++c; continue; }
+        if (cc == '\n' && !quote) { ++row; col = 0; continue; }
+        arr[row][col] += cc;
+    }
+    return arr;
 }
 
 function toNumber(v){
-  if(!v) return 0;
-  let clean = v.toString().replace(/\s/g, "").replace(/\./g, "").replace(",", ".");
-  return parseFloat(clean) || 0;
+    if(!v) return 0;
+    let clean = v.toString().replace(/\s/g, "").replace(/\./g, "").replace(",", ".");
+    return parseFloat(clean) || 0;
 }
 
 const formatTRY = v => v.toLocaleString('tr-TR', { maximumFractionDigits: 0 }) + " ₺";
 
-async function loadData() {
-  const status = document.getElementById("status-msg");
-  // Her istekte URL'yi tamamen benzersiz yapıyoruz
-  const finalURL = `${BASE_URL}&v=${Math.random()}&t=${new Date().getTime()}`;
-  
-  try {
-    const response = await fetch(finalURL, { cache: "no-cache", mode: 'cors' });
-    const text = await response.text();
-    const rows = parseCSV(text.trim());
-    
-    if (rows.length < 2) throw new Error("Eksik veri");
+async function init() {
+    try {
+        const resp = await fetch(`${CSV_URL}&cachebuster=${Date.now()}`);
+        const text = await resp.text();
+        const rows = parseCSV(text.trim());
+        const rawHeaders = rows.shift();
+        const headers = rawHeaders.map(h => cleanStr(h));
 
-    const headers = rows.shift().map(h => h.replace(/[\r\n]+/g, "").trim());
-    
-    // Veri bütünlüğü kontrolü
-    if (!headers.includes("tur") || !headers.includes("toplamYatirim")) throw new Error("Sütun hatası");
+        DATA = rows.map(r => {
+            let o = {};
+            headers.forEach((h, i) => {
+                const val = r[i] ? r[i].toString() : "";
+                if(h === "urun" || h === "tur") o[h] = cleanStr(val);
+                else o[h] = toNumber(val);
+            });
+            return o;
+        }).filter(item => item.urun !== "" && item.toplamYatirim > 0);
 
-    DATA = rows.map(r => {
-      let o = {};
-      headers.forEach((h, i) => { 
-        if(h === "urun" || h === "tur") o[h] = r[i] ? r[i].toString().trim() : "";
-        else o[h] = toNumber(r[i]);
-      });
-      return o;
-    });
+        if (DATA.length === 0) throw "Veri hatası";
 
-    status.style.display = "none";
-    renderAll();
-  } catch (err) {
-    console.error("Yükleme denemesi başarısız:", err);
-    if (retryCount < 5) {
-      retryCount++;
-      status.innerText = `Veri bekleniyor... (Deneme ${retryCount}/5)`;
-      setTimeout(loadData, 2000); // 2 saniye sonra tekrar dene
-    } else {
-      status.innerText = "Bağlantı zayıf. Lütfen sayfayı yenileyin.";
+        document.getElementById("loader").style.display = "none";
+        renderAll();
+    } catch (e) {
+        setTimeout(init, 1000);
     }
-  }
 }
 
 const sum=(arr,key)=>arr.reduce((a,b)=>a+(b[key]||0),0);
 
-function filterTur(t){
-  if(t === "ALL") return DATA;
-  return DATA.filter(x => x.tur && x.tur.toString().trim().toUpperCase() === t.toUpperCase());
-}
-
 function renderAll(){
-  renderSummary(); renderTypes(); renderPeriods(); renderTicker(); renderDetails();
+    // Filtreleme yaparken "FON" ve "fon " gibi farkları ortadan kaldırıyoruz
+    const d = ACTIVE === "ALL" ? DATA : DATA.filter(x => cleanStr(x.tur).toUpperCase() === ACTIVE.toUpperCase());
+    
+    // Özet panel
+    const t = sum(d, "toplamYatirim"), g = sum(d, "guncelDeger"), kz = g - t;
+    const p = t !== 0 ? ((kz / t) * 100).toFixed(1) : 0;
+    document.getElementById("summary").innerHTML = `
+        <div class="card"><div class="small">Maliyet</div><div class="big">${formatTRY(t)}</div></div>
+        <div class="card"><div class="small">Güncel</div><div class="big">${formatTRY(g)}</div></div>
+        <div class="card ${kz>=0?"pos":"neg"}"><div class="small">Toplam K/Z</div><div class="big">${kz>=0?'+':''}${p}%</div><div style="font-size:9px; font-weight:bold">${formatTRY(kz)}</div></div>`;
+
+    // Tür Kartları (Varlık Grupları)
+    const turlar = [...new Set(DATA.map(item => cleanStr(item.tur)))].filter(Boolean);
+    let typeHtml = `<div class="card type-card ${ACTIVE==="ALL"?"active":""}" onclick="setFilter('ALL')"><div class="small">GENEL</div><div class="big" style="font-size:11px">HEPSİ</div></div>`;
+    turlar.forEach(tur => {
+        const sub = DATA.filter(x => cleanStr(x.tur) === tur);
+        const subKz = sum(sub, "guncelDeger") - sum(sub, "toplamYatirim");
+        typeHtml += `<div class="card type-card ${ACTIVE===tur?"active":""}" onclick="setFilter('${tur}')"><div class="small">${tur.toUpperCase()}</div><div class="big ${subKz>=0?'pos':'neg'}" style="font-size:11px">${formatTRY(subKz)}</div></div>`;
+    });
+    document.getElementById("types").innerHTML = typeHtml;
+
+    // Periyotlar
+    const periods = [["Günlük","gunluk"], ["Haftalık","haftalik"], ["Aylık","aylik"], ["3 Ay","ucAylik"], ["6 Ay","altiAylik"], ["1 Yıl","birYillik"]];
+    document.getElementById("periods").innerHTML = periods.map(x => {
+        const v = sum(d, x[1]);
+        return `<div class="card ${v>=0?"pos":"neg"}"><div class="small">${x[0]}</div><div class="big">${formatTRY(v)}</div></div>`;
+    }).join("");
+
+    // Alt Ürün Listesi
+    document.getElementById("detail-title").innerText = ACTIVE === "ALL" ? "📦 TÜM ÜRÜNLER" : `📦 ${ACTIVE.toUpperCase()} DETAYLARI`;
+    document.getElementById("detail-list").innerHTML = d.map(item => {
+        const itemKz = item.guncelDeger - item.toplamYatirim;
+        return `<div class="detail-item">
+            <div class="detail-info"><div>${item.urun}</div><div>Maliyet: ${formatTRY(item.toplamYatirim)}</div></div>
+            <div class="detail-values"><div class="detail-val">${formatTRY(item.guncelDeger)}</div><div class="detail-perc ${itemKz>=0?'pos':'neg'}">${formatTRY(itemKz)}</div></div>
+        </div>`;
+    }).join("");
+
+    // Kayan Ticker
+    const tickerItems = DATA.map(d => {
+        const perc = (d.guncelDeger - d.gunluk) !== 0 ? ((d.gunluk / (d.guncelDeger - d.gunluk)) * 100).toFixed(2) : 0;
+        return `<div class="ticker-item" style="color:${d.gunluk>=0?'var(--pos)':'var(--neg)'}">${d.urun} %${Math.abs(perc)}</div>`;
+    }).join("");
+    document.getElementById("ticker-content").innerHTML = tickerItems + tickerItems + tickerItems;
 }
 
-function renderTicker() {
-  const container = document.getElementById("ticker-content");
-  if(DATA.length === 0) return;
-  const items = DATA.map(d => {
-    const p = (d.guncelDeger - d.gunluk) !== 0 ? ((d.gunluk / (d.guncelDeger - d.gunluk)) * 100).toFixed(2) : 0;
-    return `<div class="ticker-item" style="color:${d.gunluk>=0?'var(--pos)':'var(--neg)'}">${d.urun} ${d.gunluk>=0?'▲':'▼'} %${Math.abs(p)}</div>`;
-  }).join("");
-  container.innerHTML = items + items + items;
-}
+function setFilter(t) { ACTIVE = t; renderAll(); }
 
-function renderSummary(){
-  const d = filterTur(ACTIVE);
-  const t = sum(d, "toplamYatirim"), g = sum(d, "guncelDeger"), kz = g - t;
-  const p = t !== 0 ? ((kz / t) * 100).toFixed(1) : 0;
-  document.getElementById("summary").innerHTML=`
-    <div class="card"><div class="small">Maliyet</div><div class="big">${formatTRY(t)}</div></div>
-    <div class="card"><div class="small">Güncel</div><div class="big">${formatTRY(g)}</div></div>
-    <div class="card ${kz>=0?"pos":"neg"}"><div class="small">Toplam K/Z</div><div class="big">${kz>=0?'+':''}${p}%</div><div style="font-size:9px; font-weight:bold">${formatTRY(kz)}</div></div>`;
-}
-
-function renderTypes(){
-  const c = document.getElementById("types");
-  const turlar = [...new Set(DATA.map(item => item.tur ? item.tur.toString().trim() : ""))].filter(Boolean);
-  const totalG = sum(DATA, "guncelDeger"), totalK = sum(DATA, "gunluk");
-  const totalP = (totalG - totalK) !== 0 ? ((totalK / (totalG - totalK)) * 100).toFixed(2) : 0;
-
-  let html = `<div class="card type-card ${ACTIVE==="ALL"?"active":""}" onclick="selectTur('ALL')">
-                <div class="small">GENEL</div>
-                <div class="${totalK>=0?'pos':'neg'}" style="font-size:10px; font-weight:bold">${totalK>=0?'▲':'▼'} %${Math.abs(totalP)}</div>
-                <div style="font-size:9px">${formatTRY(totalK)}</div>
-              </div>`;
-  turlar.forEach(t=>{
-    const d = DATA.filter(x => x.tur && x.tur.toUpperCase() === t.toUpperCase());
-    const guncel = sum(d, "guncelDeger"), gunluk = sum(d, "gunluk");
-    const p = (guncel - gunluk) !== 0 ? ((gunluk / (guncel - gunluk)) * 100).toFixed(2) : 0;
-    html += `<div class="card type-card ${ACTIVE.toUpperCase()===t.toUpperCase()?"active":""}" onclick="selectTur('${t}')">
-        <div class="small">${t.toUpperCase()}</div>
-        <div class="${gunluk>=0?'pos':'neg'}" style="font-size:10px; font-weight:bold">${gunluk>=0?'▲':'▼'} %${Math.abs(p)}</div>
-        <div style="font-size:9px">${formatTRY(gunluk)}</div>
-      </div>`;
-  });
-  c.innerHTML = html;
-}
-
-function renderPeriods(){
-  const d = filterTur(ACTIVE);
-  const t = sum(d, "toplamYatirim");
-  const pArr = [["Günlük","gunluk"], ["Haftalık","haftalik"], ["Aylık","aylik"], ["3 Ay","ucAylik"], ["6 Ay","altiAylik"], ["1 Yıl","birYillik"]];
-  document.getElementById("periods").innerHTML = pArr.map(x=>{
-    const v = sum(d,x[1]);
-    const perc = t !== 0 ? ((v / t) * 100).toFixed(1) : 0;
-    return `<div class="card ${v>=0?"pos":"neg"}"><div class="small">${x[0]}</div><div class="big">${formatTRY(v)}</div><div style="font-size:9px; font-weight:bold; margin-top:1px;">${v>=0?'+':''}${perc}%</div></div>`;
-  }).join("");
-}
-
-function renderDetails() {
-  const list = document.getElementById("detail-list");
-  const title = document.getElementById("detail-title");
-  const filteredData = filterTur(ACTIVE);
-  title.innerText = ACTIVE === "ALL" ? "📦 TÜM ÜRÜNLERİN DETAYI" : `📦 ${ACTIVE.toUpperCase()} DETAYLARI`;
-  list.innerHTML = filteredData.map(item => {
-    const kz = item.guncelDeger - item.toplamYatirim;
-    const perc = item.toplamYatirim !== 0 ? ((kz / item.toplamYatirim) * 100).toFixed(1) : 0;
-    return `<div class="detail-item">
-        <div class="detail-info"><div>${item.urun}</div><div>Maliyet: ${formatTRY(item.toplamYatirim)}</div></div>
-        <div class="detail-values">
-          <div class="detail-val">${formatTRY(item.guncelDeger)}</div>
-          <div class="detail-perc ${kz>=0?'pos':'neg'}">${kz>=0?'+':''}${perc}% (${formatTRY(kz)})</div>
-        </div>
-      </div>`;
-  }).join("");
-}
-
-function selectTur(t){ ACTIVE = t; renderAll(); }
-
-// Başlat
-loadData();
+init();
 </script>
 </body>
 </html>
