@@ -58,11 +58,12 @@ h2{ margin:8px 16px 4px; font-size:10px; text-transform: uppercase; letter-spaci
 </div>
 
 <script>
-const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQLPFVZn0j8Ygu914QDGRCGKsVy88gWjdk7DFi-jWiydmqYsdGUE4hEAb-R_IBzQmtFZwoMJFcN6rlD/pub?gid=1050165900&single=true&output=csv";
+// URL'ye her saniye değişen bir parametre ekleyerek önbelleği devre dışı bırakıyoruz
+const BASE_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQLPFVZn0j8Ygu914QDGRCGKsVy88gWjdk7DFi-jWiydmqYsdGUE4hEAb-R_IBzQmtFZwoMJFcN6rlD/pub?gid=1050165900&single=true&output=csv";
+const CSV_URL = BASE_URL + "&t=" + new Date().getTime();
 
 let DATA=[], ACTIVE="ALL", myChart = null;
 
-// Stabil çalışan ilk parser mantığına dönüş
 function parseCSV(text){
   const rows=[];
   let row=[], cur="", inQuotes=false;
@@ -79,24 +80,22 @@ function parseCSV(text){
   return rows;
 }
 
-// Güvenli sayı dönüştürücü
 function toNumber(v){
   if(!v) return 0;
-  // Sadece boşlukları temizleyip nokta-virgül standardını ayarlar
   let clean = v.toString().replace(/\s/g, "").replace(/\./g, "").replace(",", ".");
   return parseFloat(clean) || 0;
 }
 
 const formatTRY = v => v.toLocaleString('tr-TR', { maximumFractionDigits: 0 }) + " ₺";
 
-fetch(CSV_URL).then(r=>r.text()).then(t=>{
+// fetch kısmına önbellek kontrolü eklendi
+fetch(CSV_URL, { cache: "no-store" }).then(r=>r.text()).then(t=>{
   const rows = parseCSV(t.trim());
   const headers = rows.shift().map(h => h.replace(/[\r\n]+/g, "").trim());
   DATA = rows.map(r => {
     let o = {};
     headers.forEach((h, i) => { 
       if(h) {
-        // "tur" ve "urun" sütunlarını temizle
         if(h === "urun" || h === "tur") o[h] = r[i] ? r[i].toString().trim() : "";
         else o[h] = toNumber(r[i]);
       }
@@ -108,10 +107,10 @@ fetch(CSV_URL).then(r=>r.text()).then(t=>{
 
 const sum=(arr,key)=>arr.reduce((a,b)=>a+(b[key]||0),0);
 
-// Filtreleme mantığını güvenli hale getiriyoruz
 function filterTur(t){
   if(t === "ALL") return DATA;
-  return DATA.filter(x => x.tur && x.tur.toUpperCase() === t.toUpperCase());
+  // Hem büyük-küçük harf hem de görünmez karakterleri temizleyerek filtreliyoruz
+  return DATA.filter(x => x.tur && x.tur.toString().trim().toUpperCase() === t.toString().trim().toUpperCase());
 }
 
 function renderAll(){
@@ -138,7 +137,7 @@ function renderSummary(){
 
 function renderTypes(){
   const c = document.getElementById("types");
-  const turlar = [...new Set(DATA.map(item => item.tur ? item.tur.trim() : ""))].filter(Boolean);
+  const turlar = [...new Set(DATA.map(item => item.tur ? item.tur.toString().trim() : ""))].filter(Boolean);
   
   const totalG = sum(DATA, "guncelDeger"), totalK = sum(DATA, "gunluk");
   const totalP = (totalG - totalK) !== 0 ? ((totalK / (totalG - totalK)) * 100).toFixed(2) : 0;
@@ -150,13 +149,13 @@ function renderTypes(){
               </div>`;
                  
   turlar.forEach(t=>{
-    const d = DATA.filter(x => x.tur && x.tur.toUpperCase() === t.toUpperCase());
+    const d = DATA.filter(x => x.tur && x.tur.toString().trim().toUpperCase() === t.toUpperCase());
     const guncel = sum(d, "guncelDeger"), gunluk = sum(d, "gunluk");
     const p = (guncel - gunluk) !== 0 ? ((gunluk / (guncel - gunluk)) * 100).toFixed(2) : 0;
     const isPos = gunluk >= 0;
 
     html += `
-      <div class="card type-card ${ACTIVE.toUpperCase()===t.toUpperCase()?"active":""}" onclick="selectTur('${t}')">
+      <div class="card type-card ${ACTIVE.toString().toUpperCase()===t.toUpperCase()?"active":""}" onclick="selectTur('${t}')">
         <div class="small">${t.toUpperCase()}</div>
         <div class="${isPos?'pos':'neg'}" style="font-size:10px; font-weight:bold">${isPos?'▲':'▼'} %${Math.abs(p)}</div>
         <div style="font-size:9px">${formatTRY(gunluk)}</div>
@@ -182,8 +181,8 @@ function renderPeriods(){
 }
 
 function updateChart(){
-  const turlar = [...new Set(DATA.map(item => item.tur ? item.tur.trim() : ""))].filter(Boolean);
-  const values = turlar.map(t => sum(DATA.filter(x=>x.tur && x.tur.toUpperCase() === t.toUpperCase()), "guncelDeger"));
+  const turlar = [...new Set(DATA.map(item => item.tur ? item.tur.toString().trim() : ""))].filter(Boolean);
+  const values = turlar.map(t => sum(DATA.filter(x=>x.tur && x.tur.toString().trim().toUpperCase() === t.toUpperCase()), "guncelDeger"));
 
   if(myChart) myChart.destroy();
   const ctx = document.getElementById('distChart').getContext('2d');
