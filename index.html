@@ -84,7 +84,7 @@ h2{ margin:14px 16px 6px; font-size:11px; text-transform: uppercase; letter-spac
   box-shadow: 0 0 6px rgba(255,255,255,.2);
 }
 
-/* Detail list */
+/* Controls & list */
 .controls{
   display:flex; gap:8px; align-items:center; padding: 0 10px; flex-wrap: wrap; margin-bottom: 8px;
 }
@@ -100,7 +100,9 @@ h2{ margin:14px 16px 6px; font-size:11px; text-transform: uppercase; letter-spac
 .detail-item{
   background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px;
   margin-bottom: 8px; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 10px;
+  cursor: pointer;
 }
+.detail-item:hover{ outline:1px solid rgba(59,130,246,.35); }
 .detail-info div:first-child{ font-weight: 800; font-size: 13px; color: #fff; }
 .detail-info div:last-child{ font-size: 10px; color: var(--muted); }
 .detail-values{ text-align: right; }
@@ -108,9 +110,7 @@ h2{ margin:14px 16px 6px; font-size:11px; text-transform: uppercase; letter-spac
 .detail-perc{ font-size: 11px; font-weight: 700; }
 
 /* Sparkline */
-.spark{
-  width: 90px; height: 26px; display:inline-block; margin-left: 6px; opacity: .9;
-}
+.spark{ width: 90px; height: 26px; display:inline-block; margin-left: 6px; opacity: .9; vertical-align: -6px; }
 .spark path{ fill:none; stroke-width:1.8; }
 
 /* Loader & alerts */
@@ -121,6 +121,72 @@ h2{ margin:14px 16px 6px; font-size:11px; text-transform: uppercase; letter-spac
 .inline-alert{
   margin: 10px; padding: 8px 10px; border-radius: 8px; background: rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.35);
   color:#fecaca; font-size:12px;
+}
+
+/* MODAL (Detay Kartı) */
+.modal-backdrop{
+  position: fixed; inset:0; background: rgba(0,0,0,.5); display:none; align-items:center; justify-content:center; z-index: 1000;
+}
+.modal-backdrop.show{ display:flex; }
+.modal-card{
+  background: linear-gradient(145deg, var(--card), #162033);
+  border:1px solid var(--line); border-radius: 14px; width: min(680px, 94vw); max-height: 90vh;
+  overflow: auto; box-shadow: 0 10px 40px rgba(0,0,0,.45);
+}
+.modal-head{
+  display:flex; align-items:center; justify-content:space-between; padding: 12px 14px; border-bottom:1px solid var(--line);
+}
+.modal-title{
+  display:flex; align-items:center; gap:10px; font-weight:800;
+}
+.modal-chip{
+  font-size:11px; color:var(--muted); border:1px solid var(--line); padding:2px 8px; border-radius:999px;
+}
+.modal-alert-badge{
+  font-size:11px; color:#fecaca; background: rgba(239,68,68,.12); border:1px solid rgba(239,68,68,.35);
+  padding:2px 8px; border-radius:999px;
+}
+.modal-close{
+  background: transparent; color: var(--text); border:1px solid var(--line); border-radius:8px; padding:6px 10px; cursor:pointer;
+}
+.modal-section{ padding: 12px 14px; display:grid; gap:10px; }
+
+/* Trend area */
+.trend-toolbar{
+  display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+}
+.pills{ display:inline-flex; gap:6px; }
+.pill{
+  border:1px solid var(--line); background: var(--card); color: var(--text);
+  padding:4px 10px; font-size:12px; border-radius:999px; cursor:pointer; user-select:none;
+}
+.pill.active{ border-color: var(--accent); background: rgba(59,130,246,.15); }
+.trend-wrap{ background: #0f1627; border:1px solid var(--line); border-radius:10px; padding:8px; }
+
+/* Form */
+.form-grid{
+  display:grid; grid-template-columns: repeat(3, 1fr); gap:10px;
+}
+@media (max-width: 520px){
+  .form-grid{ grid-template-columns: 1fr; }
+}
+.input{
+  width:100%; background: var(--card); border:1px solid var(--line); border-radius:8px; color:var(--text); padding:8px 10px;
+}
+.form-actions{ display:flex; gap:8px; justify-content:flex-end; }
+.btn{
+  background: var(--card); border:1px solid var(--line); color:var(--text); border-radius:8px; padding:8px 12px; cursor:pointer;
+}
+.btn.primary{ border-color: var(--accent); background: rgba(59,130,246,.15); }
+.btn.danger{ border-color: rgba(239,68,68,.45); background: rgba(239,68,68,.12); color:#fecaca; }
+.help{ font-size:11px; color: var(--muted); }
+.kv{ display:grid; grid-template-columns: 100px 1fr; gap:6px; align-items:center; }
+.kv .key{ font-size:12px; color: var(--muted); }
+.kv .val{ font-weight:700; }
+
+/* Accessible focus */
+button:focus-visible, .pill:focus-visible, .input:focus-visible{
+  outline:2px solid var(--accent); outline-offset:2px;
 }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
@@ -176,12 +242,31 @@ h2{ margin:14px 16px 6px; font-size:11px; text-transform: uppercase; letter-spac
   </div>
 </div>
 
+<!-- Modal (Detay Kartı) -->
+<div id="modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-hidden="true">
+  <div class="modal-card">
+    <div class="modal-head">
+      <div class="modal-title">
+        <span id="modal-title">Detay</span>
+        <span id="modal-type-chip" class="modal-chip"></span>
+        <span id="modal-alert-badge" class="modal-alert-badge" style="display:none">Uyarı!</span>
+      </div>
+      <button class="modal-close" id="modal-close-btn" aria-label="Kapat">Kapat ✕</button>
+    </div>
+    <div class="modal-section" id="modal-body">
+      <!-- Dinamik içerik JS ile doldurulur -->
+    </div>
+  </div>
+</div>
+
 <script>
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQLPFVZn0j8Ygu914QDGRCGKsVy88gWjdk7DFi-jWiydmqYsdGUE4hEAb-R_IBzQmtFZwoMJFcN6rlD/pub?gid=1050165900&single=true&output=csv";
 
 // Cache
 const CACHE_KEY_DATA = "portfolio_cache_data_v1";
 const CACHE_KEY_TIME = "portfolio_cache_time_v1";
+// Alerts (ürüne özel eşikler)
+const ALERTS_KEY = "portfolio_alerts_v1";
 
 let DATA = [];
 let ACTIVE = "ALL";
@@ -217,6 +302,31 @@ function typeColor(tur){
   return TYPE_PALETTE[idx];
 }
 
+/* Alerts store */
+function loadAlerts(){
+  try{
+    const raw = localStorage.getItem(ALERTS_KEY);
+    return raw ? JSON.parse(raw) : {};
+  }catch{ return {}; }
+}
+function saveAlerts(obj){
+  try{ localStorage.setItem(ALERTS_KEY, JSON.stringify(obj)); }catch{}
+}
+function getAlertFor(urun){
+  const store = loadAlerts();
+  return store[urun] || { guncel:null, kz:null, gunlukPct:null };
+}
+function setAlertFor(urun, alertObj){
+  const store = loadAlerts();
+  store[urun] = alertObj;
+  saveAlerts(store);
+}
+function clearAlertFor(urun){
+  const store = loadAlerts();
+  delete store[urun];
+  saveAlerts(store);
+}
+
 /* DOM helpers */
 function setAlert(msg){
   const el = document.getElementById('inline-alert');
@@ -230,32 +340,67 @@ function setStatus(text, online=true){
 }
 
 /* Sparkline (small inline SVG) */
-function sparkline(values, width=90, height=26, color="#22c55e"){
-  // values: sayısal dizi, eksikler 0
+function sparkline(values, width=90, height=26){
   const vals = values.map(v => Number.isFinite(v) ? v : 0);
   const min = Math.min(...vals, 0);
   const max = Math.max(...vals, 0);
   const span = (max - min) || 1;
-  const step = (width - 6) / Math.max(vals.length - 1, 1); // 3px padding solda/sağda
+  const step = (width - 6) / Math.max(vals.length - 1, 1); // padding 3px
   let d = "";
   vals.forEach((v, i) => {
     const x = 3 + i * step;
-    const y = height - 3 - ((v - min) / span) * (height - 6); // 3px top/bottom padding
+    const y = height - 3 - ((v - min) / span) * (height - 6);
     d += (i === 0 ? `M${x},${y}` : ` L${x},${y}`);
   });
   const last = vals[vals.length - 1] || 0;
   const stroke = last >= 0 ? "var(--pos)" : "var(--neg)";
   return `
     <svg class="spark" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" aria-hidden="true">
-      <path d="${d}" stroke="${stroke}"></path>
+      <path d="${d}" stroke="${stroke}" fill="none" stroke-width="1.8"></path>
       <line x1="0" y1="${height-3}" x2="${width}" y2="${height-3}" stroke="rgba(255,255,255,.08)" stroke-width="1"/>
     </svg>
   `;
 }
 
+/* Trend chart (for modal) — 3 nokta: Gün, Hafta, Ay */
+function trendLine3(values, labels, width=360, height=140){
+  const vals = values.map(v => Number.isFinite(v) ? v : 0);
+  const min = Math.min(...vals, 0);
+  const max = Math.max(...vals, 0);
+  const span = (max - min) || 1;
+  const padding = {x:18, y:16};
+  const innerW = width - padding.x*2;
+  const innerH = height - padding.y*2;
+  const step = innerW / Math.max(vals.length - 1, 1);
+  let d = "";
+  const points = [];
+  vals.forEach((v, i) => {
+    const x = padding.x + i * step;
+    const y = padding.y + (innerH - ((v - min) / span) * innerH);
+    points.push([x,y]);
+    d += (i === 0 ? `M${x},${y}` : ` L${x},${y}`);
+  });
+  const axisY = padding.y + innerH;
+  const poly = `
+    <svg viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" aria-label="Trend grafiği">
+      <rect x="0" y="0" width="${width}" height="${height}" rx="8" ry="8" fill="#0f1627" />
+      <line x1="${padding.x}" y1="${axisY}" x2="${width-padding.x}" y2="${axisY}" stroke="rgba(255,255,255,.12)" stroke-width="1"/>
+      <path d="${d}" stroke="url(#grad)" fill="none" stroke-width="2.2"/>
+      ${points.map(([x,y],i)=>`<circle cx="${x}" cy="${y}" r="3" fill="#fff"/>`).join("")}
+      ${points.map(([x],i)=>`<text x="${x}" y="${axisY+12}" font-size="10" text-anchor="middle" fill="rgba(255,255,255,.6)">${labels[i]}</text>`).join("")}
+      <defs>
+        <linearGradient id="grad" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#22c55e" />
+          <stop offset="100%" stop-color="#3b82f6" />
+        </linearGradient>
+      </defs>
+    </svg>
+  `;
+  return poly;
+}
+
 /* Data */
 function parseRows(rows){
-  // Beklenen kolon isimleri (Google Sheet’te birebir isimler)
   const cols = {
     urun: "urun", tur: "tur", toplamYatirim: "toplamYatirim", guncelDeger: "guncelDeger",
     gunluk: "gunluk", haftalik: "haftalik", aylik: "aylik", ucAylik: "ucAylik",
@@ -319,7 +464,6 @@ async function init(){
       const d = new Date(cached.when || Date.now());
       document.getElementById('last-updated').textContent = d.toLocaleString('tr-TR') + " (önbellek)";
       renderAll();
-      // Yeniden dene (sessiz) — kullanıcıyı rahatsız etmeden
       setTimeout(init, 5000);
     } else {
       setStatus("Bağlantı sorunu", false);
@@ -433,7 +577,7 @@ function renderAll(){
   document.getElementById("detail-title").innerText =
     ACTIVE === "ALL" ? "📦 TÜM ÜRÜNLER" : `📦 ${ACTIVE.toUpperCase()} DETAYLARI`;
 
-  // Sıralama + Liste
+  // Sıralama + Liste (click -> modal)
   const sorted = sortDetails(dataFiltered, SORT_BY, SORT_DIR);
   const detailsHTML = sorted.map(item => {
     const itemKz = item.guncelDeger - item.toplamYatirim;
@@ -442,7 +586,8 @@ function renderAll(){
     ].map(v => Number.isFinite(v) ? v : 0);
 
     return `
-      <div class="detail-item" role="listitem">
+      <div class="detail-item" role="listitem" tabindex="0" aria-label="${item.urun} detayı aç"
+           data-urun="${item.urun.replace(/"/g,'&quot;')}">
         <div class="detail-info">
           <div>${item.urun} ${sparkline(perfSeries)}</div>
           <div>Maliyet: ${formatTRY(item.toplamYatirim)}</div>
@@ -453,9 +598,21 @@ function renderAll(){
         </div>
       </div>`;
   }).join("");
-  document.getElementById("detail-list").innerHTML = detailsHTML;
+  const listEl = document.getElementById("detail-list");
+  listEl.innerHTML = detailsHTML;
 
-  // Kayan Ticker (günlük değişim yüzdesi — gün başına göre)
+  // Click & Enter key -> open modal
+  listEl.querySelectorAll(".detail-item").forEach(el => {
+    const name = el.getAttribute('data-urun');
+    const obj = sorted.find(x => x.urun === name);
+    const handler = () => openDetail(obj);
+    el.addEventListener('click', handler);
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handler(); }
+    });
+  });
+
+  // Kayan Ticker
   const tickerItems = DATA.map(r => {
     const prev = r.guncelDeger - r.gunluk;
     const pct = (prev && isFinite(prev)) ? (r.gunluk / prev) * 100 : 0;
@@ -492,6 +649,165 @@ document.getElementById('sort-by').addEventListener('change', (e) => {
 document.getElementById('sort-dir').addEventListener('change', (e) => {
   SORT_DIR = e.target.value; renderAll(); applySearch();
 });
+
+/* ===== Modal: Detay Kartı ===== */
+const modalEl = document.getElementById('modal');
+const modalBody = document.getElementById('modal-body');
+const modalTitle = document.getElementById('modal-title');
+const modalTypeChip = document.getElementById('modal-type-chip');
+const modalAlertBadge = document.getElementById('modal-alert-badge');
+const modalCloseBtn = document.getElementById('modal-close-btn');
+
+function showModal(){ modalEl.classList.add('show'); modalEl.setAttribute('aria-hidden','false'); modalCloseBtn.focus(); }
+function hideModal(){ modalEl.classList.remove('show'); modalEl.setAttribute('aria-hidden','true'); }
+
+modalCloseBtn.addEventListener('click', hideModal);
+modalEl.addEventListener('click', (e) => { if (e.target === modalEl) hideModal(); });
+window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && modalEl.classList.contains('show')) hideModal(); });
+
+function openDetail(item){
+  if (!item) return;
+
+  // Başlık & tür & ağırlık
+  const totalCurrentAll = sum(DATA, 'guncelDeger') || 1;
+  const weightPct = (item.guncelDeger / totalCurrentAll) * 100;
+  modalTitle.textContent = `Ürün · ${item.urun}`;
+  modalTypeChip.textContent = `Tür: ${item.tur || '-'} · Ağırlık: ${weightPct.toFixed(1)}%`;
+
+  // Değerler
+  const kz = item.guncelDeger - item.toplamYatirim;
+
+  // Trend (Gün, Hafta, Ay) — 3 noktalı çizgi
+  const trendVals = [item.gunluk, item.haftalik, item.aylik].map(v => Number.isFinite(v) ? v : 0);
+  const trendLabels = ["Gün", "Hafta", "Ay"];
+  let activePill = "Gün"; // varsayılan
+
+  // Uyarılar
+  const alertObj = getAlertFor(item.urun);
+  const dailyPrev = item.guncelDeger - item.gunluk;
+  const dailyPct = (dailyPrev && isFinite(dailyPrev)) ? (item.gunluk / dailyPrev) * 100 : 0;
+
+  // Uyarı koşulu sağlanıyor mu?
+  const alertTriggered =
+    (alertObj.guncel != null && item.guncelDeger >= alertObj.guncel) ||
+    (alertObj.kz != null && kz >= alertObj.kz) ||
+    (alertObj.gunlukPct != null && dailyPct >= alertObj.gunlukPct);
+
+  modalAlertBadge.style.display = alertTriggered ? '' : 'none';
+
+  // Modal içeriği
+  modalBody.innerHTML = `
+    <div class="card" style="gap:10px">
+      <div class="small">Detay</div>
+      <div class="kv"><div class="key">Ürün</div><div class="val">${item.urun}</div></div>
+      <div class="kv"><div class="key">Tür</div><div class="val">${item.tur || '-'}</div></div>
+      <div class="kv"><div class="key">Ağırlık</div><div class="val">${weightPct.toFixed(1)}%</div></div>
+    </div>
+
+    <div class="card" style="gap:10px">
+      <div class="small">Değerler</div>
+      <div class="kv"><div class="key">Güncel</div><div class="val">${formatTRY(item.guncelDeger)}</div></div>
+      <div class="kv"><div class="key">Maliyet</div><div class="val">${formatTRY(item.toplamYatirim)}</div></div>
+      <div class="kv"><div class="key">K/Z</div>
+        <div class="val ${kz>=0?'pos':'neg'}">${sign(kz)}${formatTRY(Math.abs(kz))}</div>
+      </div>
+    </div>
+
+    <div class="card" style="gap:10px">
+      <div class="small">Trend</div>
+      <div class="trend-toolbar">
+        <div class="pills" role="tablist" aria-label="Trend seçimi">
+          ${trendLabels.map(lbl => `<button class="pill ${lbl===activePill?'active':''}" data-pill="${lbl}" role="tab" aria-selected="${lbl===activePill}">${lbl}</button>`).join('')}
+        </div>
+        <div class="help">Seçili ölçü: <b id="trend-current-label">${activePill}</b>,
+          değer: <b id="trend-current-value">${sign(trendVals[0])}${formatTRY(Math.abs(trendVals[0]))}</b></div>
+      </div>
+      <div class="trend-wrap" id="trend-wrap">
+        ${trendLine3(trendVals, trendLabels, 360, 140)}
+      </div>
+    </div>
+
+    <div class="card" style="gap:10px">
+      <div class="small">Uyarı Tanımları</div>
+      <div class="form-grid">
+        <div>
+          <label class="small" for="a-guncel">Güncel ≥</label>
+          <input id="a-guncel" class="input" inputmode="decimal" placeholder="Örn: 100000" value="${alertObj.guncel??''}">
+        </div>
+        <div>
+          <label class="small" for="a-kz">K/Z ≥</label>
+          <input id="a-kz" class="input" inputmode="decimal" placeholder="Örn: 5000" value="${alertObj.kz??''}">
+        </div>
+        <div>
+          <label class="small" for="a-gunlukpct">Günlük % ≥</label>
+          <input id="a-gunlukpct" class="input" inputmode="decimal" placeholder="Örn: 2.5" value="${alertObj.gunlukPct??''}">
+        </div>
+      </div>
+      <div class="help">Not: Sayılarda virgül veya nokta kullanabilirsiniz. Kaydedilen eşikler sadece bu cihazda saklanır.</div>
+      <div class="form-actions">
+        <button class="btn danger" id="alerts-clear">Uyarıları Sil</button>
+        <button class="btn primary" id="alerts-save">Kaydet</button>
+      </div>
+    </div>
+  `;
+
+  // Trend pill etkileşimi
+  const pills = modalBody.querySelectorAll('.pill');
+  const labelEl = modalBody.querySelector('#trend-current-label');
+  const valueEl = modalBody.querySelector('#trend-current-value');
+  const wrapEl = modalBody.querySelector('#trend-wrap');
+
+  function setActivePill(lbl){
+    activePill = lbl;
+    pills.forEach(p => {
+      const sel = p.getAttribute('data-pill') === lbl;
+      p.classList.toggle('active', sel);
+      p.setAttribute('aria-selected', sel);
+    });
+    const idx = trendLabels.indexOf(lbl);
+    const val = trendVals[idx] || 0;
+    labelEl.textContent = lbl;
+    valueEl.textContent = `${sign(val)}${formatTRY(Math.abs(val))}`;
+    // çizgi aynı: 3 nokta — seçim sadece bilgi ve vurgu amaçlı
+    wrapEl.innerHTML = trendLine3(trendVals, trendLabels, 360, 140);
+  }
+
+  pills.forEach(p => p.addEventListener('click', () => setActivePill(p.getAttribute('data-pill'))));
+
+  // Uyarılar kaydet/sil
+  const aGuncel = modalBody.querySelector('#a-guncel');
+  const aKz = modalBody.querySelector('#a-kz');
+  const aGunlukPct = modalBody.querySelector('#a-gunlukpct');
+
+  modalBody.querySelector('#alerts-save').addEventListener('click', () => {
+    const obj = {
+      guncel: aGuncel.value ? toNumber(aGuncel.value) : null,
+      kz: aKz.value ? toNumber(aKz.value) : null,
+      gunlukPct: aGunlukPct.value ? toNumber(aGunlukPct.value) : null
+    };
+    setAlertFor(item.urun, obj);
+    modalAlertBadge.style.display = (
+      (obj.guncel!=null && item.guncelDeger >= obj.guncel) ||
+      (obj.kz!=null && kz >= obj.kz) ||
+      (obj.gunlukPct!=null && dailyPct >= obj.gunlukPct)
+    ) ? '' : 'none';
+    // küçük bir geri bildirim
+    const old = modalCloseBtn.textContent;
+    modalCloseBtn.textContent = "Kaydedildi ✓";
+    setTimeout(()=> modalCloseBtn.textContent = old, 1000);
+  });
+
+  modalBody.querySelector('#alerts-clear').addEventListener('click', () => {
+    clearAlertFor(item.urun);
+    aGuncel.value = ""; aKz.value = ""; aGunlukPct.value = "";
+    modalAlertBadge.style.display = 'none';
+    const old = modalCloseBtn.textContent;
+    modalCloseBtn.textContent = "Silindi ✓";
+    setTimeout(()=> modalCloseBtn.textContent = old, 1000);
+  });
+
+  showModal();
+}
 
 init();
 </script>
