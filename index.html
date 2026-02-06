@@ -26,31 +26,36 @@ h2{ margin:14px 16px 6px; font-size:11px; text-transform: uppercase; letter-spac
 .ticker-item{ display:flex; align-items:center; padding:0 25px; font-size:16px; font-weight:800; border-right:1px solid rgba(255,255,255,0.1); }
 @keyframes ticker-move { 0%{ transform: translateX(0); } 100%{ transform: translateX(-50%); } }
 
-/* Header & Grids */
+/* Header & Summary */
 .header-section{ position: sticky; top: 0; z-index: 100; background: rgba(11, 18, 32, 0.95); backdrop-filter: blur(15px); border-bottom: 1px solid var(--line); padding: 10px; }
 .grid-summary{ display:grid; grid-template-columns: repeat(4, 1fr); gap:6px; margin-bottom:12px; }
-.grid-types{ display:grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap:8px; }
-.grid-periods{ display:grid; grid-template-columns: repeat(2, 1fr); gap:10px; padding: 0 10px; }
-@media (min-width: 560px){ .grid-periods{ grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 480px){ .grid-summary{ grid-template-columns: repeat(2, 1fr); } }
+.grid-types{ display:grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap:8px; }
 
-/* Cards & Alert Styling */
+/* Cards & Alerts */
 .card{ background: linear-gradient(145deg, var(--card), #161e2e); border-radius: 12px; padding: 10px; border: 1px solid var(--line); display: flex; flex-direction: column; transition: 0.2s ease; }
-.alert-pill { border-color: var(--warn) !important; color: var(--warn) !important; }
-.alert-triggered { border: 1px solid var(--neg) !important; box-shadow: 0 0 12px rgba(239, 68, 68, 0.25); }
-.alert-text { font-size: 9px; color: var(--warn); font-weight: 700; margin-top: 2px; text-transform: uppercase; }
+.card.active{ border-color: var(--accent); background: rgba(59,130,246,0.1); }
+.alert-triggered { border: 1px solid var(--neg) !important; box-shadow: 0 0 12px rgba(239, 68, 68, 0.2); }
+.alert-msg { font-size: 9px; color: var(--warn); font-weight: bold; margin-top: 4px; text-transform: uppercase; }
 
 .big{ font-size:14px; font-weight:700; margin-top:2px; }
 .small{ font-size:9px; font-weight:700; opacity:.8; text-transform: uppercase; }
 .pos{ color: var(--pos); } .neg{ color: var(--neg); }
 
-/* Detay Listesi */
+/* List */
 .detail-item{ background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-bottom: 8px; display: grid; grid-template-columns: 1fr auto; align-items: center; cursor: pointer; }
 .detail-info div:first-child{ font-weight: 800; font-size: 14px; color: #fff; display:flex; align-items:center; gap:6px; }
 
 /* Modal */
 .modal-backdrop{ position: fixed; inset:0; background: rgba(0,0,0,.8); display:none; align-items:center; justify-content:center; z-index: 1000; }
 .modal-backdrop.show{ display:flex; }
-.modal-card{ background: var(--bg); border:1px solid var(--line); border-radius: 16px; width: min(550px, 95vw); padding: 20px; overflow-y: auto; max-height: 90vh; }
+.modal-card{ background: var(--bg); border:1px solid var(--line); border-radius: 16px; width: min(600px, 95vw); max-height: 90vh; overflow-y: auto; position:relative; }
+.modal-content{ padding: 20px; }
+
+/* Sparkline & Table */
+.spark{ width: 90px; height: 26px; vertical-align: middle; }
+.table{ width:100%; border-collapse: collapse; margin-top:10px; font-size:12px; }
+.table th, .table td{ padding:10px; text-align:left; border-bottom:1px solid var(--line); }
 
 /* Controls */
 .controls{ display:flex; gap:8px; align-items:center; padding: 10px; flex-wrap: wrap; }
@@ -62,24 +67,24 @@ h2{ margin:14px 16px 6px; font-size:11px; text-transform: uppercase; letter-spac
 </head>
 <body>
 
-<div id="loader">Veriler Yükleniyor...</div>
-<div class="ticker-wrap"><div class="ticker" id="ticker-content"></div></div>
+<div id="loader">ANALİZ EDİLİYOR...</div>
+<div id="ticker-wrap" class="ticker-wrap"><div class="ticker" id="ticker-content"></div></div>
 
 <div class="header-section">
   <div class="grid-summary" id="summary"></div>
-  <h2>💼 Varlık Grupları</h2>
+  <h2>💼 VARLIK GRUPLARI</h2>
   <div class="grid-types" id="types"></div>
 </div>
 
 <div class="content-section">
-  <h2>📈 Dönemsel Performans</h2>
-  <div id="periods" class="grid-periods"></div>
+  <h2>📈 DÖNEMSEL PERFORMANS</h2>
+  <div id="periods" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:10px; padding:0 10px; margin-bottom:15px;"></div>
 
   <div class="controls">
     <select id="sort-by" class="select">
       <option value="kz">K/Z Sırala</option>
       <option value="guncel">Değer Sırala</option>
-      <option value="ad">A-Z Sırala</option>
+      <option value="ad">Ad Sırala</option>
     </select>
 
     <select id="auto-refresh" class="select">
@@ -89,193 +94,208 @@ h2{ margin:14px 16px 6px; font-size:11px; text-transform: uppercase; letter-spac
         <option value="60">60 Dakika</option>
     </select>
 
-    <input type="text" id="search" placeholder="Hızlı ürün ara..." />
+    <input type="text" id="search" placeholder="Ürün ara..." />
   </div>
 
   <div id="detail-list" style="padding: 0 10px;"></div>
 </div>
 
 <div id="modal" class="modal-backdrop">
-    <div class="modal-card" id="modal-inner"></div>
+  <div class="modal-card">
+      <div id="modal-content-area" class="modal-content"></div>
+  </div>
 </div>
 
 <script>
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQLPFVZn0j8Ygu914QDGRCGKsVy88gWjdk7DFi-jWiydmqYsdGUE4hEAb-R_IBzQmtFZwoMJFcN6rlD/pub?gid=1050165900&single=true&output=csv";
-const STORAGE_KEY = "portfolio_alerts_pro";
+const ALERTS_KEY = "portfolio_alerts_v1";
 
 let DATA = [];
-let ACTIVE_FILTER = "ALL"; // ALL, HISSE, BONO, ALERTS vb.
-let REFRESH_TIMER = null;
+let ACTIVE_PILL = "ALL";
+let REFRESH_INT = null;
 
 const toNumber = v => v ? parseFloat(v.toString().replace(/[^\d,\.\-]/g, '').replace(',', '.')) || 0 : 0;
 const formatTRY = v => Math.round(v).toLocaleString('tr-TR') + " ₺";
 
-async function fetchData() {
-    try {
-        const res = await fetch(`${CSV_URL}&cb=${Date.now()}`);
-        const text = await res.text();
-        const parsed = Papa.parse(text.trim(), { header: true });
-        DATA = parsed.data.map(row => ({
-            ...row,
-            toplamYatirim: toNumber(row.toplamYatirim),
-            guncelDeger: toNumber(row.guncelDeger),
-            gunluk: toNumber(row.gunluk),
-            haftalik: toNumber(row.haftalik),
-            aylik: toNumber(row.aylik),
-            ucAylik: toNumber(row.ucAylik),
-            altiAylik: toNumber(row.altiAylik),
-            birYillik: toNumber(row.birYillik)
-        })).filter(i => i.urun && i.toplamYatirim > 0);
-        
-        document.getElementById("loader").style.display = "none";
-        renderAll();
-    } catch(e) { console.error(e); }
+async function init() {
+  try {
+    const res = await fetch(`${CSV_URL}&cb=${Date.now()}`);
+    const text = await res.text();
+    const p = Papa.parse(text.trim(), { header: true });
+    DATA = p.data.map(r => ({
+      ...r,
+      toplamYatirim: toNumber(r.toplamYatirim),
+      guncelDeger: toNumber(r.guncelDeger),
+      gunluk: toNumber(r.gunluk),
+      haftalik: toNumber(r.haftalik),
+      aylik: toNumber(r.aylik),
+      ucAylik: toNumber(r.ucAylik),
+      altiAylik: toNumber(r.altiAylik),
+      birYillik: toNumber(r.birYillik)
+    })).filter(i => i.urun && i.toplamYatirim > 0);
+    
+    document.getElementById("loader").style.display = "none";
+    renderAll();
+  } catch(e) { console.error(e); }
 }
 
-function getAlertInfo(item) {
-    const alerts = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+function getTriggeredReason(item) {
+    const alerts = JSON.parse(localStorage.getItem(ALERTS_KEY)) || {};
     const a = alerts[item.urun];
     if(!a) return null;
-
     const kz = item.guncelDeger - item.toplamYatirim;
     const dailyPct = (item.gunluk / (item.guncelDeger - item.gunluk)) * 100;
-
-    let reasons = [];
-    if(a.guncel && item.guncelDeger >= a.guncel) reasons.push(`Değer ≥ ${formatTRY(a.guncel)}`);
-    if(a.kz && kz >= a.kz) reasons.push(`Kâr ≥ ${formatTRY(a.kz)}`);
-    if(a.pct && dailyPct >= a.pct) reasons.push(`Günlük ≥ %${a.pct}`);
-
-    return reasons.length > 0 ? reasons.join(" | ") : null;
+    
+    let msgs = [];
+    if(a.guncel && item.guncelDeger >= a.guncel) msgs.push(`Fiyat ≥ ${formatTRY(a.guncel)}`);
+    if(a.kz && kz >= a.kz) msgs.push(`Kâr ≥ ${formatTRY(a.kz)}`);
+    if(a.gunlukPct && dailyPct >= a.gunlukPct) msgs.push(`Günlük ≥ %${a.gunlukPct}`);
+    
+    return msgs.length > 0 ? msgs.join(" | ") : null;
 }
 
 function renderAll() {
-    const list = document.getElementById("detail-list");
-    const summary = document.getElementById("summary");
-    const sortVal = document.getElementById("sort-by").value;
-    
-    let totalM = 0, totalG = 0, alertCount = 0;
+  const alerts = JSON.parse(localStorage.getItem(ALERTS_KEY)) || {};
+  let totalAlerts = 0;
+  DATA.forEach(i => { if(getTriggeredReason(i)) totalAlerts++; });
 
-    // Filtreleme
-    let filtered = DATA;
-    if(ACTIVE_FILTER === "ALERTS") {
-        filtered = DATA.filter(item => getAlertInfo(item) !== null);
-    } else if(ACTIVE_FILTER !== "ALL") {
-        filtered = DATA.filter(item => item.tur === ACTIVE_FILTER);
-    }
+  // 1. Özet Grid
+  const totalM = DATA.reduce((a,b)=>a+b.toplamYatirim,0);
+  const totalG = DATA.reduce((a,b)=>a+b.guncelDeger,0);
+  document.getElementById("summary").innerHTML = `
+    <div class="card"><div class="small">Maliyet</div><div class="big">${formatTRY(totalM)}</div></div>
+    <div class="card"><div class="small">Güncel</div><div class="big">${formatTRY(totalG)}</div></div>
+    <div class="card ${totalG-totalM>=0?'pos':'neg'}"><div class="small">K/Z</div><div class="big">${formatTRY(totalG-totalM)}</div></div>
+    <div class="card"><div class="small">Nakit</div><div class="big">0 ₺</div></div>
+  `;
 
-    // Sıralama
-    filtered.sort((a,b) => {
-        if(sortVal==='kz') return (b.guncelDeger - b.toplamYatirim) - (a.guncelDeger - a.toplamYatirim);
-        if(sortVal==='guncel') return b.guncelDeger - a.guncelDeger;
-        return a.urun.localeCompare(b.urun);
-    });
+  // 2. Varlık Grupları
+  const turlar = [...new Set(DATA.map(i => i.tur))];
+  document.getElementById("types").innerHTML = `
+    <button class="card ${ACTIVE_PILL==='ALL'?'active':''}" onclick="setFilter('ALL')">GENEL</button>` + 
+    turlar.map(t => `<button class="card ${ACTIVE_PILL===t?'active':''}" onclick="setFilter('${t}')">${t}</button>`).join("") +
+    `<button class="card ${ACTIVE_PILL==='ALERTS'?'active':''}" onclick="setFilter('ALERTS')">UYARILAR (${totalAlerts})</button>`;
 
-    // Toplam Uyarı Sayısı (Tüm Portföyde)
-    DATA.forEach(item => { if(getAlertInfo(item)) alertCount++; });
+  // 3. Dönemsel (6 Kart)
+  const pers = [["Günlük","gunluk"],["Haftalık","haftalik"],["Aylık","aylik"],["3 Aylık","ucAylik"],["6 Aylık","altiAylik"],["1 Yıllık","birYillik"]];
+  document.getElementById("periods").innerHTML = pers.map(([l, k]) => {
+    const v = DATA.reduce((a,b)=>a+b[k],0);
+    return `<div class="card ${v>=0?'pos':'neg'}"><div class="small">${l}</div><div class="big">${formatTRY(v)}</div></div>`;
+  }).join("");
 
-    // Özet Grid
-    DATA.forEach(i => { totalM += i.toplamYatirim; totalG += i.guncelDeger; });
-    const totalKz = totalG - totalM;
-    summary.innerHTML = `
-        <div class="card"><div class="small">Maliyet</div><div class="big">${formatTRY(totalM)}</div></div>
-        <div class="card"><div class="small">Güncel</div><div class="big">${formatTRY(totalG)}</div></div>
-        <div class="card ${totalKz>=0?'pos':'neg'}"><div class="small">Toplam K/Z</div><div class="big">${formatTRY(totalKz)}</div></div>
-        <div class="card"><div class="small">Nakit</div><div class="big">0 ₺</div></div>
-    `;
+  // 4. Liste
+  const sort = document.getElementById("sort-by").value;
+  let filtered = ACTIVE_PILL === "ALL" ? DATA : (ACTIVE_PILL === "ALERTS" ? DATA.filter(i => getTriggeredReason(i)) : DATA.filter(i => i.tur === ACTIVE_PILL));
+  
+  filtered.sort((a,b) => {
+    if(sort==='kz') return (b.guncelDeger-b.toplamYatirim)-(a.guncelDeger-a.toplamYatirim);
+    if(sort==='guncel') return b.guncelDeger-a.guncelDeger;
+    return a.urun.localeCompare(b.urun);
+  });
 
-    // Varlık Grupları + Uyarılar Butonu
-    const turlar = [...new Set(DATA.map(i => i.tur))];
-    document.getElementById("types").innerHTML = `
-        <button class="card ${ACTIVE_FILTER==='ALL'?'alert-pill':''}" onclick="setFilter('ALL')">HEPSİ</button>` +
-        turlar.map(t => `<button class="card ${ACTIVE_FILTER===t?'alert-pill':''}" onclick="setFilter('${t}')">${t}</button>`).join("") +
-        `<button class="card ${ACTIVE_FILTER==='ALERTS'?'alert-pill':''}" onclick="setFilter('ALERTS')">UYARILAR (${alertCount})</button>`;
-
-    // Performans Kartları (6'lı)
-    const perMap = [["Günlük","gunluk"],["Haftalık","haftalik"],["Aylık","aylik"],["3 Aylık","ucAylik"],["6 Aylık","altiAylik"],["1 Yıllık","birYillik"]];
-    document.getElementById("periods").innerHTML = perMap.map(([lbl, key]) => {
-        const val = DATA.reduce((a,b) => a + b[key], 0);
-        return `<div class="card ${val>=0?'pos':'neg'}"><div class="small">${lbl}</div><div class="big">${formatTRY(val)}</div></div>`;
-    }).join("");
-
-    // Ürün Listesi
-    list.innerHTML = filtered.map(item => {
-        const kz = item.guncelDeger - item.toplamYatirim;
-        const alertMsg = getAlertInfo(item);
-        return `
-            <div class="detail-item ${alertMsg ? 'alert-triggered' : ''}" onclick="openModal('${item.urun}')">
-                <div>
-                    <div style="font-weight:800">${item.urun} ${alertMsg ? '⚠️' : ''}</div>
-                    <div class="small" style="color:var(--muted)">Maliyet: ${formatTRY(item.toplamYatirim)}</div>
-                    ${alertMsg ? `<div class="alert-text">${alertMsg}</div>` : ''}
-                </div>
-                <div style="text-align:right">
-                    <div class="big">${formatTRY(item.guncelDeger)}</div>
-                    <div class="small ${kz>=0?'pos':'neg'}">${kz>=0?'+':''}${((kz/item.toplamYatirim)*100).toFixed(1)}%</div>
-                </div>
-            </div>`;
-    }).join("");
-
-    // Ticker
-    const tickerHtml = DATA.map(i => `<div class="ticker-item" style="color:${i.gunluk>=0?'var(--pos)':'var(--neg)'}">${i.urun} %${((i.gunluk/(i.guncelDeger-i.gunluk))*100).toFixed(1)}</div>`).join("");
-    document.getElementById("ticker-content").innerHTML = tickerHtml + tickerHtml;
+  document.getElementById("detail-list").innerHTML = filtered.map(item => {
+    const kz = item.guncelDeger - item.toplamYatirim;
+    const reason = getTriggeredReason(item);
+    return `
+      <div class="detail-item ${reason ? 'alert-triggered' : ''}" onclick="openDetail('${item.urun}')">
+        <div>
+          <div style="font-weight:800">${item.urun} ${reason ? '⚠️' : ''}</div>
+          <div class="small" style="color:var(--muted)">Maliyet: ${formatTRY(item.toplamYatirim)}</div>
+          ${reason ? `<div class="alert-msg">${reason}</div>` : ''}
+        </div>
+        <div style="text-align:right">
+          <div class="big">${formatTRY(item.guncelDeger)}</div>
+          <div class="small ${kz>=0?'pos':'neg'}">${((kz/item.toplamYatirim)*100).toFixed(1)}%</div>
+        </div>
+      </div>`;
+  }).join("");
 }
 
-function setFilter(f) { ACTIVE_FILTER = f; renderAll(); }
+function setFilter(f) { ACTIVE_PILL = f; renderAll(); }
 
-// Orijinal Detaylı Modal
-function openModal(name) {
-    const item = DATA.find(i => i.urun === name);
-    const alerts = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
-    const a = alerts[name] || {};
-    const kz = item.guncelDeger - item.toplamYatirim;
+// BURASI ORİJİNAL KODUNDAKİ DETAYLI MODALIN AYNISIDIR
+function openDetail(name) {
+  const item = DATA.find(i => i.urun === name);
+  const alerts = JSON.parse(localStorage.getItem(ALERTS_KEY)) || {};
+  const a = alerts[name] || {};
+  const kz = item.guncelDeger - item.toplamYatirim;
+  const totalG = DATA.reduce((a,b)=>a+b.guncelDeger,0);
 
-    document.getElementById("modal-inner").innerHTML = `
-        <div style="display:flex; justify-content:space-between; margin-bottom:20px">
-            <h3 style="margin:0">${item.urun} Detay</h3>
-            <button onclick="document.getElementById('modal').classList.remove('show')" style="background:none; border:none; color:#fff; cursor:pointer">✕</button>
-        </div>
-        <div class="grid-summary">
-            <div class="card"><div class="small">Güncel</div><div class="big">${formatTRY(item.guncelDeger)}</div></div>
-            <div class="card"><div class="small">Maliyet</div><div class="big">${formatTRY(item.toplamYatirim)}</div></div>
-            <div class="card ${kz>=0?'pos':'neg'}"><div class="small">K/Z</div><div class="big">${formatTRY(kz)}</div></div>
-        </div>
-        <h4 class="small" style="margin-top:20px">Uyarı Kuralları</h4>
-        <div style="display:grid; gap:10px">
-            <input id="a-guncel" class="select" type="number" placeholder="Değer ≥ (₺)" value="${a.guncel || ''}">
-            <input id="a-kz" class="select" type="number" placeholder="Kâr ≥ (₺)" value="${a.kz || ''}">
-            <input id="a-pct" class="select" type="number" placeholder="Günlük Değişim ≥ (%)" value="${a.pct || ''}">
-            <button onclick="saveAlert('${item.urun}')" style="background:var(--accent); color:#fff; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold">KAYDET</button>
-        </div>
-    `;
-    document.getElementById("modal").classList.add("show");
+  document.getElementById("modal-content-area").innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+      <h3 style="margin:0">${item.urun} Detay</h3>
+      <button onclick="document.getElementById('modal').classList.remove('show')" style="background:none; border:none; color:#fff; cursor:pointer; font-size:20px;">✕</button>
+    </div>
+    
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;">
+      <div class="card"><div class="small">Tür</div><div class="big">${item.tur}</div></div>
+      <div class="card"><div class="small">Portföy Ağırlığı</div><div class="big">%${((item.guncelDeger/totalG)*100).toFixed(2)}</div></div>
+    </div>
+
+    <div class="card" style="margin-bottom:15px;">
+      <div class="small">Değerler</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-top:10px;">
+        <div><div class="small">Güncel</div><div class="big">${formatTRY(item.guncelDeger)}</div></div>
+        <div><div class="small">Maliyet</div><div class="big">${formatTRY(item.toplamYatirim)}</div></div>
+        <div class="${kz>=0?'pos':'neg'}"><div class="small">K/Z</div><div class="big">${formatTRY(kz)}</div></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:15px;">
+      <div class="small">Geçmiş Performans</div>
+      <table class="table">
+        <tr><th>Dönem</th><th>Değer</th><th>Yüzde</th></tr>
+        <tr><td>Günlük</td><td class="${item.gunluk>=0?'pos':'neg'}">${formatTRY(item.gunluk)}</td><td>%${((item.gunluk/(item.guncelDeger-item.gunluk))*100).toFixed(1)}</td></tr>
+        <tr><td>Haftalık</td><td class="${item.haftalik>=0?'pos':'neg'}">${formatTRY(item.haftalik)}</td><td>%${((item.haftalik/(item.guncelDeger-item.haftalik))*100).toFixed(1)}</td></tr>
+        <tr><td>Aylık</td><td class="${item.aylik>=0?'pos':'neg'}">${formatTRY(item.aylik)}</td><td>%${((item.aylik/(item.guncelDeger-item.aylik))*100).toFixed(1)}</td></tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <div class="small">Uyarı Ayarları</div>
+      <div style="display:grid; gap:10px; margin-top:10px;">
+        <input id="new-guncel" class="select" type="number" placeholder="Fiyat ≥" value="${a.guncel||''}">
+        <input id="new-kz" class="select" type="number" placeholder="Kâr ≥" value="${a.kz||''}">
+        <input id="new-pct" class="select" type="number" placeholder="Günlük % ≥" value="${a.gunlukPct||''}">
+        <button onclick="saveAlert('${item.urun}')" style="background:var(--accent); color:#fff; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold;">KAYDET</button>
+        <button onclick="clearAlert('${item.urun}')" style="background:var(--line); color:var(--neg); border:none; padding:8px; border-radius:8px; cursor:pointer; font-size:10px;">UYARILARI SİL</button>
+      </div>
+    </div>
+  `;
+  document.getElementById("modal").classList.add("show");
 }
 
 function saveAlert(name) {
-    const alerts = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
-    alerts[name] = {
-        guncel: toNumber(document.getElementById("a-guncel").value),
-        kz: toNumber(document.getElementById("a-kz").value),
-        pct: toNumber(document.getElementById("a-pct").value)
-    };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(alerts));
-    document.getElementById("modal").classList.remove("show");
-    renderAll();
+  const alerts = JSON.parse(localStorage.getItem(ALERTS_KEY)) || {};
+  alerts[name] = {
+    guncel: toNumber(document.getElementById("new-guncel").value),
+    kz: toNumber(document.getElementById("new-kz").value),
+    gunlukPct: toNumber(document.getElementById("new-pct").value)
+  };
+  localStorage.setItem(ALERTS_KEY, JSON.stringify(alerts));
+  document.getElementById("modal").classList.remove("show");
+  renderAll();
 }
 
-// UI Eventleri
-document.getElementById("sort-by").onchange = renderAll;
-document.getElementById("auto-refresh").onchange = (e) => {
-    clearInterval(REFRESH_TIMER);
-    if(e.target.value > 0) REFRESH_TIMER = setInterval(fetchData, e.target.value * 60000);
-};
-document.getElementById("search").oninput = (e) => {
-    const val = e.target.value.toLowerCase();
-    document.querySelectorAll(".detail-item").forEach(el => {
-        el.style.display = el.innerText.toLowerCase().includes(val) ? "grid" : "none";
-    });
-};
+function clearAlert(name) {
+  const alerts = JSON.parse(localStorage.getItem(ALERTS_KEY)) || {};
+  delete alerts[name];
+  localStorage.setItem(ALERTS_KEY, JSON.stringify(alerts));
+  document.getElementById("modal").classList.remove("show");
+  renderAll();
+}
 
-fetchData();
+document.getElementById("sort-by").addEventListener("change", renderAll);
+document.getElementById("auto-refresh").addEventListener("change", (e) => {
+    clearInterval(REFRESH_INT);
+    if(e.target.value > 0) REFRESH_INT = setInterval(init, e.target.value * 60000);
+});
+document.getElementById("search").addEventListener("input", (e) => {
+  const v = e.target.value.toLowerCase();
+  document.querySelectorAll(".detail-item").forEach(el => el.style.display = el.innerText.toLowerCase().includes(v) ? "grid" : "none");
+});
+
+init();
 </script>
 </body>
 </html>
