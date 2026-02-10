@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-<title>Portföy Terminali Pro Max — FINAL v2</title>
+<title>Portföy Terminali Pro Max — FINAL V3</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
@@ -89,13 +89,40 @@ const formatTRY = v => Math.round(v).toLocaleString('tr-TR') + " ₺";
 const formatPrice = v => parseFloat(v).toLocaleString('tr-TR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + " ₺";
 function parseDateTR(s){ if(!s) return null; if(s instanceof Date) return s; const a=s.toString().split('.'); if(a.length!==3) return null; const dd=+a[0], mm=+a[1], yy=+a[2]; if(!dd||!mm||!yy) return null; return new Date(yy, mm-1, dd); }
 async function loadHistory(){ const res=await fetch(`${HISTORY_URL}&cb=${Date.now()}`); const text=await res.text(); const p=Papa.parse(text.trim(),{header:true}); PRICE_HISTORY=p.data.map(r=>({urun:r.urun||r['Ürün']||r['Urun'], date:parseDateTR(r.tarih||r['Tarih']), price:toNumber(r.fiyat||r['Fiyat'])})).filter(x=>x.urun&&x.date&&(x.price||x.price===0)); HISTORY_BY_URUN={}; for(const row of PRICE_HISTORY){ (HISTORY_BY_URUN[row.urun]??=[]).push({date:row.date, price:row.price}); } Object.keys(HISTORY_BY_URUN).forEach(k=>HISTORY_BY_URUN[k].sort((a,b)=>a.date-b.date)); }
-function getPrevPricePair(urun){ const h=HISTORY_BY_URUN[urun]; if(!h||h.length<2) return null; const last=h[h.length-1].price; const prev=h[h.length-2].price; return {last,prev}; }
-function getPriceAtOrBefore(urun, targetDate){ const h=HISTORY_BY_URUN[urun]; if(!h||h.length===0) return null; let candidate=null; for(let i=h.length-1;i>=0;i--){ if(h[i].date<=targetDate){ candidate=h[i].price; break; } } return (candidate ?? h[0].price); }
-function getCalendarDaysBackPrice(urun, daysBack){ const h=HISTORY_BY_URUN[urun]; if(!h||h.length===0) return null; const lastDate=h[h.length-1].date; const t=new Date(lastDate); t.setDate(t.getDate()-daysBack); return getPriceAtOrBefore(urun,t); }
-function getChangeTRY(urun, adet, daysBack){ const h=HISTORY_BY_URUN[urun]; if(!h||h.length===0) return 0; const last=h[h.length-1].price; const past=getCalendarDaysBackPrice(urun, daysBack); if(past===null||past===undefined) return 0; return adet*(last-past); }
+function getClosestBackwardPrice(urun, targetDate) {
+    const h = HISTORY_BY_URUN[urun];
+    if (!h || h.length === 0) return null;
+    for (let i = h.length - 1; i >= 0; i--) {
+        if (h[i].date <= targetDate) {
+            return h[i].price;
+        }
+    }
+    return null;
+}
+function getChangeTRY(urun, adet, daysBack) {
+    const h = HISTORY_BY_URUN[urun];
+    if (!h || h.length === 0) return 0;
+    const last = h[h.length - 1].price;
+    const lastDate = h[h.length - 1].date;
+    const target = new Date(lastDate);
+    target.setDate(target.getDate() - daysBack);
+    const past = getClosestBackwardPrice(urun, target);
+    if (past === null) return 0;
+    return adet * (last - past);
+}
 function getAlertMsg(item){ const alerts=JSON.parse(localStorage.getItem(ALERTS_KEY))||{}; const a=alerts[item.urun]; if(!a) return null; const kz=item.guncelDeger-item.toplamYatirim; const prev=item.guncelDeger-item.gunluk; const dPct=(prev>0)?(item.gunluk/prev)*100:0; let m=[]; if(a.guncel&&item.guncelDeger>=a.guncel) m.push(`Değer ≥ ${formatTRY(a.guncel)}`); if(a.kz&&kz>=a.kz) m.push(`Kâr ≥ ${formatTRY(a.kz)}`); if(a.gp&&dPct>=a.gp) m.push(`Günlük ≥ %${a.gp}`); return m.length>0?m.join(" | "):null; }
 function updateLastRefresh(){ const now=new Date(); const txt=now.toLocaleTimeString("tr-TR",{hour:"2-digit",minute:"2-digit",second:"2-digit"}); const el=document.getElementById("last-refresh"); if(el) el.innerText="Son güncelleme: "+txt; }
 function setAutoRefresh(mins){ clearInterval(REFRESH_INT); if(mins>0){ REFRESH_INT=setInterval(()=>{ init(); }, mins*60*1000); } }
+function getClosestPrevForTicker(urun) {
+    const h = HISTORY_BY_URUN[urun];
+    if (!h || h.length < 2) return null;
+    const last = h[h.length - 1].price;
+    for (let i = h.length - 2; i >= 0; i--) {
+        const prev = h[i].price;
+        if (prev !== last) return { last, prev };
+    }
+    return null;
+}
 async function init(){ try{ const res=await fetch(`${CSV_URL}&cb=${Date.now()}`); const text=await res.text(); const p=Papa.parse(text.trim(),{header:true}); DATA=p.data.map(r=>({...r, urun:(r.urun||r['Ürün']||r['Urun']), tur:(r.tur||r['Tür']||r['tur']), adet:toNumber(r.adet||r.miktar||r['Miktar']||0), fiyat:toNumber(r.fiyat||r.sonFiyat||r['Son Fiyat']||0), toplamYatirim:toNumber(r.toplamYatirim), guncelDeger:toNumber(r.guncelDeger), gunluk:toNumber(r.gunluk), haftalik:toNumber(r.haftalik), aylik:toNumber(r.aylik), ucAylik:toNumber(r.ucAylik), altiAylik:toNumber(r.altiAylik), birYillik:toNumber(r.birYillik)})).filter(i=>i.urun&&i.toplamYatirim>0); await loadHistory(); for(const item of DATA){ const hist=HISTORY_BY_URUN[item.urun]; if(hist&&hist.length){ const lastPrice=hist[hist.length-1].price; if(!item.fiyat||item.fiyat<=0) item.fiyat=lastPrice; if(!item.guncelDeger||item.guncelDeger<=0) item.guncelDeger=item.adet*lastPrice; item.gunluk=getChangeTRY(item.urun,item.adet,1); item.haftalik=getChangeTRY(item.urun,item.adet,7); item.aylik=getChangeTRY(item.urun,item.adet,30); item.ucAylik=getChangeTRY(item.urun,item.adet,90); item.altiAylik=getChangeTRY(item.urun,item.adet,180); item.birYillik=getChangeTRY(item.urun,item.adet,365); } }
  document.getElementById("loader").style.display="none"; renderAll(); updateLastRefresh(); }catch(e){ console.error(e); } }
 function renderAll(){ let triggeredCount=0; DATA.forEach(i=>{ if(getAlertMsg(i)) triggeredCount++; });
@@ -118,7 +145,7 @@ function renderAll(){ let triggeredCount=0; DATA.forEach(i=>{ if(getAlertMsg(i))
  // LIST
  const sort=document.getElementById("sort-by").value; let listData=[...filtered]; listData.sort((a,b)=>{ if(sort==='kz') return (b.guncelDeger-b.toplamYatirim)-(a.guncelDeger-a.toplamYatirim); if(sort==='guncel') return b.guncelDeger-a.guncelDeger; return a.urun.localeCompare(b.urun); });
  document.getElementById("detail-list").innerHTML = listData.map(item=>{ const kz=item.guncelDeger-item.toplamYatirim; const msg=getAlertMsg(item); const pct=item.toplamYatirim>0?((kz/item.toplamYatirim)*100).toFixed(1):'0.0'; return `
-   <div class="detail-item ${msg?'alert-triggered':''}" onclick="openDetail('${item.urun.replace(/'/g, "\'")}')">
+   <div class="detail-item ${msg?'alert-triggered':''}" onclick="openDetail('${item.urun.replace(/'/g, "\\'")}')">
      <div>
        <div style="font-weight:800">${item.urun} ${msg?'⚠️':''}</div>
        <div class="item-meta"><span>Adet: ${item.adet.toLocaleString('tr-TR')}</span><span>Fiyat: ${formatPrice(item.fiyat)}</span></div>
@@ -127,7 +154,7 @@ function renderAll(){ let triggeredCount=0; DATA.forEach(i=>{ if(getAlertMsg(i))
      <div style="text-align:right"><div class="big">${formatTRY(item.guncelDeger)}</div><div class="small ${kz>=0?'pos':'neg'}">${pct}%</div></div>
    </div>`; }).join("");
  // TICKER: Use last two prices from history (not value-based) to avoid 0%
- const tickerItems = DATA.map(r=>{ const pair=getPrevPricePair(r.urun); let pct=0; if(pair && pair.prev>0){ pct=((pair.last - pair.prev)/pair.prev)*100; } const color = pct>=0 ? 'var(--pos)' : 'var(--neg)'; return `<div class="ticker-item" style="color:${color}">${r.urun} %${pct.toFixed(1)}</div>`; }).join("");
+ const tickerItems = DATA.map(r=>{ const pair=getClosestPrevForTicker(r.urun); let pct=0; if(pair && pair.prev>0){ pct=((pair.last - pair.prev)/pair.prev)*100; } const color = pct>=0 ? 'var(--pos)' : 'var(--neg)'; return `<div class="ticker-item" style="color:${color}">${r.urun} %${pct.toFixed(1)}</div>`; }).join("");
  document.getElementById("ticker-content").innerHTML = tickerItems + tickerItems;
  // After re-render, update last refresh text inline
  updateLastRefresh();
