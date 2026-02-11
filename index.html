@@ -40,6 +40,9 @@ h2{ margin:14px 16px 6px; font-size:11px; text-transform: uppercase; letter-spac
 .modal-section { background: var(--card); border:1px solid var(--line); border-radius:12px; padding:18px; margin:20px 0; }
 .modal-section h4 { margin:0 0 14px; font-size:13px; opacity:0.9; text-transform:uppercase; letter-spacing:0.4px; }
 .modal-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(158px, 1fr)); gap:14px 18px; }
+.modal-grid .info-box { background: #0f172a; border:1px solid var(--line); border-radius:8px; padding:10px 12px; text-align:center; }
+.modal-grid .info-box .small { font-size:10px; opacity:0.8; margin-bottom:4px; }
+.modal-grid .info-box .big { font-size:15px; font-weight:600; }
 .modal-table { width:100%; border-collapse:collapse; font-size:12px; }
 .modal-table th, .modal-table td { padding:9px 12px; text-align:left; border-bottom:1px solid var(--line); }
 .modal-table th { color:var(--muted); font-weight:600; text-transform:uppercase; font-size:11px; }
@@ -48,6 +51,11 @@ h2{ margin:14px 16px 6px; font-size:11px; text-transform: uppercase; letter-spac
 .sparkline-tooltip { position:absolute; background: rgba(0,0,0,.85); color:#fff; padding:6px 10px; border-radius:6px; font-size:11px; pointer-events:none; transform: translate(-50%, -130%); white-space:nowrap; z-index: 1001; border:1px solid var(--line); display:none; }
 .sparkline-wrap canvas{ width:100% !important; height: 180px; display:block; }
 .refresh-inline{ margin-left:auto; font-size:10px; opacity:.7; padding-right:6px; }
+
+@media (max-width: 480px) {
+  .modal-grid { grid-template-columns: repeat(2, 1fr); gap:12px 14px; }
+  .modal-grid .info-box .big { font-size:14px; }
+}
 </style>
 </head>
 <body>
@@ -103,7 +111,6 @@ async function loadHistory(){
 }
 
 function getClosestBackwardPrice(urun, targetDate) { const h = HISTORY_BY_URUN[urun]; if (!h || h.length === 0) return null; for (let i = h.length - 1; i >= 0; i--) { if (h[i].date <= targetDate) return h[i].price; } return null; }
-function getChangeTRY(urun, adet, daysBack) { const h = HISTORY_BY_URUN[urun]; if (!h || h.length === 0) return 0; const last = h[h.length - 1].price; const lastDate = h[h.length - 1].date; const target = new Date(lastDate); target.setDate(target.getDate() - daysBack); const past = getClosestBackwardPrice(urun, target); if (past === null) return 0; return adet * (last - past); }
 function getAlertMsg(item){ const alerts=JSON.parse(localStorage.getItem(ALERTS_KEY))||{}; const a=alerts[item.urun]; if(!a) return null; const kz=item.guncelDeger-item.toplamYatirim; const prev=item.guncelDeger-item.gunluk; const dPct=(prev>0)?(item.gunluk/prev)*100:0; let m=[]; if(a.guncel&&item.guncelDeger>=a.guncel) m.push(`Değer ≥ ${formatTRY(a.guncel)}`); if(a.kz&&kz>=a.kz) m.push(`Kâr ≥ ${formatTRY(a.kz)}`); if(a.gp&&dPct>=a.gp) m.push(`Günlük ≥ %${a.gp}`); return m.length>0?m.join(" | "):null; }
 function updateLastRefresh(){ const now=new Date(); const txt=now.toLocaleTimeString("tr-TR",{hour:"2-digit",minute:"2-digit",second:"2-digit"}); const el=document.getElementById("last-refresh"); if(el) el.innerText="Son güncelleme: "+txt; }
 function setAutoRefresh(mins){ clearInterval(REFRESH_INT); if(mins>0){ REFRESH_INT=setInterval(()=>{ init(); }, mins*60*1000); } }
@@ -128,7 +135,8 @@ async function init(){
       ucAylik:toNumber(r.ucAylik), 
       altiAylik:toNumber(r.altiAylik), 
       birYillik:toNumber(r.birYillik),
-      tarih: r.tarih || r['Tarih'] || r['alım tarihi'] || ''   // tarih sütunu esnek eşleşme
+      tutulangun: toNumber(r.tutulangun || r['Tutulan Gün'] || r.tutulanGun || 0),
+      tarih: r.tarih || r['Tarih'] || ''
     })).filter(i=>i.urun&&i.toplamYatirim>0); 
     
     await loadHistory(); 
@@ -182,8 +190,6 @@ function renderAll(){
     return a.urun.localeCompare(b.urun); 
   });
 
-  const totalG = DATA.reduce((a,b)=>a+b.guncelDeger,0);
-
   document.getElementById("detail-list").innerHTML = listData.map(item=>{ 
     const kz=item.guncelDeger-item.toplamYatirim; 
     const pct=item.toplamYatirim>0?((kz/item.toplamYatirim)*100).toFixed(1):'0.0'; 
@@ -230,6 +236,19 @@ function drawSparkline(canvas, values, dates, color='#3b82f6'){
   canvas.onmouseleave=()=>{ tooltip.style.display='none'; };
 }
 
+function getPreviousPrice(urun) {
+  const hist = HISTORY_BY_URUN[urun] || [];
+  if (hist.length < 2) return null;
+  // son iki farklı fiyatlı kayıttan bir önceki fiyat
+  let last = hist[hist.length-1];
+  for (let i = hist.length-2; i >= 0; i--) {
+    if (hist[i].price !== last.price) {
+      return hist[i].price;
+    }
+  }
+  return null;
+}
+
 function openDetail(name){
   const item = DATA.find(i => i.urun === name); 
   if(!item) return;
@@ -244,15 +263,8 @@ function openDetail(name){
   const birimKZ = item.adet > 0 ? (kz / item.adet) : 0;
   const birimPct = item.toplamYatirim > 0 && item.adet > 0 ? ((birimKZ / ortFiyat) * 100).toFixed(1) : '0.0';
 
-  let tutulanGun = '—';
-  if (item.tarih) {
-    const alimTarihi = parseDateTR(item.tarih);
-    if (alimTarihi) {
-      const simdi = new Date();
-      const farkMs = simdi - alimTarihi;
-      tutulanGun = Math.floor(farkMs / (1000 * 60 * 60 * 24));
-    }
-  }
+  const previousPrice = getPreviousPrice(item.urun);
+  const tutulanGun = item.tutulangun > 0 ? item.tutulangun : '—';
 
   const hist = (HISTORY_BY_URUN[name] || []).slice(-30); 
   const last30 = hist.map(h => h.price); 
@@ -274,25 +286,25 @@ function openDetail(name){
 
     <div class="modal-section" style="margin-bottom:24px;">
       <h4 style="margin:0 0 14px 0; font-size:13px; opacity:0.9; text-transform:uppercase; letter-spacing:0.4px;">Genel Bilgiler</h4>
-      <div class="modal-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(158px, 1fr)); gap:14px 18px;">
-        <div><div class="small">Varlık Türü</div><div class="big" style="font-size:15px;">${item.tur || '—'}</div></div>
-        <div><div class="small">Portföy Payı</div><div class="big" style="font-size:15px;">%${portföyPay}</div></div>
-        <div><div class="small">Tutulan Gün</div><div class="big" style="font-size:15px;">${tutulanGun} gün</div></div>
-        <div><div class="small">Yatırım Tutarı</div><div class="big" style="font-size:15px;">${formatTRY(item.toplamYatirim)}</div></div>
-        <div><div class="small">Güncel Değer</div><div class="big" style="font-size:15px;">${formatTRY(item.guncelDeger)}</div></div>
-        <div class="${kz >= 0 ? 'pos' : 'neg'}"><div class="small">K/Z</div><div class="big" style="font-size:15px;">${formatTRY(kz)}</div></div>
-        <div class="${kz >= 0 ? 'pos' : 'neg'}"><div class="small">Getiri</div><div class="big" style="font-size:15px;">%${pctTotal}</div></div>
+      <div class="modal-grid">
+        <div class="info-box"><div class="small">Varlık Türü</div><div class="big">${item.tur || '—'}</div></div>
+        <div class="info-box"><div class="small">Portföy Payı</div><div class="big">%${portföyPay}</div></div>
+        <div class="info-box"><div class="small">Tutulan Gün</div><div class="big">${tutulanGun} gün</div></div>
+        <div class="info-box"><div class="small">Yatırım Tutarı</div><div class="big">${formatTRY(item.toplamYatirim)}</div></div>
+        <div class="info-box"><div class="small">Güncel Değer</div><div class="big">${formatTRY(item.guncelDeger)}</div></div>
+        <div class="info-box ${kz >= 0 ? 'pos' : 'neg'}"><div class="small">K/Z</div><div class="big">${formatTRY(kz)}</div></div>
       </div>
     </div>
 
     <div class="modal-section" style="margin-bottom:24px;">
       <h4 style="margin:0 0 14px 0; font-size:13px; opacity:0.9; text-transform:uppercase; letter-spacing:0.4px;">Pozisyon Detayları</h4>
-      <div class="modal-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:14px 18px;">
-        <div><div class="small">Adet</div><div class="big" style="font-size:15px;">${item.adet.toLocaleString('tr-TR')}</div></div>
-        <div><div class="small">Ort. Maliyet</div><div class="big" style="font-size:15px;">${formatPrice(ortFiyat)}</div></div>
-        <div><div class="small">Güncel Fiyat</div><div class="big" style="font-size:15px;">${formatPrice(item.fiyat)}</div></div>
-        <div class="${birimKZ >= 0 ? 'pos' : 'neg'}"><div class="small">Birim K/Z</div><div class="big" style="font-size:15px;">${formatPrice(birimKZ)}</div></div>
-        <div class="${birimPct >= 0 ? 'pos' : 'neg'}"><div class="small">Birim Getiri</div><div class="big" style="font-size:15px;">%${birimPct}</div></div>
+      <div class="modal-grid">
+        <div class="info-box"><div class="small">Adet</div><div class="big">${item.adet.toLocaleString('tr-TR')}</div></div>
+        <div class="info-box"><div class="small">Ort. Maliyet</div><div class="big">${formatPrice(ortFiyat)}</div></div>
+        <div class="info-box"><div class="small">Güncel Fiyat</div><div class="big">${formatPrice(item.fiyat)}</div></div>
+        <div class="info-box"><div class="small">Önceki Fiyat</div><div class="big">${previousPrice !== null ? formatPrice(previousPrice) : '—'}</div></div>
+        <div class="info-box ${birimKZ >= 0 ? 'pos' : 'neg'}"><div class="small">Birim K/Z</div><div class="big">${formatPrice(birimKZ)}</div></div>
+        <div class="info-box ${birimPct >= 0 ? 'pos' : 'neg'}"><div class="small">Birim Getiri</div><div class="big">%${birimPct}</div></div>
       </div>
     </div>
 
@@ -303,18 +315,17 @@ function openDetail(name){
           <thead>
             <tr>
               <th>Dönem</th>
-              <th>Değişim ₺</th>
               <th>K/Z ₺</th>
               <th>Getiri %</th>
             </tr>
           </thead>
           <tbody>
-            <tr><td>Günlük</td><td class="${Number(item.gunluk) >= 0 ? 'pos' : 'neg'}">${formatTRY(item.gunluk)}</td><td class="${kz >= 0 ? 'pos' : 'neg'}">${formatTRY(kz)}</td><td class="${pctTotal >= 0 ? 'pos' : 'neg'}">%${pctTotal}</td></tr>
-            <tr><td>Haftalık</td><td class="${Number(item.haftalik) >= 0 ? 'pos' : 'neg'}">${formatTRY(item.haftalik)}</td><td class="${kz >= 0 ? 'pos' : 'neg'}">${formatTRY(kz)}</td><td class="${pctTotal >= 0 ? 'pos' : 'neg'}">%${pctTotal}</td></tr>
-            <tr><td>Aylık</td><td class="${Number(item.aylik) >= 0 ? 'pos' : 'neg'}">${formatTRY(item.aylik)}</td><td class="${kz >= 0 ? 'pos' : 'neg'}">${formatTRY(kz)}</td><td class="${pctTotal >= 0 ? 'pos' : 'neg'}">%${pctTotal}</td></tr>
-            <tr><td>3 Aylık</td><td class="${Number(item.ucAylik) >= 0 ? 'pos' : 'neg'}">${formatTRY(item.ucAylik)}</td><td class="${kz >= 0 ? 'pos' : 'neg'}">${formatTRY(kz)}</td><td class="${pctTotal >= 0 ? 'pos' : 'neg'}">%${pctTotal}</td></tr>
-            <tr><td>6 Aylık</td><td class="${Number(item.altiAylik) >= 0 ? 'pos' : 'neg'}">${formatTRY(item.altiAylik)}</td><td class="${kz >= 0 ? 'pos' : 'neg'}">${formatTRY(kz)}</td><td class="${pctTotal >= 0 ? 'pos' : 'neg'}">%${pctTotal}</td></tr>
-            <tr><td>1 Yıllık</td><td class="${Number(item.birYillik) >= 0 ? 'pos' : 'neg'}">${formatTRY(item.birYillik)}</td><td class="${kz >= 0 ? 'pos' : 'neg'}">${formatTRY(kz)}</td><td class="${pctTotal >= 0 ? 'pos' : 'neg'}">%${pctTotal}</td></tr>
+            <tr><td>Günlük</td><td class="${Number(item.gunluk) >= 0 ? 'pos' : 'neg'}">${formatTRY(item.gunluk)}</td><td class="${item.gunluk / item.toplamYatirim * 100 >= 0 ? 'pos' : 'neg'}">%${(item.gunluk / item.toplamYatirim * 100).toFixed(1)}</td></tr>
+            <tr><td>Haftalık</td><td class="${Number(item.haftalik) >= 0 ? 'pos' : 'neg'}">${formatTRY(item.haftalik)}</td><td class="${item.haftalik / item.toplamYatirim * 100 >= 0 ? 'pos' : 'neg'}">%${(item.haftalik / item.toplamYatirim * 100).toFixed(1)}</td></tr>
+            <tr><td>Aylık</td><td class="${Number(item.aylik) >= 0 ? 'pos' : 'neg'}">${formatTRY(item.aylik)}</td><td class="${item.aylik / item.toplamYatirim * 100 >= 0 ? 'pos' : 'neg'}">%${(item.aylik / item.toplamYatirim * 100).toFixed(1)}</td></tr>
+            <tr><td>3 Aylık</td><td class="${Number(item.ucAylik) >= 0 ? 'pos' : 'neg'}">${formatTRY(item.ucAylik)}</td><td class="${item.ucAylik / item.toplamYatirim * 100 >= 0 ? 'pos' : 'neg'}">%${(item.ucAylik / item.toplamYatirim * 100).toFixed(1)}</td></tr>
+            <tr><td>6 Aylık</td><td class="${Number(item.altiAylik) >= 0 ? 'pos' : 'neg'}">${formatTRY(item.altiAylik)}</td><td class="${item.altiAylik / item.toplamYatirim * 100 >= 0 ? 'pos' : 'neg'}">%${(item.altiAylik / item.toplamYatirim * 100).toFixed(1)}</td></tr>
+            <tr><td>1 Yıllık</td><td class="${Number(item.birYillik) >= 0 ? 'pos' : 'neg'}">${formatTRY(item.birYillik)}</td><td class="${item.birYillik / item.toplamYatirim * 100 >= 0 ? 'pos' : 'neg'}">%${(item.birYillik / item.toplamYatirim * 100).toFixed(1)}</td></tr>
           </tbody>
         </table>
       </div>
