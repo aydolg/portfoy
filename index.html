@@ -12,7 +12,6 @@
 *{ box-sizing: border-box; }
 body{ margin:0; background:var(--bg); color:var(--text); font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; overflow-x:hidden; }
 h2{ margin:14px 16px 6px; font-size:11px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8; }
-/* Ticker */
 .ticker-wrap{ width:100%; overflow:hidden; background:#1a2234; border-bottom:2px solid var(--line); padding:12px 0; display:flex; position: sticky; top:0; z-index: 100; }
 .ticker{ display:flex; white-space:nowrap; animation: ticker-move 40s linear infinite; }
 .ticker-item{ display:flex; align-items:center; padding:0 25px; font-size:14px; font-weight:800; border-right:1px solid rgba(255,255,255,0.1); }
@@ -20,16 +19,14 @@ h2{ margin:14px 16px 6px; font-size:11px; text-transform: uppercase; letter-spac
 .header-section{ position: sticky; top: 48px; z-index: 99; background: rgba(11, 18, 32, 0.95); backdrop-filter: blur(15px); border-bottom: 1px solid var(--line); padding: 10px; }
 .grid-summary{ display:grid; grid-template-columns: repeat(4, 1fr); gap:6px; margin-bottom:12px; }
 @media (max-width: 480px){ .grid-summary{ grid-template-columns: repeat(2, 1fr); } }
-/* TYPES */
 .grid-types{ display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
-.grid-types .card{ padding:10px 16px; min-width:80px; text-align:center; font-size:13px; font-weight:600; }
-/* Kart - ANA LİSTE (eski basit hali geri geldi) */
+.grid-types .card{ padding:10px 16px; min-width:80px; text-align:center; font-size:13px; font-weight:600; cursor:pointer; }
 .card{ background: linear-gradient(145deg, var(--card), #161e2e); border-radius: 12px; padding: 10px; border: 1px solid var(--line); display: flex; flex-direction: column; transition: 0.2s ease; cursor:pointer;}
 .card.active{ border-color: var(--accent); background: rgba(59,130,246,0.1); }
 .alert-triggered { border: 1px solid var(--neg) !important; box-shadow: 0 0 12px rgba(239, 68, 68, 0.25); }
 .alert-msg { font-size: 9px; color: var(--warn); font-weight: bold; margin-top: 4px; text-transform: uppercase; }
 .big{ font-size:14px; font-weight:700; margin-top:2px; }
-.small{ font-size:9px; font-weight:700; opacity:.8; text-transform: uppercase; }
+.small{ font-size:9px; font-weight:700; opacity:.8; text-transform: uppercase; display:block; margin-bottom:3px; }
 .pos{ color: var(--pos); } .neg{ color: var(--neg); }
 .detail-item{ background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-bottom: 8px; display: grid; grid-template-columns: 1fr auto; align-items: center; }
 .item-meta{ font-size: 10px; color: var(--muted); margin-top: 4px; display: flex; gap: 8px; }
@@ -37,21 +34,18 @@ h2{ margin:14px 16px 6px; font-size:11px; text-transform: uppercase; letter-spac
 .select{ background: var(--card); border:1px solid var(--line); color:var(--text); border-radius:8px; padding: 8px; font-size:12px; height: 38px;}
 #search{ flex: 1; padding: 8px 12px; background: var(--card); border: 1px solid var(--line); border-radius: 8px; color: #fff; height: 38px;}
 #loader{ position: fixed; inset:0; background:var(--bg); z-index:999; display:flex; justify-content:center; align-items:center; font-weight:bold; color:var(--accent); }
-/* Modal - detaylar buraya taşındı */
 .modal-backdrop{ position: fixed; inset:0; background: rgba(0,0,0,.85); display:none; align-items:center; justify-content:center; z-index: 1000; }
 .modal-backdrop.show{ display:flex; }
-.modal-card{ background: #0f172a; border: 1px solid var(--line); border-radius: 16px; width: min(760px, 95vw); max-height: 90vh; overflow-y: auto; }
-.modal-section { background: var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; margin:16px 0; }
-.modal-section h4 { margin:0 0 12px; font-size:13px; opacity:0.9; text-transform:uppercase; letter-spacing:0.5px; }
-.modal-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:12px; }
+.modal-card{ background: #0f172a; border: 1px solid var(--line); border-radius: 16px; width: min(820px, 95vw); max-height: 92vh; overflow-y: auto; }
+.modal-section { background: var(--card); border:1px solid var(--line); border-radius:12px; padding:18px; margin:20px 0; }
+.modal-section h4 { margin:0 0 14px; font-size:13px; opacity:0.9; text-transform:uppercase; letter-spacing:0.4px; }
+.modal-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(158px, 1fr)); gap:14px 18px; }
 .modal-table { width:100%; border-collapse:collapse; font-size:12px; }
-.modal-table th, .modal-table td { padding:8px 10px; text-align:left; border-bottom:1px solid var(--line); }
+.modal-table th, .modal-table td { padding:9px 12px; text-align:left; border-bottom:1px solid var(--line); }
 .modal-table th { color:var(--muted); font-weight:600; text-transform:uppercase; font-size:11px; }
-.modal-table .pos, .modal-table .neg { font-weight:600; }
-/* Sparkline */
-.sparkline-wrap{ background:#0b1329; border:1px solid var(--line); border-radius:10px; padding:8px; position: relative; margin:16px 0; }
-.sparkline-title{ font-size:10px; opacity:.8; text-transform:uppercase; margin-bottom:6px; }
-.sparkline-tooltip { position:absolute; background: rgba(0,0,0,.85); color:#fff; padding:6px 8px; border-radius:6px; font-size:11px; pointer-events:none; transform: translate(-50%, -120%); white-space:nowrap; z-index: 1001; border:1px solid var(--line); display:none; }
+.sparkline-wrap{ background:#0b1329; border:1px solid var(--line); border-radius:10px; padding:10px; position: relative; margin:16px 0; }
+.sparkline-title{ font-size:10px; opacity:.8; text-transform:uppercase; margin-bottom:8px; }
+.sparkline-tooltip { position:absolute; background: rgba(0,0,0,.85); color:#fff; padding:6px 10px; border-radius:6px; font-size:11px; pointer-events:none; transform: translate(-50%, -130%); white-space:nowrap; z-index: 1001; border:1px solid var(--line); display:none; }
 .sparkline-wrap canvas{ width:100% !important; height: 180px; display:block; }
 .refresh-inline{ margin-left:auto; font-size:10px; opacity:.7; padding-right:6px; }
 </style>
@@ -88,17 +82,27 @@ h2{ margin:14px 16px 6px; font-size:11px; text-transform: uppercase; letter-spac
 </div>
 
 <script>
-// Değişkenler ve yardımcı fonksiyonlar (değişmedi)
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQLPFVZn0j8Ygu914QDGRCGKsVy88gWjdk7DFi-jWiydmqYsdGUE4hEAb-R_IBzQmtFZwoMJFcN6rlD/pub?gid=1050165900&single=true&output=csv";
 const HISTORY_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQLPFVZn0j8Ygu914QDGRCGKsVy88gWjdk7DFi-jWiydmqYsdGUE4hEAb-R_IBzQmtFZwoMJFcN6rlD/pub?gid=1490096590&single=true&output=csv";
 const ALERTS_KEY = "portfolio_alerts_v1";
 let DATA = []; let ACTIVE_PILL = "ALL"; let REFRESH_INT = null; let PRICE_HISTORY = []; let HISTORY_BY_URUN = {};
+
 const toNumber = (v) => { if (v===null||v===undefined) return 0; let s=v.toString().trim(); if(!s) return 0; s=s.replace(/[₺\s]/g,''); if(s.includes(',')&&s.includes('.')){ s=s.replace(/\./g,''); s=s.replace(',', '.'); } else { s=s.replace(',', '.'); } s=s.replace(/[^\d.\-]/g,''); const n=parseFloat(s); return Number.isFinite(n)?n:0; };
 const formatTRY = v => Math.round(v).toLocaleString('tr-TR') + " ₺";
 const formatPrice = v => parseFloat(v).toLocaleString('tr-TR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + " ₺";
 function parseDateTR(s){ if(!s) return null; if(s instanceof Date) return s; const a=s.toString().split('.'); if(a.length!==3) return null; const dd=+a[0], mm=+a[1], yy=+a[2]; if(!dd||!mm||!yy) return null; return new Date(yy, mm-1, dd); }
-async function loadHistory(){ const res=await fetch(`${HISTORY_URL}&cb=${Date.now()}`); const text=await res.text(); const p=Papa.parse(text.trim(),{header:true}); PRICE_HISTORY=p.data.map(r=>({urun:r.urun||r['Ürün']||r['Urun'], date:parseDateTR(r.tarih||r['Tarih']), price:toNumber(r.fiyat||r['Fiyat'])})).filter(x=>x.urun&&x.date&&(x.price||x.price===0)); HISTORY_BY_URUN={}; for(const row of PRICE_HISTORY){ (HISTORY_BY_URUN[row.urun]??=[]).push({date:row.date, price:row.price}); } Object.keys(HISTORY_BY_URUN).forEach(k=>HISTORY_BY_URUN[k].sort((a,b)=>a.date-b.date)); }
-function getClosestBackwardPrice(urun, targetDate) { const h = HISTORY_BY_URUN[urun]; if (!h || h.length === 0) return null; for (let i = h.length - 1; i >= 0; i--) { if (h[i].date <= targetDate) { return h[i].price; } } return null; }
+
+async function loadHistory(){ 
+  const res=await fetch(`${HISTORY_URL}&cb=${Date.now()}`); 
+  const text=await res.text(); 
+  const p=Papa.parse(text.trim(),{header:true}); 
+  PRICE_HISTORY=p.data.map(r=>({urun:r.urun||r['Ürün']||r['Urun'], date:parseDateTR(r.tarih||r['Tarih']), price:toNumber(r.fiyat||r['Fiyat'])})).filter(x=>x.urun&&x.date&&(x.price||x.price===0)); 
+  HISTORY_BY_URUN={}; 
+  for(const row of PRICE_HISTORY){ (HISTORY_BY_URUN[row.urun]??=[]).push({date:row.date, price:row.price}); } 
+  Object.keys(HISTORY_BY_URUN).forEach(k=>HISTORY_BY_URUN[k].sort((a,b)=>a.date-b.date)); 
+}
+
+function getClosestBackwardPrice(urun, targetDate) { const h = HISTORY_BY_URUN[urun]; if (!h || h.length === 0) return null; for (let i = h.length - 1; i >= 0; i--) { if (h[i].date <= targetDate) return h[i].price; } return null; }
 function getChangeTRY(urun, adet, daysBack) { const h = HISTORY_BY_URUN[urun]; if (!h || h.length === 0) return 0; const last = h[h.length - 1].price; const lastDate = h[h.length - 1].date; const target = new Date(lastDate); target.setDate(target.getDate() - daysBack); const past = getClosestBackwardPrice(urun, target); if (past === null) return 0; return adet * (last - past); }
 function getAlertMsg(item){ const alerts=JSON.parse(localStorage.getItem(ALERTS_KEY))||{}; const a=alerts[item.urun]; if(!a) return null; const kz=item.guncelDeger-item.toplamYatirim; const prev=item.guncelDeger-item.gunluk; const dPct=(prev>0)?(item.gunluk/prev)*100:0; let m=[]; if(a.guncel&&item.guncelDeger>=a.guncel) m.push(`Değer ≥ ${formatTRY(a.guncel)}`); if(a.kz&&kz>=a.kz) m.push(`Kâr ≥ ${formatTRY(a.kz)}`); if(a.gp&&dPct>=a.gp) m.push(`Günlük ≥ %${a.gp}`); return m.length>0?m.join(" | "):null; }
 function updateLastRefresh(){ const now=new Date(); const txt=now.toLocaleTimeString("tr-TR",{hour:"2-digit",minute:"2-digit",second:"2-digit"}); const el=document.getElementById("last-refresh"); if(el) el.innerText="Son güncelleme: "+txt; }
@@ -110,15 +114,44 @@ async function init(){
     const res=await fetch(`${CSV_URL}&cb=${Date.now()}`); 
     const text=await res.text(); 
     const p=Papa.parse(text.trim(),{header:true}); 
-    DATA=p.data.map(r=>({...r, urun:(r.urun||r['Ürün']||r['Urun']), tur:(r.tur||r['Tür']||r['tur']), adet:toNumber(r.adet||r.miktar||r['Miktar']||0), fiyat:toNumber(r.fiyat||r.sonFiyat||r['Son Fiyat']||0), toplamYatirim:toNumber(r.toplamYatirim), guncelDeger:toNumber(r.guncelDeger), gunluk:toNumber(r.gunluk), haftalik:toNumber(r.haftalik), aylik:toNumber(r.aylik), ucAylik:toNumber(r.ucAylik), altiAylik:toNumber(r.altiAylik), birYillik:toNumber(r.birYillik)})).filter(i=>i.urun&&i.toplamYatirim>0); 
+    DATA=p.data.map(r=>({
+      ...r, 
+      urun:(r.urun||r['Ürün']||r['Urun']), 
+      tur:(r.tur||r['Tür']||r['tur']), 
+      adet:toNumber(r.adet||r.miktar||r['Miktar']||0), 
+      fiyat:toNumber(r.fiyat||r.sonFiyat||r['Son Fiyat']||0), 
+      toplamYatirim:toNumber(r.toplamYatirim), 
+      guncelDeger:toNumber(r.guncelDeger), 
+      gunluk:toNumber(r.gunluk), 
+      haftalik:toNumber(r.haftalik), 
+      aylik:toNumber(r.aylik), 
+      ucAylik:toNumber(r.ucAylik), 
+      altiAylik:toNumber(r.altiAylik), 
+      birYillik:toNumber(r.birYillik),
+      tarih: r.tarih || r['Tarih'] || r['alım tarihi'] || ''   // tarih sütunu esnek eşleşme
+    })).filter(i=>i.urun&&i.toplamYatirim>0); 
+    
     await loadHistory(); 
-    for(const item of DATA){ const hist=HISTORY_BY_URUN[item.urun]; if(hist&&hist.length){ const lastPrice=hist[hist.length-1].price; if(!item.fiyat||item.fiyat<=0) item.fiyat=lastPrice; if(!item.guncelDeger||item.guncelDeger<=0) item.guncelDeger=item.adet*lastPrice; item.gunluk=getChangeTRY(item.urun,item.adet,1); item.haftalik=getChangeTRY(item.urun,item.adet,7); item.aylik=getChangeTRY(item.urun,item.adet,30); item.ucAylik=getChangeTRY(item.urun,item.adet,90); item.altiAylik=getChangeTRY(item.urun,item.adet,180); item.birYillik=getChangeTRY(item.urun,item.adet,365); } }
-    document.getElementById("loader").style.display="none"; renderAll(); updateLastRefresh(); 
+    
+    for(const item of DATA){
+      const hist=HISTORY_BY_URUN[item.urun];
+      if(hist&&hist.length){
+        const lastPrice=hist[hist.length-1].price;
+        if(!item.fiyat||item.fiyat<=0) item.fiyat=lastPrice;
+        if(!item.guncelDeger||item.guncelDeger<=0) item.guncelDeger=item.adet*lastPrice;
+      }
+    }
+
+    document.getElementById("loader").style.display="none"; 
+    renderAll(); 
+    updateLastRefresh(); 
   }catch(e){ console.error(e); }
 }
 
 function renderAll(){ 
-  let triggeredCount=0; DATA.forEach(i=>{ if(getAlertMsg(i)) triggeredCount++; });
+  let triggeredCount=0; 
+  DATA.forEach(i=>{ if(getAlertMsg(i)) triggeredCount++; });
+
   const turlar=[...new Set(DATA.map(i=>i.tur))].filter(Boolean); 
   document.getElementById("types").innerHTML = `
    <div class="card ${ACTIVE_PILL==='ALL'?'active':''}" onclick="setActivePill('ALL')"><div class="small">GENEL</div></div>
@@ -126,8 +159,12 @@ function renderAll(){
    <div class="card ${ACTIVE_PILL==='ALERTS'?'active':''}" onclick="setActivePill('ALERTS')"><div class="small">UYARILAR (${triggeredCount})</div></div>
    <div id="last-refresh" class="refresh-inline">Son güncelleme: -</div>`;
 
-  let filtered=DATA; if(ACTIVE_PILL==="ALERTS") filtered=DATA.filter(i=>getAlertMsg(i)); else if(ACTIVE_PILL!=="ALL") filtered=DATA.filter(i=>i.tur===ACTIVE_PILL);
-  const fM=filtered.reduce((a,b)=>a+b.toplamYatirim,0); const fG=filtered.reduce((a,b)=>a+b.guncelDeger,0);
+  let filtered=DATA; 
+  if(ACTIVE_PILL==="ALERTS") filtered=DATA.filter(i=>getAlertMsg(i)); 
+  else if(ACTIVE_PILL!=="ALL") filtered=DATA.filter(i=>i.tur===ACTIVE_PILL);
+
+  const fM=filtered.reduce((a,b)=>a+b.toplamYatirim,0); 
+  const fG=filtered.reduce((a,b)=>a+b.guncelDeger,0);
   document.getElementById("summary").innerHTML = `
    <div class="card"><div class="small">Maliyet</div><div class="big">${formatTRY(fM)}</div></div>
    <div class="card"><div class="small">Güncel</div><div class="big">${formatTRY(fG)}</div></div>
@@ -137,8 +174,13 @@ function renderAll(){
   const pers=[["Günlük","gunluk"],["Haftalık","haftalik"],["Aylık","aylik"],["3 Aylık","ucAylik"],["6 Aylık","altiAylik"],["1 Yıllık","birYillik"]];
   document.getElementById("periods").innerHTML = pers.map(([l,k])=>{ const v=filtered.reduce((a,b)=>a+b[k],0); return `<div class="card ${v>=0?'pos':'neg'}"><div class="small">${l}</div><div class="big">${formatTRY(v)}</div></div>`; }).join("");
 
-  const sort=document.getElementById("sort-by").value; let listData=[...filtered];
-  listData.sort((a,b)=>{ if(sort==='kz') return (b.guncelDeger-b.toplamYatirim)-(a.guncelDeger-a.toplamYatirim); if(sort==='guncel') return b.guncelDeger-a.guncelDeger; return a.urun.localeCompare(b.urun); });
+  const sort=document.getElementById("sort-by").value; 
+  let listData=[...filtered];
+  listData.sort((a,b)=>{ 
+    if(sort==='kz') return (b.guncelDeger-b.toplamYatirim)-(a.guncelDeger-a.toplamYatirim); 
+    if(sort==='guncel') return b.guncelDeger-a.guncelDeger; 
+    return a.urun.localeCompare(b.urun); 
+  });
 
   const totalG = DATA.reduce((a,b)=>a+b.guncelDeger,0);
 
@@ -167,100 +209,145 @@ function setActivePill(p){ ACTIVE_PILL=p; renderAll(); }
 function drawSparkline(canvas, values, dates, color='#3b82f6'){
   canvas.width = Math.max(320, canvas.clientWidth*2);
   canvas.height = 220;
-  const ctx=canvas.getContext('2d'); const W=canvas.width, H=canvas.height; ctx.clearRect(0,0,W,H); if(!values||!values.length) return; const min=Math.min(...values), max=Math.max(...values); const pad=8; const nx=i=> pad + (i*(W-2*pad))/Math.max(1,(values.length-1)); const ny=v=> (max===min? H/2 : (H - pad - ((v-min)*(H-2*pad)/(max-min))));
-  ctx.lineWidth=2; ctx.strokeStyle=color; ctx.beginPath(); ctx.moveTo(nx(0), ny(values[0])); for(let i=1;i<values.length;i++) ctx.lineTo(nx(i), ny(values[i])); ctx.stroke(); ctx.lineTo(nx(values.length-1), H-pad); ctx.lineTo(nx(0), H-pad); ctx.closePath(); ctx.fillStyle='rgba(59,130,246,0.15)'; ctx.fill(); let tooltip=canvas.parentElement.querySelector('.sparkline-tooltip'); if(!tooltip){ tooltip=document.createElement('div'); tooltip.className='sparkline-tooltip'; canvas.parentElement.appendChild(tooltip); }
-  canvas.onmousemove=(ev)=>{ const rect=canvas.getBoundingClientRect(); const x=ev.clientX-rect.left; const idx=Math.round((x - pad) / ((canvas.clientWidth - 2*(pad/2)) / Math.max(1,(values.length-1)))); const i=Math.max(0, Math.min(values.length-1, idx)); tooltip.style.left = `${(x)}px`; tooltip.style.top = `${ny(values[i])*(canvas.clientHeight/canvas.height)}px`; tooltip.style.display='block'; tooltip.innerHTML = `<b>${dates[i]}</b><br>Fiyat: ${values[i].toFixed(2)}`; };
+  const ctx=canvas.getContext('2d'); const W=canvas.width, H=canvas.height; ctx.clearRect(0,0,W,H); if(!values||!values.length) return; 
+  const min=Math.min(...values), max=Math.max(...values); const pad=8; 
+  const nx=i=> pad + (i*(W-2*pad))/Math.max(1,(values.length-1)); 
+  const ny=v=> (max===min? H/2 : (H - pad - ((v-min)*(H-2*pad)/(max-min))));
+  ctx.lineWidth=2; ctx.strokeStyle=color; ctx.beginPath(); ctx.moveTo(nx(0), ny(values[0])); 
+  for(let i=1;i<values.length;i++) ctx.lineTo(nx(i), ny(values[i])); 
+  ctx.stroke(); ctx.lineTo(nx(values.length-1), H-pad); ctx.lineTo(nx(0), H-pad); ctx.closePath(); 
+  ctx.fillStyle='rgba(59,130,246,0.15)'; ctx.fill();
+  let tooltip=canvas.parentElement.querySelector('.sparkline-tooltip'); 
+  if(!tooltip){ tooltip=document.createElement('div'); tooltip.className='sparkline-tooltip'; canvas.parentElement.appendChild(tooltip); }
+  canvas.onmousemove=(ev)=>{ 
+    const rect=canvas.getBoundingClientRect(); const x=ev.clientX-rect.left; 
+    const idx=Math.round((x - pad) / ((canvas.clientWidth - 2*pad) / Math.max(1,(values.length-1)))); 
+    const i=Math.max(0, Math.min(values.length-1, idx)); 
+    tooltip.style.left = `${x}px`; tooltip.style.top = `${ny(values[i])*(canvas.clientHeight/canvas.height)}px`; 
+    tooltip.style.display='block'; 
+    tooltip.innerHTML = `<b>${dates[i]}</b><br>Fiyat: ${values[i].toFixed(2)} ₺`; 
+  };
   canvas.onmouseleave=()=>{ tooltip.style.display='none'; };
 }
 
 function openDetail(name){
-  const item=DATA.find(i=>i.urun===name); 
+  const item = DATA.find(i => i.urun === name); 
   if(!item) return;
-  const alerts=JSON.parse(localStorage.getItem(ALERTS_KEY))||{}; 
-  const a=alerts[name]||{}; 
-  const kz=item.guncelDeger-item.toplamYatirim; 
-  const totalG=DATA.reduce((a,b)=>a+b.guncelDeger,0); 
-  const hist=(HISTORY_BY_URUN[name]||[]).slice(-30); 
-  const last30=hist.map(h=>h.price); 
-  const dates30=hist.map(h=>h.date.toLocaleDateString('tr-TR')); 
-  const safeName=name.replace(/[^\w\-]/g,'_');
-  const ortFiyat = item.adet > 0 ? item.toplamYatirim / item.adet : item.fiyat;
-  const birimKZ = item.adet > 0 ? kz / item.adet : 0;
+
+  const alerts = JSON.parse(localStorage.getItem(ALERTS_KEY)) || {}; 
+  const a = alerts[name] || {}; 
+  const kz = item.guncelDeger - item.toplamYatirim; 
+  const totalG = DATA.reduce((a,b) => a + b.guncelDeger, 0); 
   const portföyPay = totalG > 0 ? ((item.guncelDeger / totalG) * 100).toFixed(1) : '0.0';
+  const pctTotal = item.toplamYatirim > 0 ? ((kz / item.toplamYatirim) * 100).toFixed(1) : '0.0';
+  const ortFiyat = item.adet > 0 ? (item.toplamYatirim / item.adet) : item.fiyat;
+  const birimKZ = item.adet > 0 ? (kz / item.adet) : 0;
+  const birimPct = item.toplamYatirim > 0 && item.adet > 0 ? ((birimKZ / ortFiyat) * 100).toFixed(1) : '0.0';
+
+  let tutulanGun = '—';
+  if (item.tarih) {
+    const alimTarihi = parseDateTR(item.tarih);
+    if (alimTarihi) {
+      const simdi = new Date();
+      const farkMs = simdi - alimTarihi;
+      tutulanGun = Math.floor(farkMs / (1000 * 60 * 60 * 24));
+    }
+  }
+
+  const hist = (HISTORY_BY_URUN[name] || []).slice(-30); 
+  const last30 = hist.map(h => h.price); 
+  const dates30 = hist.map(h => h.date.toLocaleDateString('tr-TR')); 
+  const safeName = name.replace(/[^\w\-]/g, '_');
 
   document.getElementById("modal-inner").innerHTML = `
-  <div style="padding:24px 20px;">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-      <h3 style="margin:0; font-size:18px;">${item.urun} Analizi</h3>
-      <button onclick="document.getElementById('modal').classList.remove('show')" style="background:none;border:none;color:#fff;font-size:24px;cursor:pointer;">✕</button>
+  <div style="padding:24px 20px; max-width:780px; margin:0 auto;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+      <h3 style="margin:0; font-size:19px; font-weight:600;">${item.urun} Analizi</h3>
+      <button onclick="document.getElementById('modal').classList.remove('show')" style="background:none;border:none;color:#fff;font-size:26px;cursor:pointer;opacity:0.8;">✕</button>
     </div>
 
-    <div class="sparkline-wrap">
+    <div class="sparkline-wrap" style="margin-bottom:28px;">
       <div class="sparkline-title">Son 30 Gün Fiyat Hareketi</div>
       <canvas id="spark-${safeName}"></canvas>
       <div class="sparkline-tooltip"></div>
     </div>
 
-    <div class="modal-section">
-      <h4>Genel Bilgiler</h4>
-      <div class="modal-grid">
-        <div><div class="small">Varlık Türü</div><div class="big">${item.tur || '—'}</div></div>
-        <div><div class="small">Portföy Payı</div><div class="big">%${portföyPay}</div></div>
-        <div><div class="small">Elde Tutma</div><div class="big">— gün</div></div>
+    <div class="modal-section" style="margin-bottom:24px;">
+      <h4 style="margin:0 0 14px 0; font-size:13px; opacity:0.9; text-transform:uppercase; letter-spacing:0.4px;">Genel Bilgiler</h4>
+      <div class="modal-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(158px, 1fr)); gap:14px 18px;">
+        <div><div class="small">Varlık Türü</div><div class="big" style="font-size:15px;">${item.tur || '—'}</div></div>
+        <div><div class="small">Portföy Payı</div><div class="big" style="font-size:15px;">%${portföyPay}</div></div>
+        <div><div class="small">Tutulan Gün</div><div class="big" style="font-size:15px;">${tutulanGun} gün</div></div>
+        <div><div class="small">Yatırım Tutarı</div><div class="big" style="font-size:15px;">${formatTRY(item.toplamYatirim)}</div></div>
+        <div><div class="small">Güncel Değer</div><div class="big" style="font-size:15px;">${formatTRY(item.guncelDeger)}</div></div>
+        <div class="${kz >= 0 ? 'pos' : 'neg'}"><div class="small">K/Z</div><div class="big" style="font-size:15px;">${formatTRY(kz)}</div></div>
+        <div class="${kz >= 0 ? 'pos' : 'neg'}"><div class="small">Getiri</div><div class="big" style="font-size:15px;">%${pctTotal}</div></div>
+      </div>
+    </div>
+
+    <div class="modal-section" style="margin-bottom:24px;">
+      <h4 style="margin:0 0 14px 0; font-size:13px; opacity:0.9; text-transform:uppercase; letter-spacing:0.4px;">Pozisyon Detayları</h4>
+      <div class="modal-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:14px 18px;">
+        <div><div class="small">Adet</div><div class="big" style="font-size:15px;">${item.adet.toLocaleString('tr-TR')}</div></div>
+        <div><div class="small">Ort. Maliyet</div><div class="big" style="font-size:15px;">${formatPrice(ortFiyat)}</div></div>
+        <div><div class="small">Güncel Fiyat</div><div class="big" style="font-size:15px;">${formatPrice(item.fiyat)}</div></div>
+        <div class="${birimKZ >= 0 ? 'pos' : 'neg'}"><div class="small">Birim K/Z</div><div class="big" style="font-size:15px;">${formatPrice(birimKZ)}</div></div>
+        <div class="${birimPct >= 0 ? 'pos' : 'neg'}"><div class="small">Birim Getiri</div><div class="big" style="font-size:15px;">%${birimPct}</div></div>
+      </div>
+    </div>
+
+    <div class="modal-section" style="margin-bottom:24px;">
+      <h4 style="margin:0 0 14px 0; font-size:13px; opacity:0.9; text-transform:uppercase; letter-spacing:0.4px;">Dönemsel Performans</h4>
+      <div style="overflow-x:auto;">
+        <table class="modal-table" style="width:100%; min-width:520px;">
+          <thead>
+            <tr>
+              <th>Dönem</th>
+              <th>Değişim ₺</th>
+              <th>K/Z ₺</th>
+              <th>Getiri %</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Günlük</td><td class="${Number(item.gunluk) >= 0 ? 'pos' : 'neg'}">${formatTRY(item.gunluk)}</td><td class="${kz >= 0 ? 'pos' : 'neg'}">${formatTRY(kz)}</td><td class="${pctTotal >= 0 ? 'pos' : 'neg'}">%${pctTotal}</td></tr>
+            <tr><td>Haftalık</td><td class="${Number(item.haftalik) >= 0 ? 'pos' : 'neg'}">${formatTRY(item.haftalik)}</td><td class="${kz >= 0 ? 'pos' : 'neg'}">${formatTRY(kz)}</td><td class="${pctTotal >= 0 ? 'pos' : 'neg'}">%${pctTotal}</td></tr>
+            <tr><td>Aylık</td><td class="${Number(item.aylik) >= 0 ? 'pos' : 'neg'}">${formatTRY(item.aylik)}</td><td class="${kz >= 0 ? 'pos' : 'neg'}">${formatTRY(kz)}</td><td class="${pctTotal >= 0 ? 'pos' : 'neg'}">%${pctTotal}</td></tr>
+            <tr><td>3 Aylık</td><td class="${Number(item.ucAylik) >= 0 ? 'pos' : 'neg'}">${formatTRY(item.ucAylik)}</td><td class="${kz >= 0 ? 'pos' : 'neg'}">${formatTRY(kz)}</td><td class="${pctTotal >= 0 ? 'pos' : 'neg'}">%${pctTotal}</td></tr>
+            <tr><td>6 Aylık</td><td class="${Number(item.altiAylik) >= 0 ? 'pos' : 'neg'}">${formatTRY(item.altiAylik)}</td><td class="${kz >= 0 ? 'pos' : 'neg'}">${formatTRY(kz)}</td><td class="${pctTotal >= 0 ? 'pos' : 'neg'}">%${pctTotal}</td></tr>
+            <tr><td>1 Yıllık</td><td class="${Number(item.birYillik) >= 0 ? 'pos' : 'neg'}">${formatTRY(item.birYillik)}</td><td class="${kz >= 0 ? 'pos' : 'neg'}">${formatTRY(kz)}</td><td class="${pctTotal >= 0 ? 'pos' : 'neg'}">%${pctTotal}</td></tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
     <div class="modal-section">
-      <h4>Pozisyon Detayları</h4>
-      <div class="modal-grid">
-        <div><div class="small">Adet</div><div class="big">${item.adet.toLocaleString('tr-TR')}</div></div>
-        <div><div class="small">Ortalama Maliyet</div><div class="big">${formatPrice(ortFiyat)}</div></div>
-        <div><div class="small">Güncel Fiyat</div><div class="big">${formatPrice(item.fiyat)}</div></div>
-        <div class="${birimKZ>=0?'pos':'neg'}"><div class="small">Birim K/Z</div><div class="big">${formatPrice(birimKZ)}</div></div>
-      </div>
-      <div style="margin-top:16px; font-size:16px; font-weight:700; text-align:center;">
-        Güncel Değer: ${formatTRY(item.guncelDeger)} 
-        <span class="${kz>=0?'pos':'neg'}">(${formatTRY(kz)} • ${kz>=0?'+':' '}${((kz/item.toplamYatirim)*100).toFixed(1)}%)</span>
-      </div>
-    </div>
-
-    <div class="modal-section">
-      <h4>Dönemsel Performans</h4>
-      <table class="modal-table">
-        <thead>
-          <tr><th>Dönem</th><th>Değişim ₺</th><th>Son Değer ₺</th><th>K/Z ₺</th><th>Getiri %</th></tr>
-        </thead>
-        <tbody>
-          <tr><td>Günlük</td><td class="${item.gunluk>=0?'pos':'neg'}">${formatTRY(item.gunluk)}</td><td>${formatTRY(item.guncelDeger)}</td><td class="${kz>=0?'pos':'neg'}">${formatTRY(kz)}</td><td class="${kz>=0?'pos':'neg'}">${((kz/item.toplamYatirim)*100).toFixed(1)}%</td></tr>
-          <tr><td>Haftalık</td><td class="${item.haftalik>=0?'pos':'neg'}">${formatTRY(item.haftalik)}</td><td>${formatTRY(item.guncelDeger)}</td><td class="${kz>=0?'pos':'neg'}">${formatTRY(kz)}</td><td class="${kz>=0?'pos':'neg'}">${((kz/item.toplamYatirim)*100).toFixed(1)}%</td></tr>
-          <tr><td>Aylık</td><td class="${item.aylik>=0?'pos':'neg'}">${formatTRY(item.aylik)}</td><td>${formatTRY(item.guncelDeger)}</td><td class="${kz>=0?'pos':'neg'}">${formatTRY(kz)}</td><td class="${kz>=0?'pos':'neg'}">${((kz/item.toplamYatirim)*100).toFixed(1)}%</td></tr>
-          <!-- İstersen 3A, 6A, 1Y satırları da eklenebilir -->
-        </tbody>
-      </table>
-    </div>
-
-    <div class="modal-section">
-      <h4>Uyarı Tanımla</h4>
+      <h4 style="margin:0 0 14px 0; font-size:13px; opacity:0.9; text-transform:uppercase; letter-spacing:0.4px;">Uyarı Tanımla</h4>
       <div style="display:grid; gap:12px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
         <input id="n-g" type="number" placeholder="Değer ≥" value="${a.guncel||''}" class="select">
         <input id="n-k" type="number" placeholder="Kâr ≥" value="${a.kz||''}" class="select">
         <input id="n-p" type="number" placeholder="Günlük % ≥" value="${a.gp||''}" class="select">
-        <button onclick="saveA('${item.urun.replace(/'/g, "\\'")}')" style="background:var(--accent); color:white; border:none; padding:12px; border-radius:8px; font-weight:bold; cursor:pointer;">KAYDET</button>
+        <button onclick="saveA('${item.urun.replace(/'/g, "\\'")}')" style="background:var(--accent); color:white; border:none; padding:12px 16px; border-radius:8px; font-weight:bold; cursor:pointer; min-height:42px;">KAYDET</button>
       </div>
     </div>
   </div>`;
 
   document.getElementById("modal").classList.add("show"); 
 
-  try{ 
+  try { 
     const cnv = document.getElementById(`spark-${safeName}`); 
-    if(cnv && last30?.length) drawSparkline(cnv, last30, dates30, '#3b82f6'); 
-  }catch(err){ console.warn('Sparkline error', err); }
+    if (cnv && last30?.length) drawSparkline(cnv, last30, dates30, '#3b82f6'); 
+  } catch(err) { 
+    console.warn('Sparkline error', err); 
+  }
 }
 
 function saveA(n){ 
   const alerts=JSON.parse(localStorage.getItem(ALERTS_KEY))||{}; 
-  alerts[n]={ guncel:toNumber(document.getElementById("n-g").value), kz:toNumber(document.getElementById("n-k").value), gp:toNumber(document.getElementById("n-p").value)}; 
+  alerts[n]={ 
+    guncel:toNumber(document.getElementById("n-g").value), 
+    kz:toNumber(document.getElementById("n-k").value), 
+    gp:toNumber(document.getElementById("n-p").value)
+  }; 
   localStorage.setItem(ALERTS_KEY, JSON.stringify(alerts)); 
   document.getElementById("modal").classList.remove("show"); 
   renderAll(); 
