@@ -28,7 +28,7 @@ h2{ margin:14px 16px 6px; font-size:11px; text-transform: uppercase; letter-spac
 .big{ font-size:14px; font-weight:700; margin-top:2px; }
 .small{ font-size:9px; font-weight:700; opacity:.8; text-transform: uppercase; display:block; margin-bottom:3px; }
 .pos{ color: var(--pos); } .neg{ color: var(--neg); }
-.detail-item{ background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-bottom: 8px; display: grid; grid-template-columns: 1fr auto; align-items: center; }
+.detail-item{ background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-bottom: 8px; display: grid; grid-template-columns: 1fr auto; align-items: center; cursor:pointer; }
 .item-meta{ font-size: 10px; color: var(--muted); margin-top: 4px; display: flex; gap: 8px; }
 .controls{ display:flex; gap:8px; align-items:center; padding: 10px; flex-wrap: wrap; }
 .select{ background: var(--card); border:1px solid var(--line); color:var(--text); border-radius:8px; padding: 8px; font-size:12px; height: 38px;}
@@ -49,7 +49,7 @@ h2{ margin:14px 16px 6px; font-size:11px; text-transform: uppercase; letter-spac
 .sparkline-wrap canvas{ width:100% !important; height: 180px; display:block; }
 .refresh-inline{ margin-left:auto; font-size:10px; opacity:.7; padding-right:6px; }
 
-/* Dönem kartları için yeni stiller */
+/* Dönem kartları */
 .period-cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -77,15 +77,9 @@ h2{ margin:14px 16px 6px; font-size:11px; text-transform: uppercase; letter-spac
   font-size: 14px;
   font-weight: 600;
 }
-
-/* Mobil için kartları tam genişlik yap */
 @media (max-width: 520px) {
-  .period-cards {
-    grid-template-columns: 1fr;
-  }
-  .period-card {
-    padding: 16px;
-  }
+  .period-cards { grid-template-columns: 1fr; }
+  .period-card { padding: 16px; }
 }
 </style>
 </head>
@@ -131,18 +125,44 @@ const formatTRY = v => Math.round(v).toLocaleString('tr-TR') + " ₺";
 const formatPrice = v => parseFloat(v).toLocaleString('tr-TR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + " ₺";
 
 async function loadHistory(){ 
-  const res=await fetch(`${HISTORY_URL}&cb=${Date.now()}`); 
-  const text=await res.text(); 
-  const p=Papa.parse(text.trim(),{header:true}); 
-  PRICE_HISTORY=p.data.map(r=>({urun:r.urun||r['Ürün']||r['Urun'], date:r.tarih||r['Tarih'], price:toNumber(r.fiyat||r['Fiyat'])})).filter(x=>x.urun&&x.date&&(x.price||x.price===0)); 
-  HISTORY_BY_URUN={}; 
-  for(const row of PRICE_HISTORY){ (HISTORY_BY_URUN[row.urun]??=[]).push({date:row.date, price:row.price}); } 
-  Object.keys(HISTORY_BY_URUN).forEach(k=>HISTORY_BY_URUN[k].sort((a,b)=>a.date.localeCompare(b.date))); 
+  try {
+    const res=await fetch(`${HISTORY_URL}&cb=${Date.now()}`); 
+    const text=await res.text(); 
+    const p=Papa.parse(text.trim(),{header:true}); 
+    PRICE_HISTORY=p.data.map(r=>({urun:r.urun||r['Ürün']||r['Urun'], date:r.tarih||r['Tarih'], price:toNumber(r.fiyat||r['Fiyat'])})).filter(x=>x.urun&&x.date&&(x.price||x.price===0)); 
+    HISTORY_BY_URUN={}; 
+    for(const row of PRICE_HISTORY){ (HISTORY_BY_URUN[row.urun]??=[]).push({date:row.date, price:row.price}); } 
+    Object.keys(HISTORY_BY_URUN).forEach(k=>HISTORY_BY_URUN[k].sort((a,b)=>a.date.localeCompare(b.date))); 
+  } catch(e) {
+    console.error("Tarih yüklenemedi:", e);
+  }
 }
 
-function getAlertMsg(item){ const alerts=JSON.parse(localStorage.getItem(ALERTS_KEY))||{}; const a=alerts[item.urun]; if(!a) return null; const kz=item.guncelDeger-item.toplamYatirim; const prev=item.guncelDeger-item.gunluk; const dPct=(prev>0)?(item.gunluk/prev)*100:0; let m=[]; if(a.guncel&&item.guncelDeger>=a.guncel) m.push(`Değer ≥ ${formatTRY(a.guncel)}`); if(a.kz&&kz>=a.kz) m.push(`Kâr ≥ ${formatTRY(a.kz)}`); if(a.gp&&dPct>=a.gp) m.push(`Günlük ≥ %${a.gp}`); return m.length>0?m.join(" | "):null; }
-function updateLastRefresh(){ const now=new Date(); const txt=now.toLocaleTimeString("tr-TR",{hour:"2-digit",minute:"2-digit",second:"2-digit"}); const el=document.getElementById("last-refresh"); if(el) el.innerText="Son güncelleme: "+txt; }
-function setAutoRefresh(mins){ clearInterval(REFRESH_INT); if(mins>0){ REFRESH_INT=setInterval(()=>{ init(); }, mins*60*1000); } }
+function getAlertMsg(item){ 
+  const alerts=JSON.parse(localStorage.getItem(ALERTS_KEY))||{}; 
+  const a=alerts[item.urun]; 
+  if(!a) return null; 
+  const kz=item.guncelDeger-item.toplamYatirim; 
+  const prev=item.guncelDeger-item.gunluk; 
+  const dPct=(prev>0)?(item.gunluk/prev)*100:0; 
+  let m=[]; 
+  if(a.guncel&&item.guncelDeger>=a.guncel) m.push(`Değer ≥ ${formatTRY(a.guncel)}`); 
+  if(a.kz&&kz>=a.kz) m.push(`Kâr ≥ ${formatTRY(a.kz)}`); 
+  if(a.gp&&dPct>=a.gp) m.push(`Günlük ≥ %${a.gp}`); 
+  return m.length>0?m.join(" | "):null; 
+}
+
+function updateLastRefresh(){ 
+  const now=new Date(); 
+  const txt=now.toLocaleTimeString("tr-TR",{hour:"2-digit",minute:"2-digit",second:"2-digit"}); 
+  const el=document.getElementById("last-refresh"); 
+  if(el) el.innerText="Son güncelleme: "+txt; 
+}
+
+function setAutoRefresh(mins){ 
+  clearInterval(REFRESH_INT); 
+  if(mins>0){ REFRESH_INT=setInterval(()=>{ init(); }, mins*60*1000); } 
+}
 
 async function init(){ 
   try{
@@ -180,7 +200,10 @@ async function init(){
     document.getElementById("loader").style.display="none"; 
     renderAll(); 
     updateLastRefresh(); 
-  }catch(e){ console.error(e); }
+  }catch(e){ 
+    console.error("Başlatma hatası:", e); 
+    document.getElementById("loader").innerText = "Yükleme hatası: " + e.message;
+  }
 }
 
 function renderAll(){ 
@@ -264,8 +287,13 @@ function drawSparkline(canvas, values, dates, color='#3b82f6'){
 }
 
 function openDetail(name){
+  console.log("openDetail çağrıldı:", name); // debug
+
   const item = DATA.find(i => i.urun === name); 
-  if(!item) return;
+  if(!item) {
+    console.error("Ürün bulunamadı:", name);
+    return;
+  }
 
   const alerts = JSON.parse(localStorage.getItem(ALERTS_KEY)) || {}; 
   const a = alerts[name] || {}; 
@@ -280,10 +308,9 @@ function openDetail(name){
 
   const hist = (HISTORY_BY_URUN[name] || []).slice(-30); 
   const last30 = hist.map(h => h.price); 
-  const dates30 = hist.map(h => h.date.toLocaleDateString('tr-TR')); 
+  const dates30 = hist.map(h => h.date); 
   const safeName = name.replace(/[^\w\-]/g, '_');
 
-  // Dönem verileri için yardımcı array
   const periods = [
     { label: "Günlük",   value: item.gunluk   },
     { label: "Haftalık", value: item.haftalik },
@@ -305,67 +332,70 @@ function openDetail(name){
     `;
   }).join('');
 
-  document.getElementById("modal-inner").innerHTML = `
-  <div style="padding:24px 20px; max-width:780px; margin:0 auto;">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
-      <h3 style="margin:0; font-size:19px; font-weight:600;">${item.urun} Analizi</h3>
-      <button onclick="document.getElementById('modal').classList.remove('show')" style="background:none;border:none;color:#fff;font-size:26px;cursor:pointer;opacity:0.8;">✕</button>
-    </div>
-
-    <div class="sparkline-wrap" style="margin-bottom:28px;">
-      <div class="sparkline-title">Son 30 Gün Fiyat Hareketi</div>
-      <canvas id="spark-${safeName}"></canvas>
-      <div class="sparkline-tooltip"></div>
-    </div>
-
-    <div class="modal-section" style="margin-bottom:24px;">
-      <h4 style="margin:0 0 14px 0; font-size:13px; opacity:0.9; text-transform:uppercase; letter-spacing:0.4px;">Genel Bilgiler</h4>
-      <div class="modal-grid">
-        <div class="info-box"><div class="small">Varlık Türü</div><div class="big">${item.tur || '—'}</div></div>
-        <div class="info-box"><div class="small">Portföy Payı</div><div class="big">%${portföyPay}</div></div>
-        <div class="info-box"><div class="small">Tutulan Gün</div><div class="big">${tutulanGun} gün</div></div>
-        <div class="info-box"><div class="small">Yatırım Tutarı</div><div class="big">${formatTRY(item.toplamYatirim)}</div></div>
-        <div class="info-box"><div class="small">Güncel Değer</div><div class="big">${formatTRY(item.guncelDeger)}</div></div>
-        <div class="info-box ${kz >= 0 ? 'pos' : 'neg'}"><div class="small">K/Z</div><div class="big">${formatTRY(kz)}</div></div>
+  try {
+    document.getElementById("modal-inner").innerHTML = `
+    <div style="padding:24px 20px; max-width:780px; margin:0 auto;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+        <h3 style="margin:0; font-size:19px; font-weight:600;">${item.urun} Analizi</h3>
+        <button onclick="document.getElementById('modal').classList.remove('show')" style="background:none;border:none;color:#fff;font-size:26px;cursor:pointer;opacity:0.8;">✕</button>
       </div>
-    </div>
 
-    <div class="modal-section" style="margin-bottom:24px;">
-      <h4 style="margin:0 0 14px 0; font-size:13px; opacity:0.9; text-transform:uppercase; letter-spacing:0.4px;">Pozisyon Detayları</h4>
-      <div class="modal-grid">
-        <div class="info-box"><div class="small">Adet</div><div class="big">${item.adet.toLocaleString('tr-TR')}</div></div>
-        <div class="info-box"><div class="small">Ort. Maliyet</div><div class="big">${formatPrice(ortFiyat)}</div></div>
-        <div class="info-box"><div class="small">Güncel Fiyat</div><div class="big">${formatPrice(item.fiyat)}</div></div>
-        <div class="info-box ${birimKZ >= 0 ? 'pos' : 'neg'}"><div class="small">Birim K/Z</div><div class="big">${formatPrice(birimKZ)}</div></div>
-        <div class="info-box ${birimPct >= 0 ? 'pos' : 'neg'}"><div class="small">Birim Getiri</div><div class="big">%${birimPct}</div></div>
+      <div class="sparkline-wrap" style="margin-bottom:28px;">
+        <div class="sparkline-title">Son 30 Gün Fiyat Hareketi</div>
+        <canvas id="spark-${safeName}"></canvas>
+        <div class="sparkline-tooltip"></div>
       </div>
-    </div>
 
-    <div class="modal-section" style="margin-bottom:24px;">
-      <h4 style="margin:0 0 14px 0; font-size:13px; opacity:0.9; text-transform:uppercase; letter-spacing:0.4px;">Dönemsel Performans</h4>
-      <div class="period-cards">
-        ${periodCardsHTML}
+      <div class="modal-section" style="margin-bottom:24px;">
+        <h4 style="margin:0 0 14px 0; font-size:13px; opacity:0.9; text-transform:uppercase; letter-spacing:0.4px;">Genel Bilgiler</h4>
+        <div class="modal-grid">
+          <div class="info-box"><div class="small">Varlık Türü</div><div class="big">${item.tur || '—'}</div></div>
+          <div class="info-box"><div class="small">Portföy Payı</div><div class="big">%${portföyPay}</div></div>
+          <div class="info-box"><div class="small">Tutulan Gün</div><div class="big">${tutulanGun} gün</div></div>
+          <div class="info-box"><div class="small">Yatırım Tutarı</div><div class="big">${formatTRY(item.toplamYatirim)}</div></div>
+          <div class="info-box"><div class="small">Güncel Değer</div><div class="big">${formatTRY(item.guncelDeger)}</div></div>
+          <div class="info-box ${kz >= 0 ? 'pos' : 'neg'}"><div class="small">K/Z</div><div class="big">${formatTRY(kz)}</div></div>
+        </div>
       </div>
-    </div>
 
-    <div class="modal-section">
-      <h4 style="margin:0 0 14px 0; font-size:13px; opacity:0.9; text-transform:uppercase; letter-spacing:0.4px;">Uyarı Tanımla</h4>
-      <div style="display:grid; gap:12px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
-        <input id="n-g" type="number" placeholder="Değer ≥" value="${a.guncel||''}" class="select">
-        <input id="n-k" type="number" placeholder="Kâr ≥" value="${a.kz||''}" class="select">
-        <input id="n-p" type="number" placeholder="Günlük % ≥" value="${a.gp||''}" class="select">
-        <button onclick="saveA('${item.urun.replace(/'/g, "\\'")}')" style="background:var(--accent); color:white; border:none; padding:12px 16px; border-radius:8px; font-weight:bold; cursor:pointer; min-height:42px;">KAYDET</button>
+      <div class="modal-section" style="margin-bottom:24px;">
+        <h4 style="margin:0 0 14px 0; font-size:13px; opacity:0.9; text-transform:uppercase; letter-spacing:0.4px;">Pozisyon Detayları</h4>
+        <div class="modal-grid">
+          <div class="info-box"><div class="small">Adet</div><div class="big">${item.adet.toLocaleString('tr-TR')}</div></div>
+          <div class="info-box"><div class="small">Ort. Maliyet</div><div class="big">${formatPrice(ortFiyat)}</div></div>
+          <div class="info-box"><div class="small">Güncel Fiyat</div><div class="big">${formatPrice(item.fiyat)}</div></div>
+          <div class="info-box ${birimKZ >= 0 ? 'pos' : 'neg'}"><div class="small">Birim K/Z</div><div class="big">${formatPrice(birimKZ)}</div></div>
+          <div class="info-box ${birimPct >= 0 ? 'pos' : 'neg'}"><div class="small">Birim Getiri</div><div class="big">%${birimPct}</div></div>
+        </div>
       </div>
-    </div>
-  </div>`;
 
-  document.getElementById("modal").classList.add("show"); 
+      <div class="modal-section" style="margin-bottom:24px;">
+        <h4 style="margin:0 0 14px 0; font-size:13px; opacity:0.9; text-transform:uppercase; letter-spacing:0.4px;">Dönemsel Performans</h4>
+        <div class="period-cards">
+          ${periodCardsHTML}
+        </div>
+      </div>
 
-  try { 
-    const cnv = document.getElementById(`spark-${safeName}`); 
-    if (cnv && last30?.length) drawSparkline(cnv, last30, dates30, '#3b82f6'); 
-  } catch(err) { 
-    console.warn('Sparkline error', err); 
+      <div class="modal-section">
+        <h4 style="margin:0 0 14px 0; font-size:13px; opacity:0.9; text-transform:uppercase; letter-spacing:0.4px;">Uyarı Tanımla</h4>
+        <div style="display:grid; gap:12px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
+          <input id="n-g" type="number" placeholder="Değer ≥" value="${a.guncel||''}" class="select">
+          <input id="n-k" type="number" placeholder="Kâr ≥" value="${a.kz||''}" class="select">
+          <input id="n-p" type="number" placeholder="Günlük % ≥" value="${a.gp||''}" class="select">
+          <button onclick="saveA('${item.urun.replace(/'/g, "\\'")}')" style="background:var(--accent); color:white; border:none; padding:12px 16px; border-radius:8px; font-weight:bold; cursor:pointer; min-height:42px;">KAYDET</button>
+        </div>
+      </div>
+    </div>`;
+
+    document.getElementById("modal").classList.add("show"); 
+
+    const cnv = document.getElementById(`spark-${safeName}`);
+    if (cnv && last30?.length) {
+      drawSparkline(cnv, last30, dates30, '#3b82f6');
+    }
+  } catch(err) {
+    console.error("Modal render hatası:", err);
+    document.getElementById("modal-inner").innerHTML = `<div style="padding:40px; text-align:center; color:#ef4444;">Modal yüklenirken hata oluştu.<br><br>${err.message}</div>`;
   }
 }
 
