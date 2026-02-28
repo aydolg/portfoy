@@ -86,3 +86,23 @@ th {
   border-radius: 8px;
   border: 1px solid var(--line);
 }
+
+
+.entry-link {
+  border-style: dashed;
+}
+
+.btn {
+  display: inline-block;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  text-decoration: none;
+  color: var(--text);
+  background: #eef2ff;
+  font-weight: 600;
+}
+
+.btn:hover {
+  background: #e0e7ff;
+}
