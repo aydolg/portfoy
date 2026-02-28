@@ -1,8 +1,16 @@
 // script.js
 
 document.addEventListener('DOMContentLoaded', () => {
+    const reportContainer = document.getElementById('portfolio-summary');
+    if (!reportContainer) {
+        return;
+    }
+
     let portfolioData = [];
+    let filteredData = [];
     let portfolioSummary = {};
+
+    const getById = (id) => document.getElementById(id);
 
     const formatCurrency = (amount) => {
         if (typeof amount !== 'number' || Number.isNaN(amount)) return 'N/A';
@@ -14,14 +22,20 @@ document.addEventListener('DOMContentLoaded', () => {
         return `${value.toFixed(2)}%`;
     };
 
-    const getById = (id) => document.getElementById(id);
+    const formatDate = (value) => {
+        if (!value) return 'N/A';
+        const d = new Date(value);
+        if (Number.isNaN(d.getTime())) return 'N/A';
+        return new Intl.DateTimeFormat('tr-TR', { dateStyle: 'medium' }).format(d);
+    };
 
-    const setSectionError = (id, message) => {
+    const setSectionStatus = (id, message, type = 'status') => {
         const el = getById(id);
         if (!el) return;
+
         el.innerHTML = '';
         const p = document.createElement('p');
-        p.className = 'error';
+        p.className = type;
         p.textContent = message;
         el.appendChild(p);
     };
@@ -40,7 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!container) return;
 
         if (Object.keys(portfolioSummary).length === 0) {
-            setSectionError('portfolio-summary', 'Portföy özet verileri yüklenemedi.');
+            setSectionStatus('portfolio-summary', 'Portföy özet verileri bulunamadı.', 'empty');
             return;
         }
 
@@ -54,49 +68,16 @@ document.addEventListener('DOMContentLoaded', () => {
         fragment.appendChild(createInfoRow('Toplam Güncel Değer', formatCurrency(portfolioSummary['Toplam Güncel Değer'])));
         fragment.appendChild(createInfoRow('Toplam Kâr/Zarar', formatCurrency(portfolioSummary['Toplam Kar/Zarar'])));
         fragment.appendChild(createInfoRow('Toplam Nominal Getiri Yüzdesi', formatPercent(portfolioSummary['Toplam Nominal Getiri Yuzdesi'])));
-        fragment.appendChild(createInfoRow('Basitleştirilmiş Genel Reel Getiri (Yıllık Enflasyon Bazlı)', formatPercent(portfolioSummary['Basitlestirilmis Genel Reel Getiri Yuzdesi'])));
-        fragment.appendChild(createInfoRow('Ağırlıklı Ortalama Reel Getiri (Hisse Bazında Kümülatif Enflasyon ile)', formatPercent(portfolioSummary['Agirlikli Ortalama Reel Getiri Yuzdesi'])));
+        fragment.appendChild(createInfoRow('Basitleştirilmiş Genel Reel Getiri', formatPercent(portfolioSummary['Basitlestirilmis Genel Reel Getiri Yuzdesi'])));
+        fragment.appendChild(createInfoRow('Ağırlıklı Ortalama Reel Getiri', formatPercent(portfolioSummary['Agirlikli Ortalama Reel Getiri Yuzdesi'])));
 
         container.appendChild(fragment);
     };
 
-    const populateStockPerformance = () => {
-        const container = getById('stock-performance');
-        if (!container) return;
+    const renderTableRows = (tbody, data) => {
+        tbody.innerHTML = '';
 
-        if (portfolioData.length === 0) {
-            setSectionError('stock-performance', 'Hisse performansı verileri yüklenemedi.');
-            return;
-        }
-
-        container.innerHTML = '';
-
-        const heading = document.createElement('h3');
-        heading.textContent = 'Hisse Performansı Detayları';
-
-        const table = document.createElement('table');
-        const thead = document.createElement('thead');
-        const tbody = document.createElement('tbody');
-        const headers = [
-            'Hisse',
-            'Alış Fiyatı',
-            'Güncel Fiyat',
-            'Yatırım Miktarı',
-            'Güncel Değer',
-            'Kâr/Zarar',
-            'Nominal Getiri (%)',
-            'Reel Getiri (%)'
-        ];
-
-        const headRow = document.createElement('tr');
-        headers.forEach((text) => {
-            const th = document.createElement('th');
-            th.textContent = text;
-            headRow.appendChild(th);
-        });
-        thead.appendChild(headRow);
-
-        portfolioData.forEach((item) => {
+        data.forEach((item) => {
             const row = document.createElement('tr');
             const cells = [
                 item['Hisse'] ?? 'N/A',
@@ -112,20 +93,139 @@ document.addEventListener('DOMContentLoaded', () => {
             cells.forEach((cellValue, index) => {
                 const td = document.createElement('td');
                 td.textContent = String(cellValue);
+
                 if (index === 5) {
                     const raw = item['Kâr/Zarar'];
-                    td.classList.add(raw >= 0 ? 'pos' : 'neg');
+                    if (typeof raw === 'number') {
+                        td.classList.add(raw >= 0 ? 'pos' : 'neg');
+                    }
                 }
+
                 row.appendChild(td);
             });
 
             tbody.appendChild(row);
         });
+    };
+
+    const createTableControls = (onChange) => {
+        const controls = document.createElement('div');
+        controls.className = 'controls';
+
+        const search = document.createElement('input');
+        search.type = 'search';
+        search.placeholder = 'Hisse ara (örn: ASELS)';
+        search.className = 'input';
+
+        const sort = document.createElement('select');
+        sort.className = 'select';
+        [
+            ['Hisse (A-Z)', 'symbol-asc'],
+            ['Hisse (Z-A)', 'symbol-desc'],
+            ['Kâr/Zarar (Yüksekten Düşüğe)', 'pl-desc'],
+            ['Kâr/Zarar (Düşükten Yükseğe)', 'pl-asc']
+        ].forEach(([label, value]) => {
+            const option = document.createElement('option');
+            option.value = value;
+            option.textContent = label;
+            sort.appendChild(option);
+        });
+
+        const update = () => onChange(search.value.trim(), sort.value);
+        search.addEventListener('input', update);
+        sort.addEventListener('change', update);
+
+        controls.appendChild(search);
+        controls.appendChild(sort);
+        return controls;
+    };
+
+    const applyFiltersAndSort = (query, sortKey) => {
+        const upperQuery = query.toUpperCase();
+        let list = portfolioData.filter((item) => {
+            const symbol = String(item['Hisse'] ?? '').toUpperCase();
+            return symbol.includes(upperQuery);
+        });
+
+        list = [...list].sort((a, b) => {
+            if (sortKey === 'symbol-asc') return String(a['Hisse']).localeCompare(String(b['Hisse']), 'tr');
+            if (sortKey === 'symbol-desc') return String(b['Hisse']).localeCompare(String(a['Hisse']), 'tr');
+            if (sortKey === 'pl-asc') return (a['Kâr/Zarar'] ?? 0) - (b['Kâr/Zarar'] ?? 0);
+            return (b['Kâr/Zarar'] ?? 0) - (a['Kâr/Zarar'] ?? 0);
+        });
+
+        filteredData = list;
+        return list;
+    };
+
+    const populateStockPerformance = () => {
+        const container = getById('stock-performance');
+        if (!container) return;
+
+        if (portfolioData.length === 0) {
+            setSectionStatus('stock-performance', 'Hisse performansı verileri bulunamadı.', 'empty');
+            return;
+        }
+
+        container.innerHTML = '';
+
+        const heading = document.createElement('h3');
+        heading.textContent = 'Hisse Performansı Detayları';
+
+        const info = document.createElement('p');
+        info.className = 'muted';
+
+        const table = document.createElement('table');
+        const thead = document.createElement('thead');
+        const tbody = document.createElement('tbody');
+        const headers = [
+            'Hisse', 'Alış Fiyatı', 'Güncel Fiyat', 'Yatırım Miktarı',
+            'Güncel Değer', 'Kâr/Zarar', 'Nominal Getiri (%)', 'Reel Getiri (%)'
+        ];
+
+        const headRow = document.createElement('tr');
+        headers.forEach((text) => {
+            const th = document.createElement('th');
+            th.textContent = text;
+            headRow.appendChild(th);
+        });
+        thead.appendChild(headRow);
+
+        const refreshTable = (query = '', sortKey = 'symbol-asc') => {
+            const data = applyFiltersAndSort(query, sortKey);
+            if (data.length === 0) {
+                info.textContent = 'Sonuç bulunamadı. Filtreyi değiştirebilirsiniz.';
+                tbody.innerHTML = '';
+                return;
+            }
+
+            info.textContent = `${data.length} hisse listeleniyor.`;
+            renderTableRows(tbody, data);
+        };
+
+        const controls = createTableControls(refreshTable);
+        refreshTable('', 'symbol-asc');
 
         table.appendChild(thead);
         table.appendChild(tbody);
         container.appendChild(heading);
+        container.appendChild(controls);
+        container.appendChild(info);
         container.appendChild(table);
+    };
+
+    const createStockBullet = (stockLabel, stockData) => {
+        const li = document.createElement('li');
+        const strong = document.createElement('strong');
+        strong.textContent = `${stockLabel}: `;
+
+        const text = `Nominal ${formatPercent(stockData?.['Nominal Getiri'])}, `
+            + `Reel ${formatPercent(stockData?.['Reel Getiri Yüzdesi'])}, `
+            + `Alış: ${formatDate(stockData?.['Alış Tarihi'])}`;
+
+        li.appendChild(strong);
+        li.append(text);
+        return li;
     };
 
     const populateRealReturnAnalysis = () => {
@@ -133,41 +233,46 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!container) return;
 
         if (Object.keys(portfolioSummary).length === 0 || portfolioData.length === 0) {
-            setSectionError('real-return-analysis', 'Reel getiri analizi verileri yüklenemedi.');
+            setSectionStatus('real-return-analysis', 'Reel getiri analizi verileri bulunamadı.', 'empty');
             return;
         }
 
         const getStockData = (name) => portfolioData.find((item) => item['Hisse'] === name);
-        const fmtDate = (value) => {
-            if (!value) return 'N/A';
-            const d = new Date(value);
-            if (Number.isNaN(d.getTime())) return 'N/A';
-            return d.toISOString().slice(0, 10);
-        };
 
-        const asels = getStockData('ASELS');
-        const tuprs = getStockData('TUPRS');
-        const metro = getStockData('METRO');
-        const toaso = getStockData('TOASO');
-        const garan = getStockData('GARAN');
+        container.innerHTML = '';
 
-        container.innerHTML = `
-            <h3>Detaylı Reel Getiri Analizi</h3>
-            <p><strong>Basitleştirilmiş Genel Reel Getiri:</strong> ${formatPercent(portfolioSummary['Basitlestirilmis Genel Reel Getiri Yuzdesi'])}</p>
-            <p><strong>Ağırlıklı Ortalama Reel Getiri:</strong> ${formatPercent(portfolioSummary['Agirlikli Ortalama Reel Getiri Yuzdesi'])}</p>
+        const heading = document.createElement('h3');
+        heading.textContent = 'Detaylı Reel Getiri Analizi';
 
-            <h3>Örnek Hisselerde Enflasyon Etkisi</h3>
-            <ul>
-                <li><strong>ASELS:</strong> Nominal ${formatPercent(asels?.['Nominal Getiri'])}, Reel ${formatPercent(asels?.['Reel Getiri Yüzdesi'])}, Alış: ${fmtDate(asels?.['Alış Tarihi'])}</li>
-                <li><strong>TUPRS:</strong> Nominal ${formatPercent(tuprs?.['Nominal Getiri'])}, Reel ${formatPercent(tuprs?.['Reel Getiri Yüzdesi'])}, Alış: ${fmtDate(tuprs?.['Alış Tarihi'])}</li>
-                <li><strong>METRO:</strong> Nominal ${formatPercent(metro?.['Nominal Getiri'])}, Reel ${formatPercent(metro?.['Reel Getiri Yüzdesi'])}, Alış: ${fmtDate(metro?.['Alış Tarihi'])}</li>
-                <li><strong>TOASO:</strong> Nominal ${formatPercent(toaso?.['Nominal Getiri'])}, Reel ${formatPercent(toaso?.['Reel Getiri Yüzdesi'])}, Alış: ${fmtDate(toaso?.['Alış Tarihi'])}</li>
-                <li><strong>GARAN:</strong> Nominal ${formatPercent(garan?.['Nominal Getiri'])}, Reel ${formatPercent(garan?.['Reel Getiri Yüzdesi'])}, Alış: ${fmtDate(garan?.['Alış Tarihi'])}</li>
-            </ul>
+        const p1 = createInfoRow('Basitleştirilmiş Genel Reel Getiri', formatPercent(portfolioSummary['Basitlestirilmis Genel Reel Getiri Yuzdesi']));
+        const p2 = createInfoRow('Ağırlıklı Ortalama Reel Getiri', formatPercent(portfolioSummary['Agirlikli Ortalama Reel Getiri Yuzdesi']));
 
-            <p>Özetle, nominal getiri tek başına yeterli bir gösterge değildir; alım zamanına bağlı enflasyon etkisi gerçek performansı belirgin şekilde değiştirebilir.</p>
-        `;
+        const subHeading = document.createElement('h3');
+        subHeading.textContent = 'Örnek Hisselerde Enflasyon Etkisi';
+
+        const list = document.createElement('ul');
+        ['ASELS', 'TUPRS', 'METRO', 'TOASO', 'GARAN'].forEach((symbol) => {
+            list.appendChild(createStockBullet(symbol, getStockData(symbol)));
+        });
+
+        const summaryText = document.createElement('p');
+        summaryText.textContent = 'Özetle, nominal getiri tek başına yeterli bir gösterge değildir; alım zamanına bağlı enflasyon etkisi gerçek performansı belirgin şekilde değiştirebilir.';
+
+        container.appendChild(heading);
+        container.appendChild(p1);
+        container.appendChild(p2);
+        container.appendChild(subHeading);
+        container.appendChild(list);
+        container.appendChild(summaryText);
     };
+
+    const setLoadingStates = () => {
+        setSectionStatus('portfolio-summary', 'Portföy özeti yükleniyor...', 'status');
+        setSectionStatus('stock-performance', 'Hisse performansı yükleniyor...', 'status');
+        setSectionStatus('real-return-analysis', 'Reel getiri analizi hazırlanıyor...', 'status');
+    };
+
+    setLoadingStates();
 
     Promise.all([
         fetch('portfolio_data.json').then((res) => {
@@ -180,8 +285,8 @@ document.addEventListener('DOMContentLoaded', () => {
         })
     ])
         .then(([data, summary]) => {
-            portfolioData = data;
-            portfolioSummary = summary;
+            portfolioData = Array.isArray(data) ? data : [];
+            portfolioSummary = summary && typeof summary === 'object' ? summary : {};
 
             populateStockPerformance();
             populatePortfolioSummary();
@@ -189,9 +294,9 @@ document.addEventListener('DOMContentLoaded', () => {
         })
         .catch((error) => {
             console.error('JSON verileri yüklenirken hata oluştu:', error);
-            setSectionError('stock-performance', 'Hisse performansı verileri yüklenirken hata oluştu.');
-            setSectionError('portfolio-summary', 'Portföy özet verileri yüklenirken hata oluştu.');
-            setSectionError('real-return-analysis', 'Reel getiri analizi verileri yüklenirken hata oluştu.');
+            setSectionStatus('stock-performance', 'Hisse performansı verileri yüklenirken hata oluştu.', 'error');
+            setSectionStatus('portfolio-summary', 'Portföy özet verileri yüklenirken hata oluştu.', 'error');
+            setSectionStatus('real-return-analysis', 'Reel getiri analizi verileri yüklenirken hata oluştu.', 'error');
         });
 
     const benchmarkChartImg = getById('benchmark-chart');

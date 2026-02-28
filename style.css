@@ -6,6 +6,8 @@
   --line: #e2e8f0;
   --pos: #15803d;
   --neg: #b91c1c;
+  --status: #334155;
+  --empty: #b45309;
 }
 
 * { box-sizing: border-box; }
@@ -24,7 +26,8 @@ h1 {
   padding: 0 16px;
 }
 
-section {
+section,
+.landing {
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: 12px;
@@ -50,6 +53,16 @@ p { margin: 8px 0; }
   font-weight: 600;
 }
 
+.status {
+  color: var(--status);
+  font-weight: 600;
+}
+
+.empty {
+  color: var(--empty);
+  font-weight: 600;
+}
+
 .muted {
   color: var(--muted);
 }
@@ -60,6 +73,27 @@ p { margin: 8px 0; }
 
 .pos { color: var(--pos); }
 .neg { color: var(--neg); }
+
+.controls {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 8px 0;
+}
+
+.input,
+.select {
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text);
+}
+
+.input {
+  min-width: 220px;
+  flex: 1;
+}
 
 table {
   width: 100%;
@@ -85,11 +119,6 @@ th {
   margin: 0 auto;
   border-radius: 8px;
   border: 1px solid var(--line);
-}
-
-
-.entry-link {
-  border-style: dashed;
 }
 
 .btn {
